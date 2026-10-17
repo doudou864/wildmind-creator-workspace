@@ -1,9 +1,10 @@
+import { inboxData, dealData } from './inbox-store.ts';
 import { loadConfig } from './config.ts';
 import { dashboardData } from './dashboard-store.ts';
 import { readImageTasks } from '../jobs/image-tasks.ts';
 import { publishingData } from './publishing-store.ts';
 import { usingDatabase, usedImages } from './media-store.ts';
-import { assets, contents, topics, imageDrafts, imageGenerations, layouts, deals, messages } from '../db/schema.ts';
+import { assets, contents, topics, imageDrafts, imageGenerations, layouts } from '../db/schema.ts';
 import { loadGenerationConfig } from '../ai/image-generation.ts';
 import { shanghaiDate } from '../browser/policy.ts';
 import { desc } from 'drizzle-orm';
@@ -66,29 +67,11 @@ export async function readPublishing(): Promise<PublishingData> {
 }
 
 export async function readInbox(): Promise<InboxData> {
-  return {
-    items: [],
-    themes: [],
-    sources: [],
-    recordsReady: false,
-    topicSyncReady: false,
-    message: '评论与私信读取、分类和选题同步服务待接入；当前没有可展示的业务记录。',
-  };
+  return usingDatabase(inboxData);
 }
 
 export async function readDeals(): Promise<DealData> {
-  return usingDatabase((db) => ({
-    items: db.db
-      .select()
-      .from(deals)
-      .all()
-      .map(({ platformId, channel, messageId, ...row }) => ({ ...row, source: { platformId, channel, messageId } })),
-    messages: db.db.select().from(messages).all(),
-    recordsReady: true,
-    writeReady: false,
-    suggestionReady: false,
-    message: '商单列表已接本地记录；分类采集和编辑在第6步接入。',
-  }));
+  return usingDatabase(dealData);
 }
 
 export async function readContents(): Promise<ContentData> {

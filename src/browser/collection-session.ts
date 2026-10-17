@@ -44,7 +44,12 @@ export class CollectionSession {
       `await page.waitForTimeout(${randomBetween(policy.dwellMs)});${ready ? `try{await page.waitForSelector(${JSON.stringify(ready)},{timeout:15000});}catch{}` : ''}console.log('WORKSPACE_RESULT:true');`,
     );
   }
-  async inspect(platformId: string, scrollSelector = 'html', titleSelector = ''): Promise<PageObservation> {
+  async inspect(
+    platformId: string,
+    scrollSelector = 'html',
+    titleSelector = '',
+    expectedUrl?: string,
+  ): Promise<PageObservation> {
     const policy = await loadBrowserPolicy();
     const config = (await loadBrowserConfig()).find((p) => p.id === platformId);
     if (!config) throw new Error('平台配置不存在');
@@ -55,8 +60,10 @@ export class CollectionSession {
     if (risk) throw new AttentionRequired(risk, 'risk');
     if (config.loggedOut.some((x) => result.text.includes(x)))
       throw new AttentionRequired('登录失效，请在浏览器中登录', 'login');
-    if (new URL(result.url).origin !== new URL(config.url).origin)
-      throw new AttentionRequired('后台跳转到异常登录地址', 'login');
+    const expected = new URL(expectedUrl ?? config.url);
+    if (!config.domains.some((domain) => expected.hostname === domain || expected.hostname.endsWith('.' + domain)))
+      throw new Error('读取页面不属于平台声明域名');
+    if (new URL(result.url).origin !== expected.origin) throw new AttentionRequired('后台跳转到异常登录地址', 'login');
     return result;
   }
   async capture(filename: string) {

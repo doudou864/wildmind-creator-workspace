@@ -1,3 +1,5 @@
+import { inboxData } from './inbox-store.ts';
+import { demandThemes } from '../db/schema.ts';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import type { WorkspaceConfig } from './config.ts';
 import type { DashboardData, Day, PlatformData } from './workspace-model';
@@ -57,17 +59,31 @@ export function dashboardData(db: WorkspaceDatabase, config: WorkspaceConfig, no
     hitRates: review.hitRates,
     collectionReady: true,
     reviewReady: true,
-    questions: [],
-    questionsReady: false,
+    questions: inboxData(db)
+      .items.filter(
+        (m) => m.classification.status === 'ready' && m.classification.result.category === 'idea' && !m.topicSignalId,
+      )
+      .map((m) => ({ id: m.id, title: m.body, platformId: m.platformId })),
+    questionsReady: true,
     plannedContents: db.db
       .select()
       .from(contents)
       .all()
       .filter((c) => c.plannedDate !== null),
     plansReady: true,
-    themes: [],
-    themesReady: false,
-    themeSyncReady: false,
+    themes: db.db
+      .select()
+      .from(demandThemes)
+      .all()
+      .map((t) => ({
+        id: t.id,
+        revision: t.revision,
+        title: t.title,
+        count: t.messageIds.length,
+        signalId: t.signalId,
+      })),
+    themesReady: true,
+    themeSyncReady: true,
     accountAlerts: [],
     accountAlertsReady: false,
     attention: db.db

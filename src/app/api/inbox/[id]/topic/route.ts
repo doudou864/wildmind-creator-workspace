@@ -1,10 +1,13 @@
 import { inboxTopicInputSchema } from '@/lib/inbox-model';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function POST(request: Request) {
+import { serviceError } from '@/lib/api-response';
+import { usingDatabase } from '@/lib/media-store';
+import { syncMessage } from '@/lib/inbox-store';
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    inboxTopicInputSchema.parse(await request.json());
+    const input = inboxTopicInputSchema.parse(await request.json());
+    const { id } = await context.params;
+    return Response.json({ item: await usingDatabase((db) => syncMessage(db, id, input.expectedRevision)) });
   } catch (error) {
-    return invalid(error);
+    return serviceError(error);
   }
-  return unavailable('互动消息与选题输入同步服务');
 }

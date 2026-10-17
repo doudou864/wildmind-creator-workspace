@@ -1,0 +1,33 @@
+# 页面结构由2026-10-18真实界面确认；未知入口显式保留待核对。
+maxScreens: 20
+maxConversations: 20
+platforms:
+  - id: douyin
+    url: https://www.douyin.com/
+    commentSteps: ['text="通知"', 'text="全部消息"', 'text="评论"']
+    commentRow: '.v0rIlTlZ'
+    commentAuthor: 'a'
+    commentBody: 'pre'
+    commentTime: '.Q9Ls5TTX span:last-child'
+    commentScroll: '.sKMx4DKd'
+    commentMore: 'text="点击加载更多"'
+    dmSteps: ['text="消息"']
+    dmRow: '[data-e2e="conversation-item"]'
+    dmTitle: '.conversationConversationItemtitle'
+    dmScroll: '.conversationConversationListwrapper'
+    dmStrangers: '陌生人消息' 
+  - id: xiaohongshu
+    url: https://www.xiaohongshu.com/notification
+    commentSteps: ['text="评论和@"']
+    commentRow: '.main'
+    commentAuthor: '.user-info a'
+    commentBody: '.interaction-content'
+    commentTime: '.interaction-time'
+    commentScroll: 'html'
+    commentMore: null
+    ignoredBodies: [该评论已删除]
+    dmSteps: []
+    dmRow: ''
+    dmTitle: ''
+    dmScroll: ''
+    dmStrangers: null

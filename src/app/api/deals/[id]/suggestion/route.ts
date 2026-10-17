@@ -1,10 +1,15 @@
+import { loadDealConfig } from '@/lib/deal-config';
 import { dealSuggestionInputSchema } from '@/lib/deal-model';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function POST(request: Request) {
+import { serviceError } from '@/lib/api-response';
+import { usingDatabase } from '@/lib/media-store';
+import { confirmSuggestion } from '@/lib/inbox-store';
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    dealSuggestionInputSchema.parse(await request.json());
+    const config = await loadDealConfig();
+    const input = dealSuggestionInputSchema.parse(await request.json());
+    const { id } = await context.params;
+    return Response.json({ item: await usingDatabase((db) => confirmSuggestion(db, id, input, config)) });
   } catch (error) {
-    return invalid(error);
+    return serviceError(error);
   }
-  return unavailable('商单状态建议确认服务');
 }

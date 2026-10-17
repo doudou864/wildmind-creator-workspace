@@ -344,7 +344,8 @@ export default function Dashboard({
                   <span>
                     <Link href={`/inbox?message=${encodeURIComponent(source.id)}`}>
                       <small>
-                        商单会话待回复 · {platforms.find((p) => p.id === source.platformId)?.name ?? source.platformId}
+                        {replies.get(source.id)?.state === 'unknown' ? '商单回复状态待核对' : '商单会话待回复'} ·{' '}
+                        {platforms.find((p) => p.id === source.platformId)?.name ?? source.platformId}
                       </small>
                       <strong>
                         {source.author || '发送者待核实'} · {group.deals.length} 条关联商单

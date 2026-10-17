@@ -96,7 +96,8 @@ export function filterDeals(items: Deal[], messages: InboxMessage[], filters: De
 export function dealActions(items: Deal[], messages: InboxMessage[], replies: Map<string, { state: ReplyState }>) {
   return items.filter((deal) => {
     const source = dealSource(deal, messages);
-    return source && replies.get(source.id)?.state === 'waiting';
+    const state = source ? replies.get(source.id)?.state : undefined;
+    return source && (state === 'waiting' || (state === 'unknown' && deal.status === 'pending'));
   });
 }
 // 接入后在单条记录事务内调用；来源与创建时间不可通过编辑覆盖。

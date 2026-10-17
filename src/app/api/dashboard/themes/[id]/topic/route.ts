@@ -1,10 +1,14 @@
 import { themeSyncSchema } from '@/lib/workspace-model';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function POST(request: Request) {
+import { serviceError } from '@/lib/api-response';
+import { usingDatabase } from '@/lib/media-store';
+import { syncTheme } from '@/lib/inbox-store';
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    themeSyncSchema.parse(await request.json());
-  } catch (e) {
-    return invalid(e);
+    const input = themeSyncSchema.parse(await request.json());
+    const { id } = await context.params;
+    const result = await usingDatabase((db) => syncTheme(db, id, input.expectedRevision));
+    return Response.json({ themeId: result.id, signalId: result.signalId });
+  } catch (error) {
+    return serviceError(error);
   }
-  return unavailable('需求主题选题同步服务');
 }

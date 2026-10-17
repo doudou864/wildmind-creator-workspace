@@ -1,0 +1,20 @@
+url: https://member.bilibili.com/platform/comment/article
+row: '.comment-list-item'
+author: '.ci-title > a:first-of-type'
+body: '.ci-content'
+time: '.ci-action .date'
+title: '.article-wrap .name'
+next: '.bcc-pagination-next'
+maxPages: 30
+batchSize: 20
+selfNames: [摆烂的逗逗]
+dm:
+  url: https://message.bilibili.com/
+  contact: '[data-id^="contact_"]'
+  name: '[class*="_SessionItem__Name_"]'
+  message: '[data-msg-key]'
+  text: '[class*="_MsgText__Content_"]'
+  time: '[class*="_Msg__Time_"]'
+  self: '[class*="_MsgTextIsMe_"]'
+  maxConversations: 30
+  systemNames: [创作助手, 哔哩哔哩智能机, 服务通知, 哔哩哔哩大会员, 哔哩哔哩课堂]
