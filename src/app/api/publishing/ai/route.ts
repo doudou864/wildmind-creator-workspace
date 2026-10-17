@@ -1,10 +1,12 @@
 import { publishAiSchema } from '@/lib/publishing-model';
-import { invalid, unavailable } from '@/lib/api-response';
+import { publishingAI } from '@/lib/publishing-store';
+import { usingDatabase } from '@/lib/media-store';
+import { serviceError } from '@/lib/api-response';
 export async function POST(request: Request) {
   try {
-    publishAiSchema.parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const input = publishAiSchema.parse(await request.json());
+    return Response.json(await usingDatabase((db) => publishingAI(db, input.draft, input.instruction)));
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('AI 文案服务');
 }

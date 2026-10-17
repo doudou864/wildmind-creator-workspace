@@ -1,15 +1,12 @@
-import { contentCoverSchema } from '@/lib/content-model';
-import { loadPublishingConfig } from '@/lib/publishing-config';
-import { loadConfig } from '@/lib/config';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function POST(request: Request) {
+import { usingDatabase } from '@/lib/media-store';
+import { adoptCover } from '@/lib/publishing-store';
+import { serviceError } from '@/lib/api-response';
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const input = contentCoverSchema.parse(await request.json());
-    const workspace = await loadConfig();
-    const config = await loadPublishingConfig(workspace.platforms);
-    if (!config.requiredVideoRatios.includes(input.ratio)) throw new Error('不支持的封面比例');
+    const input = await request.json();
+    const { id } = await context.params;
+    return Response.json(await usingDatabase((db) => adoptCover(db, id, input)));
   } catch (e) {
-    return invalid(e);
+    return serviceError(e);
   }
-  return unavailable('作品封面采用服务');
 }

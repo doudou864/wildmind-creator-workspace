@@ -1,0 +1,3 @@
+# 使用本机已有 ffprobe，不新增依赖；更换安装位置时在这里调整。
+ffprobePath: /Users/a1234/miniconda3/bin/ffprobe
+probeTimeoutMs: 30000

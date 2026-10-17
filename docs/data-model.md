@@ -424,3 +424,10 @@ PostSnapshot / AccountDaily 增加 precision（exact/display/unknown）和 rawVa
 - started_at、finished_at、duration_ms、calls：按实际调用记录次数和耗时；失败尝试同样计入每日上限。
 - reason：中文失败原因；thread_id：本机 Codex 会话；source_path：data/ 原始文件；asset_id：成功后关联素材。
 - 失败不写 assets；批次全部成功后统一入库。生成与上传共用 assets，不在数据库保存图片二进制。
+
+## 第 9 / 10 步持久化约束
+
+- layouts 的三个 variants 独立保存；sent 版本必须先退回才允许改写，每次确认新增 publish_snapshots，旧快照正文不变。AI 仅改指定版本的标题和块，保留已选封面。
+- publish_records 保存本地准备草稿，更新要求 If-Match 匹配 revision；执行阶段禁止覆盖。确认稿必须属于同一作品、处于 ready 且标题正文不可在发布中心改写。
+- publish_videos 的文件在 data/videos/，尺寸/时长由本机 ffprobe 核验；图片仍复用 assets。文件读取限 data/ 内真实路径，成片支持 Range。
+- 第 10 步不启用平台上传/真实发布；返回确认稿只改变本地快照状态和准备批次，不操作平台。

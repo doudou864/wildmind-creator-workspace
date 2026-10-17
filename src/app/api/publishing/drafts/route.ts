@@ -1,10 +1,11 @@
-import { publishDraftSchema } from '@/lib/publishing-model';
-import { invalid, unavailable } from '@/lib/api-response';
+import { usingDatabase } from '@/lib/media-store';
+import { savePublishing } from '@/lib/publishing-store';
+import { serviceError } from '@/lib/api-response';
 export async function POST(request: Request) {
   try {
-    publishDraftSchema.parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const input = await request.json();
+    return Response.json(await usingDatabase((db) => savePublishing(db, input)));
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('发布准备存储服务');
 }

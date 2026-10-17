@@ -1,0 +1,185 @@
+import { randomUUID } from 'node:crypto';
+import { eq } from 'drizzle-orm';
+import type { WorkspaceDatabase } from '../db/database.ts';
+import { assets, contents, publishRecords, publishSnapshots, publishVideos, publishReceipts } from '../db/schema.ts';
+import {
+  publishDraftSchema,
+  commonCopySchema,
+  updateCommonCopy,
+  type PublishingData,
+  type PublishDraft,
+} from './publishing-model.ts';
+import { layoutPlatformSchema } from './layout-model.ts';
+import { contentCoverSchema } from './content-model.ts';
+import { loadConfig } from './config.ts';
+import { loadPublishingConfig } from './publishing-config.ts';
+import { CodexJudgment, type Judgment } from '../ai/structured.ts';
+import { actOnLayout } from './layout-store.ts';
+export function publishingData(db: WorkspaceDatabase): PublishingData {
+  return {
+    contents: db.db.select().from(contents).all(),
+    assets: db.db.select().from(assets).all(),
+    videos: db.db.select().from(publishVideos).all(),
+    snapshots: db.db
+      .select()
+      .from(publishSnapshots)
+      .all()
+      .map((s) => ({ ...s, platform: layoutPlatformSchema.parse(s.platform) })),
+    batches: db.db.select().from(publishRecords).all(),
+    receipts: db.db.select().from(publishReceipts).all(),
+    accounts: [],
+    recommendations: [],
+    storageReady: true,
+    aiReady: true,
+    handoffReady: true,
+    uploadReady: false,
+    publishReady: false,
+    message: '材料会自动保存，可复制文案和下载素材。审查 E 前不开放平台上传；模板与账号状态在真实发布接入时核验。',
+  };
+}
+export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: string, expectedRevision?: number) {
+  const input = publishDraftSchema.parse(raw),
+    config = await loadPublishingConfig((await loadConfig()).platforms);
+  return db.db.transaction((tx) => {
+    const content = input.contentId ? tx.select().from(contents).where(eq(contents.id, input.contentId)).get() : null;
+    if (!content || content.form !== (input.kind === 'video' ? '视频' : '图文'))
+      throw new Error('请选择与发布来源一致的作品。');
+    if (
+      input.settings.some(
+        (s) => !config.templates.some((t) => t.platformId === s.platformId && t.kinds.includes(input.kind)),
+      )
+    )
+      throw new Error('发布平台与内容来源不符。');
+    if (
+      input.videoId &&
+      !tx
+        .select()
+        .from(publishVideos)
+        .all()
+        .some((v) => v.id === input.videoId && v.contentId === input.contentId)
+    )
+      throw new Error('成片不属于这条作品。');
+    const allAssets = tx.select().from(assets).all();
+    if (
+      input.imageIds.some(
+        (id) => !allAssets.some((a) => a.id === id && a.contentId === input.contentId && a.source === 'upload'),
+      )
+    )
+      throw new Error('图文图片必须是这条作品上传的素材。');
+    if (input.imageIds.length > config.xhsMaxImages) throw new Error('图文图片数量超过配置上限。');
+    const snapshots = tx.select().from(publishSnapshots).all();
+    for (const snapshotId of input.snapshotIds) {
+      const snapshot = snapshots.find(
+        (s) => s.id === snapshotId && s.contentId === input.contentId && s.state === 'ready',
+      );
+      const setting = input.settings.find((s) => s.platformId === snapshot?.platform);
+      if (!snapshot || !setting || setting.title !== snapshot.content.title || setting.description !== '')
+        throw new Error('确认稿已退回、来源不符或内容被改写，请刷新后重新选择。');
+    }
+    const old = id ? tx.select().from(publishRecords).where(eq(publishRecords.id, id)).get() : null;
+    if (id && !old) throw new Error('发布草稿不存在。');
+    if (old && old.revision !== expectedRevision) throw new Error('发布草稿已被其他窗口修改，请刷新后再保存。');
+    if (old && old.state !== 'draft') throw new Error('当前批次已进入执行阶段，不能覆盖草稿。');
+    const now = new Date().toISOString(),
+      record = {
+        id: id ?? randomUUID(),
+        revision: (old?.revision ?? -1) + 1,
+        contentId: content.id,
+        state: 'draft' as const,
+        draft: input,
+        createdAt: old?.createdAt ?? now,
+        updatedAt: now,
+      };
+    tx.insert(publishRecords)
+      .values(record)
+      .onConflictDoUpdate({
+        target: publishRecords.id,
+        set: { draft: input, contentId: content.id, revision: record.revision, updatedAt: now },
+      })
+      .run();
+    return record;
+  });
+}
+export async function publishingAI(
+  db: WorkspaceDatabase,
+  draft: PublishDraft,
+  instruction: string,
+  judgment: Judgment = new CodexJudgment(),
+) {
+  if (draft.kind === 'layout') throw new Error('排版确认稿不可在发布中心改写，请退回排版中心修改。');
+  const content = db.db
+    .select()
+    .from(contents)
+    .all()
+    .find((c) => c.id === draft.contentId);
+  if (!content) throw new Error('请先关联作品。');
+  const copy = await judgment.read(
+    commonCopySchema,
+    `为用户的发布准备起草通用文案，不发布，不添加未经提供的事实。作品：${content.title}。要求：${instruction}。当前文案：${JSON.stringify(draft.commonCopy)}`,
+  );
+  return updateCommonCopy(
+    draft,
+    copy,
+    publishingData(db),
+    await loadPublishingConfig((await loadConfig()).platforms),
+    Date.now(),
+  );
+}
+export async function returnSnapshot(db: WorkspaceDatabase, batchId: string, snapshotId: string) {
+  const batch = db.db.select().from(publishRecords).where(eq(publishRecords.id, batchId)).get();
+  const snapshot = db.db.select().from(publishSnapshots).where(eq(publishSnapshots.id, snapshotId)).get();
+  if (
+    !batch ||
+    batch.state !== 'draft' ||
+    !snapshot ||
+    snapshot.contentId !== batch.contentId ||
+    !batch.draft.snapshotIds.includes(snapshotId) ||
+    snapshot.state !== 'ready'
+  )
+    throw new Error('此确认稿无法从当前批次退回。');
+  await actOnLayout(db, snapshot.layoutId, { platform: snapshot.platform, action: 'revise' });
+  return db.db.transaction((tx) => {
+    const current = tx.select().from(publishRecords).where(eq(publishRecords.id, batchId)).get()!;
+    const result = {
+      ...current,
+      revision: current.revision + 1,
+      updatedAt: new Date().toISOString(),
+      draft: {
+        ...current.draft,
+        snapshotIds: current.draft.snapshotIds.filter((id) => id !== snapshotId),
+        settings: current.draft.settings.filter((s) => s.platformId !== snapshot.platform),
+      },
+    };
+    tx.update(publishRecords)
+      .set({ draft: result.draft, revision: result.revision, updatedAt: result.updatedAt })
+      .where(eq(publishRecords.id, batchId))
+      .run();
+    return result;
+  });
+}
+export async function adoptCover(db: WorkspaceDatabase, id: string, raw: unknown) {
+  const input = contentCoverSchema.parse(raw),
+    config = await loadPublishingConfig((await loadConfig()).platforms);
+  if (!config.requiredVideoRatios.includes(input.ratio)) throw new Error('不支持的封面比例。');
+  return db.db.transaction((tx) => {
+    const content = tx.select().from(contents).where(eq(contents.id, id)).get();
+    if (!content || content.form !== '视频') throw new Error('请选择视频作品。');
+    if (input.assetId) {
+      const asset = tx.select().from(assets).where(eq(assets.id, input.assetId)).get();
+      const [w, h] = input.ratio.split(':').map(Number);
+      if (
+        !asset ||
+        asset.contentId !== id ||
+        asset.purposeId !== 'video_cover' ||
+        Math.abs(asset.width * h - asset.height * w) > 0.01
+      )
+        throw new Error('封面用途、作品或比例不符。');
+    }
+    const videoCovers = { ...content.videoCovers };
+    if (input.assetId) videoCovers[input.ratio] = input.assetId;
+    else delete videoCovers[input.ratio];
+    const result = { ...content, videoCovers, updatedAt: new Date().toISOString() };
+    tx.update(contents).set(result).where(eq(contents.id, id)).run();
+    return result;
+  });
+}

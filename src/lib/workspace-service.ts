@@ -1,3 +1,4 @@
+import { publishingData } from './publishing-store.ts';
 import { usingDatabase, usedImages } from './media-store.ts';
 import { assets, contents, topics, imageDrafts, imageGenerations, layouts } from '../db/schema.ts';
 import { loadGenerationConfig } from '../ai/image-generation.ts';
@@ -70,22 +71,7 @@ export async function readLayouts(): Promise<LayoutData> {
 }
 
 export async function readPublishing(): Promise<PublishingData> {
-  return {
-    contents: [],
-    videos: [],
-    assets: [],
-    snapshots: [],
-    batches: [],
-    receipts: [],
-    accounts: [],
-    recommendations: [],
-    storageReady: false,
-    aiReady: false,
-    uploadReady: false,
-    publishReady: false,
-    handoffReady: false,
-    message: '发布存储、AI 配置与平台发布服务待接入；本页仅准备内容，不会上传或发布。',
-  };
+  return usingDatabase(publishingData);
 }
 
 export async function readInbox(): Promise<InboxData> {

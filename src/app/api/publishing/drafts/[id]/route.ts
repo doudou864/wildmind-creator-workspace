@@ -1,10 +1,21 @@
-import { publishUpdateSchema } from '@/lib/publishing-model';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function PATCH(request: Request) {
+import { usingDatabase } from '@/lib/media-store';
+import { savePublishing } from '@/lib/publishing-store';
+import { serviceError } from '@/lib/api-response';
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    publishUpdateSchema.parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const input = await request.json();
+    const { id } = await context.params;
+    return Response.json(
+      await usingDatabase((db) =>
+        savePublishing(
+          db,
+          input,
+          id,
+          request.headers.has('if-match') ? Number(request.headers.get('if-match')) : undefined,
+        ),
+      ),
+    );
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('发布准备存储服务');
 }

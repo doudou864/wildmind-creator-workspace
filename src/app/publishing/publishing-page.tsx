@@ -388,7 +388,7 @@ export default function PublishingPage({
         recordId ? `/api/publishing/drafts/${encodeURIComponent(recordId)}` : '/api/publishing/drafts',
         {
           method: recordId ? 'PATCH' : 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...(meta ? { 'If-Match': String(meta.revision) } : {}) },
           keepalive: true,
           body: JSON.stringify(draft),
         },
@@ -706,6 +706,15 @@ export default function PublishingPage({
                           ? `${local[0].file.name} · ${(local[0].file.size / 1024 / 1024).toFixed(1)} MB · 尚未上传`
                           : currentVideo?.name}
                       </p>
+                      {currentVideo && !local.length && (
+                        <a
+                          className="button"
+                          href={`/api/publishing/media/${encodeURIComponent(currentVideo.id)}/file`}
+                          download={currentVideo.name}
+                        >
+                          下载成片
+                        </a>
+                      )}
                     </div>
                   ) : (
                     <Empty>尚未选择成片</Empty>
@@ -790,6 +799,9 @@ export default function PublishingPage({
                             {i + 1} · {a?.title ?? '素材缺失'}
                           </span>
                           <div>
+                            <a className="button" href={assetUrl(id)} download>
+                              下载图片
+                            </a>
                             <Button
                               aria-label={`第${i + 1}张前移`}
                               disabled={i === 0 || busy || locked}
@@ -867,6 +879,11 @@ export default function PublishingPage({
                       <div className="publish-cover-empty mono">{cover.ratio}</div>
                     )}
                     <span className="mono small">{cover.ratio}</span>
+                    {cover.asset && (
+                      <a className="button" href={assetUrl(cover.asset.id)} download>
+                        下载封面
+                      </a>
+                    )}
                     <p className="small">{cover.asset ? `已带出 · V${cover.asset.version}` : cover.reason}</p>
                   </div>
                 ))}
@@ -987,13 +1004,18 @@ export default function PublishingPage({
               {eligibleTemplates.map((template) => {
                 const p = platforms.find((p) => p.id === template.platformId)!;
                 const matches = snapshots.filter((s) => s.platform === p.id);
-                const disabled = busy || locked || !p.active || (draft.kind === 'layout' && matches.length !== 1);
+                const disabled =
+                  busy ||
+                  locked ||
+                  (draft.kind === 'layout' &&
+                    matches.length !== 1 &&
+                    !draft.settings.some((s) => s.platformId === p.id));
                 return (
                   <label
                     key={p.id}
                     title={
                       !p.active
-                        ? '平台尚未启用'
+                        ? '平台尚未启用，可先准备手动发布材料'
                         : draft.kind === 'layout' && matches.length !== 1
                           ? '需要唯一待发布确认稿'
                           : undefined
