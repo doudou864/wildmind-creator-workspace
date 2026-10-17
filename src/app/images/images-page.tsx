@@ -1,5 +1,7 @@
 'use client';
 import { ContentPicker } from '@/ui/content-picker';
+import { AutosaveStatus } from '@/ui/autosave-status';
+import type { SaveContext } from '@/ui/autosave-queue';
 import { useAutosave } from '@/ui/use-autosave';
 import { useEditSession } from '@/ui/use-edit-session';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
@@ -54,6 +56,8 @@ export default function ImagesPage({
   });
   const [draft, setDraft] = useState<ImageDraftInput>(blank);
   const [draftMeta, setDraftMeta] = useState<{ id: string } | null>(null);
+  const savedRecord = useRef<string | null>(null);
+  const editSession = useRef(0);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(
@@ -166,9 +170,12 @@ export default function ImagesPage({
       return;
     }
     editRevision.current++;
+    editSession.current++;
+    savedRecord.current = value === 'new' ? null : value.id;
     setUploadRevision(false);
     if (value === 'new') {
       setDraft(blank());
+      savedRecord.current = null;
       setDraftMeta(null);
     } else {
       const { id, updatedAt, ...input } = value;
@@ -225,37 +232,37 @@ export default function ImagesPage({
       setNotice('图片无法读取，请选择有效的 PNG 或 JPEG。');
     }
   }
-  async function saveDraft() {
-    if (!data.storageReady || busy || associationIssue) return;
+  async function saveDraft({ isCurrent }: SaveContext) {
+    if (!data.storageReady || associationIssue) return;
     const result = imageDraftSchema.safeParse(draft);
     if (!result.success) {
       setNotice('请先填写任务名称。');
       return;
     }
-    const submitted = editRevision.current;
-    setBusy(true);
+    const submittedSession = editSession.current;
+    const recordId = draftMeta?.id ?? savedRecord.current;
     try {
       const saved = await request<ImageDraft>(
-        draftMeta ? `/api/images/drafts/${encodeURIComponent(draftMeta.id)}` : '/api/images/drafts',
+        recordId ? `/api/images/drafts/${encodeURIComponent(recordId)}` : '/api/images/drafts',
         {
-          method: draftMeta ? 'PATCH' : 'POST',
+          method: recordId ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
           body: JSON.stringify(result.data),
         },
       );
+      if (submittedSession !== editSession.current) return;
+      savedRecord.current = saved.id;
       setDraftMeta({ id: saved.id });
-      const unchanged = submitted === editRevision.current;
+      const unchanged = isCurrent();
       setDirty(!unchanged);
-      setNotice(unchanged ? '草稿文字已保存；本地预览文件需单独上传。' : '提交时的草稿已保存，之后的编辑尚未保存。');
       await refresh();
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : '保存失败，当前填写内容保留。');
-    } finally {
-      setBusy(false);
+      throw e;
     }
   }
-  useAutosave(
-    JSON.stringify([draftMeta?.id, draft]),
+  const autosave = useAutosave(
+    JSON.stringify([editSession.current, draft]),
     dirty && data.storageReady && !busy && !associationIssue && !!draft.title.trim(),
     saveDraft,
   );
@@ -352,32 +359,29 @@ export default function ImagesPage({
     setNotice('已设为修改原图，填写修改要求后生成新版本；原图保留。');
   }
   async function saveMetadata() {
-    if (!metadata || !data.storageReady || busy) return;
+    if (!metadata || !data.storageReady) return;
     const { asset, ...fields } = metadata;
     const input = assetMetadataSchema.safeParse(fields);
     if (!input.success) {
       setNotice('请填写素材名称并选择用途。');
       return;
     }
-    setBusy(true);
     try {
       const result = await request<Asset>(`/api/images/assets/${encodeURIComponent(asset.id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
+        keepalive: true,
         body: JSON.stringify(input.data),
       });
       if (result.id !== asset.id || Object.entries(fields).some(([k, v]) => result[k as keyof Asset] !== v))
         throw new Error('素材信息保存结果未确认，请刷新核对。');
       setMetadata((current) => (current?.asset.id === result.id ? { ...current, asset: result } : current));
-      setNotice('素材用途与关联已保存。');
       await refresh();
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : '保存失败');
-    } finally {
-      setBusy(false);
+      throw e;
     }
   }
-  useAutosave(
+  const metadataAutosave = useAutosave(
     JSON.stringify(metadata),
     !!metadata &&
       data.storageReady &&
@@ -389,6 +393,7 @@ export default function ImagesPage({
   );
   return (
     <main className="workspace images-workspace">
+      <AutosaveStatus statuses={[autosave, metadataAutosave]} />
       <WorkspaceHeader current="/images" date={today} syncWindow={syncWindow} />
       <div className="modebar">
         <p>

@@ -1,6 +1,8 @@
 'use client';
 import Link from 'next/link';
 import { ContentPicker } from '@/ui/content-picker';
+import { AutosaveStatus } from '@/ui/autosave-status';
+import type { SaveContext } from '@/ui/autosave-queue';
 import { useAutosave } from '@/ui/use-autosave';
 import { useEditSession } from '@/ui/use-edit-session';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
@@ -89,6 +91,8 @@ export default function PublishingPage({
     contentId: initialContent,
   }));
   const [meta, setMeta] = useState<PublishBatch | null>(null);
+  const savedRecord = useRef<string | null>(null);
+  const editSession = useRef(0);
   const [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState('');
@@ -257,9 +261,11 @@ export default function PublishingPage({
     action();
   }
   function fresh(kind: PublishKind) {
+    editSession.current++;
     clearMedia();
     setDraft(newPublishDraft(kind));
     setMeta(null);
+    savedRecord.current = null;
     setDirty(false);
     setInstruction('');
     setNotice('');
@@ -345,8 +351,9 @@ export default function PublishingPage({
     }
   }
   async function upload() {
-    if (!data.storageReady || !draft.contentId || !local.length || busy || locked) return;
-    setBusy(true);
+    if (!data.storageReady || !draft.contentId || !local.length || locked) return;
+    const submittedSession = editSession.current;
+    const uploadedSequence = sequence.current;
     try {
       const form = new FormData();
       form.set('metadata', JSON.stringify({ kind: draft.kind, contentId: draft.contentId }));
@@ -355,50 +362,52 @@ export default function PublishingPage({
         method: 'POST',
         body: form,
       });
-      setDraft((d) => ({ ...d, videoId: result.videoId ?? d.videoId, imageIds: [...d.imageIds, ...result.assetIds] }));
-      clearMedia();
+      if (submittedSession !== editSession.current) return;
+      setDraft((d) =>
+        d.contentId === draft.contentId
+          ? { ...d, videoId: result.videoId ?? d.videoId, imageIds: [...d.imageIds, ...result.assetIds] }
+          : d,
+      );
+      if (sequence.current === uploadedSequence) clearMedia();
       await refresh();
       setDirty(true);
       setNotice('文件已保存，内容会自动保存。');
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : '上传失败，文件预览已保留。');
-    } finally {
-      setBusy(false);
+      throw e;
     }
   }
-  async function save() {
-    if (!data.storageReady || busy || locked || local.length) return;
+  async function save({ isCurrent }: SaveContext) {
+    if (!data.storageReady || locked || local.length) return;
     if (!publishDraftSchema.safeParse(draft).success) {
-      setNotice('发布内容格式有误，请检查标题、话题标签和时间。');
-      return;
+      throw new Error('发布内容格式有误，请检查标题、话题标签和时间。');
     }
-    setBusy(true);
+    const submittedSession = editSession.current;
+    const recordId = meta?.id ?? savedRecord.current;
     try {
       const result = await request<PublishBatch>(
-        meta ? `/api/publishing/drafts/${encodeURIComponent(meta.id)}` : '/api/publishing/drafts',
+        recordId ? `/api/publishing/drafts/${encodeURIComponent(recordId)}` : '/api/publishing/drafts',
         {
-          method: meta ? 'PATCH' : 'POST',
+          method: recordId ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
           body: JSON.stringify(draft),
         },
       );
+      if (submittedSession !== editSession.current) return;
+      savedRecord.current = result.id;
       setMeta(result);
-      setDraft(result.draft);
-      setDirty(false);
-      setNotice('已自动保存，尚未发布。');
+      setDirty(!isCurrent());
       await refresh();
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : '保存失败，填写内容已保留。');
-    } finally {
-      setBusy(false);
+      throw e;
     }
   }
-  useAutosave(
-    JSON.stringify([draft, meta?.id]),
+  const autosave = useAutosave(
+    JSON.stringify([editSession.current, draft]),
     dirty && data.storageReady && !busy && !locked && !local.length && !!draft.contentId,
     save,
   );
-  useAutosave(
+  const mediaAutosave = useAutosave(
     JSON.stringify([local.map((item) => [item.file.name, item.file.size, item.file.lastModified]), draft.contentId]),
     !!local.length && data.storageReady && !!draft.contentId && !busy && !locked && !mediaLoading,
     upload,
@@ -528,6 +537,8 @@ export default function PublishingPage({
     }
   }
   function loadBatch(batch: PublishBatch) {
+    editSession.current++;
+    savedRecord.current = batch.id;
     clearMedia();
     setDraft(structuredClone(batch.draft));
     setMeta(batch);
@@ -537,6 +548,7 @@ export default function PublishingPage({
   }
   return (
     <main className="workspace publishing-workspace">
+      <AutosaveStatus statuses={[autosave, mediaAutosave]} />
       <WorkspaceHeader current="/publishing" date={today} syncWindow={syncWindow} />
       <div className="modebar">
         <span className="eyebrow">05 · PUBLISHING DESK</span>
@@ -628,6 +640,7 @@ export default function PublishingPage({
                       loadBatch(existing);
                       return;
                     }
+                    editSession.current++;
                     setDraft({
                       ...newPublishDraft(draft.kind),
                       contentId: id,
@@ -638,6 +651,7 @@ export default function PublishingPage({
                       },
                     });
                     setMeta(null);
+                    savedRecord.current = null;
                     setDirty(true);
                     setInstruction('');
                     void refresh();

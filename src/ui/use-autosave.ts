@@ -1,35 +1,31 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createAutosaveQueue, type SaveContext, type SaveStatus } from './autosave-queue';
 
-// Debounce typing; a failed write waits for another edit instead of looping.
-export function useAutosave(key: string, enabled: boolean, save: () => Promise<unknown>) {
-  const latest = useRef({ key, enabled, save });
-  latest.current = { key, enabled, save };
-  const attempted = useRef<string | null>(null);
-  const running = useRef(false);
-  async function persist() {
-    const current = latest.current;
-    if (!current.enabled || running.current || attempted.current === current.key) return;
-    attempted.current = current.key;
-    running.current = true;
-    try {
-      await current.save();
-    } finally {
-      running.current = false;
-    }
-  }
-  const persistRef = useRef(persist);
-  persistRef.current = persist;
+export function useAutosave(key: string, enabled: boolean, save: (context: SaveContext) => Promise<unknown>) {
+  const [status, setStatus] = useState<SaveStatus>({ state: 'idle' });
+  const queue = useRef<ReturnType<typeof createAutosaveQueue> | null>(null);
+  if (!queue.current) queue.current = createAutosaveQueue(setStatus);
+  queue.current.update({ key, enabled, save });
   useEffect(() => {
-    if (!enabled || attempted.current === key) return;
-    const timer = window.setTimeout(() => void persistRef.current(), 400);
+    if (!enabled) return;
+    const timer = window.setTimeout(() => void queue.current!.flush(), 400);
     return () => window.clearTimeout(timer);
   }, [key, enabled]);
-  // Navigating away flushes the pending edit without asking the user to save.
-  useEffect(
-    () => () => {
-      void persistRef.current();
-    },
-    [],
-  );
+  useEffect(() => {
+    const flush = () => {
+      void queue.current!.flush();
+    };
+    const hide = () => {
+      if (document.visibilityState === 'hidden') flush();
+    };
+    window.addEventListener('pagehide', flush);
+    document.addEventListener('visibilitychange', hide);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      document.removeEventListener('visibilitychange', hide);
+      flush();
+    };
+  }, []);
+  return status;
 }

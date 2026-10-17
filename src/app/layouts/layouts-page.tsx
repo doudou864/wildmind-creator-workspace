@@ -1,9 +1,11 @@
 'use client';
 import Link from 'next/link';
 import { ContentPicker } from '@/ui/content-picker';
+import { AutosaveStatus } from '@/ui/autosave-status';
+import type { SaveContext } from '@/ui/autosave-queue';
 import { useAutosave } from '@/ui/use-autosave';
 import { useEditSession } from '@/ui/use-edit-session';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { Asset } from '@/lib/image-model';
 import {
   canSendLayout,
@@ -52,6 +54,8 @@ export default function LayoutsPage({
   const [document, setDocument] = useState<LayoutDocument | null>(
     () => initialData.documents.find((d) => d.id === initialLayout) ?? null,
   );
+  const savedRecord = useRef<string | null>(null);
+  const editSession = useRef(0);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [feedback, setFeedback] = useState('');
@@ -79,8 +83,10 @@ export default function LayoutsPage({
     },
   );
   function reset() {
+    editSession.current++;
     setContentId(initialContent);
     setSource('');
+    savedRecord.current = null;
     setDocument(null);
     setDirty(false);
     setFeedback('');
@@ -96,6 +102,8 @@ export default function LayoutsPage({
       setFeedback('请把标题放在第一行，正文从第二行开始；标题最多 200 字。');
       return;
     }
+    editSession.current++;
+    savedRecord.current = null;
     setDocument(draft);
     setDirty(true);
     setFeedback('已在本页建立三份独立稿件。抖音版保留完整原文，请自行精简。');
@@ -132,38 +140,38 @@ export default function LayoutsPage({
     }
     setPicker(null);
   }
-  async function save() {
-    if (
-      !document ||
-      !data.contents.some((c) => c.id === document.contentId && c.form === '图文') ||
-      busy ||
-      !data.storageReady
-    )
+  async function save({ isCurrent }: SaveContext) {
+    if (!document || !data.contents.some((c) => c.id === document.contentId && c.form === '图文') || !data.storageReady)
       return;
-    setBusy(true);
     setFeedback('');
+    const submittedSession = editSession.current;
+    const recordId = document.id ?? savedRecord.current;
     try {
       const payload = layoutPayload(document);
       layoutSaveSchema.parse(payload);
       const saved = await request<LayoutDocument>(
-        document.id ? `/api/layouts/${encodeURIComponent(document.id)}` : '/api/layouts',
+        recordId ? `/api/layouts/${encodeURIComponent(recordId)}` : '/api/layouts',
         {
-          method: document.id ? 'PATCH' : 'POST',
+          method: recordId ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
+          keepalive: true,
           body: JSON.stringify(payload),
         },
       );
-      setDocument(saved);
-      setDirty(false);
-      setFeedback('稿件已保存。');
+      if (submittedSession !== editSession.current) return;
+      savedRecord.current = saved.id;
+      setDocument((current) => (current ? { ...current, id: saved.id, updatedAt: saved.updatedAt } : current));
+      setDirty(!isCurrent());
       await refresh();
     } catch (e) {
-      setFeedback(e instanceof Error ? e.message : '保存失败，当前编辑已保留。');
-    } finally {
-      setBusy(false);
+      throw e;
     }
   }
-  useAutosave(JSON.stringify(document), dirty && !!document && data.storageReady && !busy, save);
+  const autosave = useAutosave(
+    JSON.stringify([editSession.current, document && layoutPayload(document)]),
+    dirty && !!document && data.storageReady && !busy,
+    save,
+  );
   async function act(platform: LayoutPlatform, action: LayoutAction) {
     if (!document?.id || dirty || busy) return;
     setBusy(true);
@@ -205,6 +213,7 @@ export default function LayoutsPage({
     .sort((a, b) => Number(b.selected) - Number(a.selected) || b.version - a.version);
   return (
     <main className="workspace layouts-workspace">
+      <AutosaveStatus statuses={[autosave]} />
       <WorkspaceHeader current="/layouts" date={today} syncWindow={syncWindow} />
       <div className="modebar">
         <span className="eyebrow">04 · LAYOUT STUDIO</span>
@@ -641,6 +650,8 @@ export default function LayoutsPage({
                   onClick={() => {
                     setLibrary(false);
                     protect(() => {
+                      editSession.current++;
+                      savedRecord.current = d.id;
                       setDocument(structuredClone(d));
                       setContentId(d.contentId);
                       setSource(d.source);
