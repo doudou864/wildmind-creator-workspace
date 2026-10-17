@@ -1,14 +1,15 @@
+import { usingDatabase } from '@/lib/media-store';
+import { saveLayout } from '@/lib/layout-store';
+import { serviceError } from '@/lib/api-response';
 import { readLayouts } from '@/lib/workspace-service';
-import { layoutSaveSchema } from '@/lib/layout-model';
-import { invalid, unavailable } from '@/lib/api-response';
 export async function GET() {
   return Response.json(await readLayouts());
 }
 export async function POST(request: Request) {
   try {
-    layoutSaveSchema.parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const input = await request.json();
+    return Response.json(await usingDatabase((db) => saveLayout(db, input)));
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('排版稿存储服务');
 }

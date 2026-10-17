@@ -562,6 +562,39 @@ export default function LayoutsPage({
                           : '内容已齐备，请预览并人工确认。'}
                 </div>
                 <div className="layout-confirm-buttons">
+                  {v && (
+                    <Button
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(
+                            [
+                              v.title,
+                              ...v.blocks
+                                .filter((b) => b.type !== 'image')
+                                .map((b) =>
+                                  b.type === 'heading'
+                                    ? `## ${b.text}`
+                                    : b.type === 'quote'
+                                      ? `> ${b.text}`
+                                      : b.type === 'list'
+                                        ? b.text
+                                            .split('\n')
+                                            .map((line) => `- ${line}`)
+                                            .join('\n')
+                                        : b.text,
+                                ),
+                            ].join('\n\n'),
+                          );
+                          setFeedback('已复制标题和正文；图片请从素材库下载后上传。');
+                        } catch {
+                          setFeedback('复制失败，请在预览中手动选取正文。');
+                        }
+                      }}
+                    >
+                      复制标题与正文
+                    </Button>
+                  )}
+
                   <Button
                     disabled={!canSend}
                     title={!data.handoffReady ? '发布交接服务未接入' : undefined}

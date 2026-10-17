@@ -1,5 +1,5 @@
 import { usingDatabase, usedImages } from './media-store.ts';
-import { assets, contents, topics, imageDrafts, imageGenerations } from '../db/schema.ts';
+import { assets, contents, topics, imageDrafts, imageGenerations, layouts } from '../db/schema.ts';
 import { loadGenerationConfig } from '../ai/image-generation.ts';
 import { shanghaiDate } from '../browser/policy.ts';
 import { desc } from 'drizzle-orm';
@@ -58,15 +58,15 @@ export async function readImages(): Promise<ImageData> {
 }
 
 export async function readLayouts(): Promise<LayoutData> {
-  return {
-    documents: [],
-    contents: [],
-    assets: [],
-    storageReady: false,
-    aiReady: false,
-    handoffReady: false,
-    message: '稿件保存、AI 修改与确认稿交接待接入；未保存编辑仅在当前窗口临时保留，关闭或刷新窗口将丢失。',
-  };
+  return usingDatabase((db) => ({
+    documents: db.db.select().from(layouts).all(),
+    contents: db.db.select().from(contents).all(),
+    assets: db.db.select().from(assets).all(),
+    storageReady: true,
+    aiReady: true,
+    handoffReady: true,
+    message: '三个版本独立编辑；每次确认保存快照，送入发布准备。',
+  }));
 }
 
 export async function readPublishing(): Promise<PublishingData> {

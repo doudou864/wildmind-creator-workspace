@@ -1,10 +1,12 @@
-import { layoutUpdateSchema } from '@/lib/layout-model';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function PATCH(request: Request) {
+import { usingDatabase } from '@/lib/media-store';
+import { saveLayout } from '@/lib/layout-store';
+import { serviceError } from '@/lib/api-response';
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    layoutUpdateSchema.parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const input = await request.json();
+    const { id } = await context.params;
+    return Response.json(await usingDatabase((db) => saveLayout(db, input, id)));
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('排版稿存储服务');
 }

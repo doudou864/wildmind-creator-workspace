@@ -1,10 +1,12 @@
-import { layoutActionSchema } from '@/lib/layout-model';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function POST(request: Request) {
+import { usingDatabase } from '@/lib/media-store';
+import { actOnLayout } from '@/lib/layout-store';
+import { serviceError } from '@/lib/api-response';
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    layoutActionSchema.parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const input = await request.json();
+    const { id } = await context.params;
+    return Response.json(await usingDatabase((db) => actOnLayout(db, id, input)));
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('排版确认、修改与交接服务');
 }
