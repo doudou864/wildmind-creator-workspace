@@ -1,3 +1,4 @@
 @import 'tailwindcss';
 @import '../ui/tokens.css';
 @import '../ui/workspace.css';
+@import '../ui/topics.css';

@@ -7,7 +7,7 @@ import { dateLabel, number, signed } from '@/lib/format';
 import { Button, Card, Dialog, Empty, Ratio, Segmented } from '@/ui/components';
 import { Chart } from '@/ui/charts';
 
-const laterPages = ['选题中心', '生图中心', '排版中心', '发布中心', '互动收件箱', '商单列表'];
+import { WorkspaceHeader } from '@/ui/workspace-header';
 type Modal = { type: 'source'; platform: Platform } | { type: 'work'; work: Work } | { type: 'deals' } | null;
 
 export default function Dashboard({ config, today }: { config: WorkspaceConfig; today: string }) {
@@ -23,7 +23,6 @@ export default function Dashboard({ config, today }: { config: WorkspaceConfig; 
   const metric = metrics.find(item => item.id === metricId)!;
   const data = demoMode ? demo[platformId] : undefined;
   const displayDate = demoMode ? DEMO_DATE : today;
-  const weekday = new Date(`${displayDate}T12:00:00+08:00`).toLocaleDateString('en-US', { weekday: 'short', timeZone: 'Asia/Shanghai' }).toUpperCase();
   const days = useMemo(() => {
     if (!data) return [];
     const start = new Date(`${displayDate}T00:00:00Z`);
@@ -70,7 +69,7 @@ export default function Dashboard({ config, today }: { config: WorkspaceConfig; 
     dialogContent = <><Empty>暂无商单线索</Empty><p className="muted">互动收件箱尚未接入。接入后按待处理、跟进中、已完成三种状态汇总。</p></>;
   }
   return <main className="workspace"><h1 className="sr-only">野生脑洞总控台</h1>
-    <header className="topbar"><a className="brand" href="/" aria-label="WILDMIND 野生脑洞工作台首页"><strong>WILDMIND</strong><span>野生脑洞 · 工作台</span></a><nav aria-label="工作台板块"><Button className="nav-key current" aria-current="page">总控台</Button>{laterPages.map(name => <Button key={name} className="nav-key" disabled title="后续开发，本次仅实现总控台">{name}</Button>)}</nav><div className="clock mono"><time dateTime={displayDate}>{displayDate} {weekday}</time><span>SYNC {parameters.syncWindow}</span></div></header>
+    <WorkspaceHeader current="/" date={displayDate} syncWindow={parameters.syncWindow} />
     <div className="modebar"><p><span className="mode-label mono">{demoMode ? 'DEMO' : 'LOCAL'}</span>{demoMode ? '演示数据 · 仅用于界面预览，未连接平台' : '暂无真实数据 · 等待接入数据底座'}</p><Button className="text-button" onClick={() => { setDemoMode(!demoMode); setModal(null); }}>{demoMode ? '查看无数据状态' : '返回演示数据'} <span aria-hidden="true">↗</span></Button></div>
     <section className="card health" aria-label="数据健康"><div className="health-heading"><h2 className="eyebrow">00 · SOURCE</h2><span className="eyebrow">最近一次成功更新 · 点击查看日志</span></div><div className="health-grid">{healthPlatforms.map(item => {
       const source = demoMode ? demo[item.id] : undefined;

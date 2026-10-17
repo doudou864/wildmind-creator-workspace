@@ -1,0 +1,106 @@
+[
+  {
+    "name": "默认 20 个候选、3 个探索位、4 个 FIRE",
+    "pass": true
+  },
+  {
+    "name": "1440 宽度无横向溢出",
+    "pass": true
+  },
+  {
+    "name": "真实 AI 生成按钮禁用并说明未接入",
+    "pass": true
+  },
+  {
+    "name": "搜索无结果展示空状态",
+    "pass": true
+  },
+  {
+    "name": "渠道筛选得到 6 条匹配来源",
+    "pass": true
+  },
+  {
+    "name": "探索位筛选与热度待验证说明",
+    "pass": true
+  },
+  {
+    "name": "FIRE 筛选保留理由与 D21 倍数",
+    "pass": true
+  },
+  {
+    "name": "样本不足仍有 20 候选但无 FIRE",
+    "pass": true
+  },
+  {
+    "name": "低样本选中保存非 FIRE 定格",
+    "pass": true
+  },
+  {
+    "name": "样本增加不改写已选非 FIRE",
+    "pass": true
+  },
+  {
+    "name": "移回后重选仍保留首次定格",
+    "pass": true
+  },
+  {
+    "name": "达门槛选中保存 FIRE 与具体理由",
+    "pass": true
+  },
+  {
+    "name": "样本场景降低保留已选 FIRE 记录",
+    "pass": true
+  },
+  {
+    "name": "刷新恢复已选清单",
+    "pass": true
+  },
+  {
+    "name": "跳过进入独立列表",
+    "pass": true
+  },
+  {
+    "name": "恢复候选不制造定格记录",
+    "pass": true
+  },
+  {
+    "name": "渠道文档展示当前配置且不伪报编辑",
+    "pass": true
+  },
+  {
+    "name": "关闭渠道文档恢复键盘焦点",
+    "pass": true
+  },
+  {
+    "name": "无数据预览清空列表但保留演示选择",
+    "pass": true
+  },
+  {
+    "name": "总控台回归：三图八作品与正确导航",
+    "pass": true
+  },
+  {
+    "name": "跨页面导航保留选题记录",
+    "pass": true
+  },
+  {
+    "name": "损坏记录报错并保持原值",
+    "pass": true
+  },
+  {
+    "name": "取消重置不清空记录",
+    "pass": true
+  },
+  {
+    "name": "明确确认后恢复干净演示状态",
+    "pass": true
+  },
+  {
+    "name": "保存失败明确提示且不伪报落盘",
+    "pass": true
+  },
+  {
+    "name": "1728 宽度无横向溢出且三栏完整",
+    "pass": true
+  }
+]

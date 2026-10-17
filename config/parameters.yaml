@@ -12,3 +12,7 @@ anomalyHigh: 3
 anomalyLow: 0.3
 syncWindow: '10:32–10:45'
 retryTimes: ['11:00', '11:30']
+topicCandidateCount: 20
+topicExploreMin: 2
+topicExploreMax: 3
+topicFireMinimum: 20

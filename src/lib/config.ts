@@ -16,6 +16,8 @@ const parametersSchema = z.object({
   chartRows: z.number().int().positive().max(12), baselineSamples: z.number().int().positive(),
   baselineMinimum: z.number().int().positive(), anomalyHigh: z.number().positive(), anomalyLow: z.number().positive(),
   syncWindow: z.string(), retryTimes: z.array(z.string()),
+  topicCandidateCount: z.number().int().positive(), topicExploreMin: z.number().int().nonnegative(),
+  topicExploreMax: z.number().int().nonnegative(), topicFireMinimum: z.number().int().positive(),
 });
 export type Platform = z.infer<typeof platformSchema>;
 export type Metric = z.infer<typeof metricSchema>;
@@ -29,6 +31,7 @@ export async function loadConfig(): Promise<WorkspaceConfig> {
   const { metrics } = z.object({ metrics: z.array(metricSchema).min(1) }).parse(metricFile);
   const parameters = parametersSchema.parse(parameterFile);
   if (!parameters.timeRanges.includes(parameters.defaultRange)) throw new Error('defaultRange 必须包含在 timeRanges 中');
+  if (parameters.topicExploreMin > parameters.topicExploreMax || parameters.topicExploreMax >= parameters.topicCandidateCount) throw new Error('探索位范围必须有效且小于候选总数');
   for (const list of [platforms, metrics]) {
     if (new Set(list.map(item => item.id)).size !== list.length) throw new Error('配置 id 不允许重复');
   }

@@ -19,6 +19,9 @@ export function Ratio({ value, parameters }: { value: number | null; parameters:
   return <span className="ratio" aria-label={`${number(value, 1)} 倍同龄基线`}><b className="mono">{number(value, 1)}</b><span className="ratio-cells" aria-hidden="true">{Array.from({ length: parameters.ratioCells }, (_, i) => <i key={i} className={i < lit ? (value >= parameters.hitThreshold ? 'lit hit' : 'lit') : ''} />)}</span></span>;
 }
 export function Empty({ children }: { children: ReactNode }) { return <p className="empty">{children}</p>; }
+export function Tag({ children, outline = false }: { children: ReactNode; outline?: boolean }) {
+  return <span className={`tag${outline ? ' tag-outline' : ''}`}>{children}</span>;
+}
 export function Dialog({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);
   useLayoutEffect(() => {
