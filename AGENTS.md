@@ -14,7 +14,7 @@
 | 数据库 | SQLite（WAL）+ Drizzle ORM + better-sqlite3 |
 | 配置 | YAML + Zod 校验 |
 | 浏览器 | ego lite（`ego-browser`）；备用 Playwright + Chrome |
-| AI | Codex SDK（ChatGPT 登录）；备用 OpenAI API Key |
+| AI | Codex CLI / SDK（本机 ChatGPT 登录）；生图只走套餐额度，不用 API |
 | 定时 | macOS launchd |
 | 测试 | Vitest |
 
