@@ -18,8 +18,18 @@ describe('真实后台登录检查', () => {
   });
   test('没实测过登录后页面不能猜成功', async () => {
     const config = (await loadBrowserConfig()).find((p) => p.id === 'channels')!;
-    expect(detectLogin(config, config.url, '首页 数据中心').state).toBe('unknown');
+    expect(detectLogin({ ...config, loggedIn: [], loggedInPath: null }, config.url, '首页 数据中心').state).toBe(
+      'unknown',
+    );
     expect(detectLogin(config, config.url, '登录视频号助手').state).toBe('logged_out');
+  });
+  test('视频号须同时核对后台地址和已实测的账号区域', async () => {
+    const config = (await loadBrowserConfig()).find((p) => p.id === 'channels')!;
+    expect(detectLogin(config, 'https://channels.weixin.qq.com/platform', '视频号ID: 关注者 昨日数据').state).toBe(
+      'logged_in',
+    );
+    expect(detectLogin(config, config.url, '登录视频号助手 微信快捷登录').state).toBe('logged_out');
+    expect(detectLogin(config, 'https://channels.weixin.qq.com/platform', '昨日数据').state).toBe('unknown');
   });
   test('控制权/CLI错误时停止后续浏览，不自动重试', async () => {
     const scripts: string[] = [];

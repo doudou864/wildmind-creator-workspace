@@ -22,10 +22,10 @@
   },
   {
     "platformId": "channels",
-    "state": "logged_out",
-    "reason": "后台显示登录入口，请登录",
-    "checkedAt": "2026-10-17T09:59:01.121Z",
-    "statePath": null
+    "state": "logged_in",
+    "reason": "已核实后台身份区域与后台地址",
+    "checkedAt": "2026-10-17T10:25:37.903Z",
+    "statePath": "data/browser/channels.json"
   },
   {
     "platformId": "youtube",

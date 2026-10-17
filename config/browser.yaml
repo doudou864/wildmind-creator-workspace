@@ -21,9 +21,9 @@ platforms:
   - id: channels
     url: https://channels.weixin.qq.com/
     domains: [channels.weixin.qq.com]
-    loggedIn: []
+    loggedIn: ["视频号ID:", 关注者, 昨日数据]
     loggedOut: [登录视频号助手]
-    loggedInPath: null
+    loggedInPath: /platform
   - id: youtube
     url: https://studio.youtube.com/
     domains: [youtube.com, google.com]

@@ -7,12 +7,13 @@
 - 真实 `data/workspace.db` 连续执行迁移成功，后续再次迁移仍保留 5 条账号检查记录。
 - 真实 `config/metrics.yaml` 临时新增 `foundation_acceptance_test`，不改代码即被 loadConfig 读取；finally 恢复原文件，再读确认测试指标消失。
 - 真实 `data/backups/` 连续生成超过 7 份后只保留 7 份。测试数据库恢复读取验证 WAL 中的数据也在备份里。
-- 实际 ego 后台：抖音、小红书、B站、YouTube 检查为已登录；视频号为未登录。证据摘要在 foundation-login.json，不含 Cookie 或账号私密正文。
-- 登录入口的 openLogin 实现实测打开抖音后台，已有登录时无需再扫码。四个平台登录资料写入 `data/browser/*.json`，权限 600，目录 700；不进 Git。
+- 实际 ego 后台：抖音、小红书、B站、YouTube 检查为已登录；视频号最初未登录，随后通过微信快捷登录成功并通过重新打开后的检查。证据摘要在 foundation-login.json，不含 Cookie 或账号私密正文。
+- 登录入口的 openLogin 实现实测打开抖音后台，已有登录时无需再扫码。五个平台登录资料写入 `data/browser/*.json`，权限 600，目录 700；不进 Git。
+
+- 视频号补验收已完成：真实点击“微信快捷登录”，进入 `/platform`，核对视频号 ID、关注者与昨日数据区域；规则和回归测试已补齐，重新打开仍识别已登录。
 
 ## 尚需用户参与的验收
 
-- 视频号当前登录页，尚未实测登录后的页面标记；该平台配置空 positive，不猜“已登录”。用户登录后需核对一次真实页面再填配置。
 - 本轮没有退出现有账号再扫码，也没有重启用户电脑。重启后运行 `npm run browser:check -- douyin`，确认仍为已登录；如平台已过期，用 `npm run browser:login -- douyin` 重新登录。
 - 当前业务 CRUD/素材存储/AI/采集仍未接入。自动保存输入回归使用隔离请求，不能把数据库建好等同于页面已经能够保存业务资料。
 
