@@ -128,6 +128,7 @@ export const crawlLogs = sqliteTable(
       reusedScreenshots: boolean;
       pages: number;
       aiCalls: number;
+      aiReads?: number; // Older telemetry did not separate image reads from text judgments.
       attention: boolean;
     }>('telemetry'),
     updatedAt: updatedAt(),

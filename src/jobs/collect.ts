@@ -1,3 +1,5 @@
+import { collectYoutube } from '../collectors/youtube/collector.ts';
+import { collectChannels } from '../collectors/channels/collector.ts';
 import { telemetry } from './telemetry.ts';
 import { mkdir } from 'node:fs/promises';
 import { acquireJobLock } from './lock.ts';
@@ -11,6 +13,8 @@ import { loadBrowserConfig } from '../browser/config.ts';
 import { confirmationDeadline, pause, loadBrowserPolicy, randomBetween } from '../browser/policy.ts';
 import { CodexJudgment } from '../ai/structured.ts';
 import { loadDouyinConfig } from '../collectors/douyin/config.ts';
+import { collectXiaohongshu } from '../collectors/xiaohongshu/collector.ts';
+import { collectBilibili } from '../collectors/bilibili/collector.ts';
 import { collectDouyin } from '../collectors/douyin/collector.ts';
 import { readState, writeState } from '../collectors/state.ts';
 import { startCrawl, finishCrawl } from './crawl-log.ts';
@@ -39,7 +43,13 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
     }
     if (mode === 'scheduled' && readState(database, 'browser:paused')?.paused) return;
     const schedule = await loadSchedule();
-    const collectors = new Map([[(await loadDouyinConfig()).platformId, collectDouyin]]);
+    const collectors = new Map<string, (...args: Parameters<typeof collectDouyin>) => Promise<object>>([
+      [(await loadDouyinConfig()).platformId, collectDouyin],
+      ['bilibili', collectBilibili],
+      ['xiaohongshu', collectXiaohongshu],
+      ['channels', collectChannels],
+      ['youtube', collectYoutube],
+    ]);
     const now = new Date();
     const date = shanghaiDate(now);
     const key = `schedule:${date}`;
@@ -69,6 +79,9 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
           try {
             await collector(database, new CollectionSession(spaceId, page), new CodexJudgment(), paths);
             await finishCrawl(database, id, { status: 'success', archivePaths: paths });
+            const current = readState(database, key) ?? state;
+            const prior = Array.isArray(current.successfulPlatforms) ? (current.successfulPlatforms as string[]) : [];
+            writeState(database, key, { ...current, successfulPlatforms: [...new Set([...prior, platformId])] });
           } catch (error) {
             await finishCrawl(database, id, {
               status: 'failed',
@@ -85,7 +98,10 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
       mode === 'scheduled' ? dueSlot(now, Number(state.chosen), schedule.retries, attempted, !!state.succeeded) : mode;
     if (!slot) return;
     const pending = pendingAttention(database);
-    const successful = new Set(Array.isArray(state.successfulPlatforms) ? (state.successfulPlatforms as string[]) : []);
+    const refreshed = readState(database, key) ?? state;
+    const successful = new Set(
+      Array.isArray(refreshed.successfulPlatforms) ? (refreshed.successfulPlatforms as string[]) : [],
+    );
     const ids =
       mode === 'resume'
         ? pending.filter((x) => x.kind !== 'confirmation').map((x) => x.platformId)
@@ -155,7 +171,10 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
         writeState(database, 'browser:retry-space', { id: activeSpace });
         const reason = error instanceof Error ? error.message : '采集失败';
         if (error instanceof AttentionRequired) telemetry()!.attention = true;
-        if (error instanceof AttentionRequired && !keepForConfirmation)
+        if (
+          error instanceof AttentionRequired &&
+          !pendingAttention(database).some((item) => item.platformId === id && item.kind === 'confirmation')
+        )
           requireAttention(database, { platformId: id, kind: error.kind, reason, spaceId: activeSpace, page: 'p1' });
         await finishCrawl(database, crawlId, { status: 'failed', reason, archivePaths: paths });
         console.error(`${id}：${reason}`);

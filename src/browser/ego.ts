@@ -74,8 +74,8 @@ async function navigate(page){
 function verified(o){return new URL(o.url).origin===new URL(cfg.url).origin && cfg.loggedInPath && new URL(o.url).pathname.includes(cfg.loggedInPath) && cfg.loggedIn.length>0 && o.positive.length===cfg.loggedIn.length && !o.negative.length && !(o.risk?.length);}
 async function observe(page){
  // Give automatic login redirects time to finish; only return booleans/URL, never page text.
- try{await page.waitForFunction((c)=>c.loggedIn.length>0 && c.loggedIn.every(m=>document.body.innerText.includes(m)),cfg,{timeout:10000});}catch{}
- const observed=await page.evaluate(c=>({url:location.href,positive:c.loggedIn.filter(m=>document.body.innerText.includes(m)),negative:c.loggedOut.filter(m=>document.body.innerText.includes(m)),risk:c.riskMarkers.filter(m=>document.body.innerText.includes(m))}),cfg);
+ try{await page.waitForFunction((c)=>{const text=[document.body.innerText,...Array.from(document.querySelectorAll('iframe')).map(f=>{try{return f.contentDocument?.body?.innerText??'';}catch{return '';}})].join(' ');return c.loggedIn.length>0 && c.loggedIn.every(m=>text.includes(m));},cfg,{timeout:10000});}catch{}
+ const observed=await page.evaluate(c=>{const text=[document.body.innerText,...Array.from(document.querySelectorAll('iframe')).map(f=>{try{return f.contentDocument?.body?.innerText??'';}catch{return '';}})].join(' ');return {url:location.href,positive:c.loggedIn.filter(m=>text.includes(m)),negative:c.loggedOut.filter(m=>text.includes(m)),risk:c.riskMarkers.filter(m=>text.includes(m))};},cfg);
  return observed;
 }
 `;

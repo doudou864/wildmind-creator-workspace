@@ -1,0 +1,27 @@
+# 用户批准临时截图；CSV 下载修复另列待办。
+platformId: youtube
+contentUrls:
+  - https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/videos/upload
+  - https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/videos/short?filter=%5B%5D&sort=%7B%22columnType%22%3A%22date%22%2C%22sortOrder%22%3A%22DESCENDING%22%7D
+contentReady: 'ytcp-video-row >> nth=0'
+rowSelector: ytcp-video-row
+titleSelector: '#video-title'
+dateSelector: '.tablecell-date'
+dashboardUrl: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA
+dashboardReady: 'text="当前订阅人数"'
+reportReady: 'loc=role:button[name="在表格中添加指标列"]'
+viewport: {width: 3000, height: 1200}
+maxScreens: 15
+matchWindowDays: 2
+historyRange: [21, 30]
+aliases:
+  缩略图展示次数: 展示次数
+  订阅人数: 订阅人数变化
+  观看时长（小时）: 观看时长小时
+  添加的评论数: 评论
+  分享数: 分享
+accountAliases:
+  当前订阅人数: 粉丝总数
+  订阅总数: 粉丝总数
+reportScroll: html
+reportUrl: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/analytics/tab-overview/period-default/explore?entity_type=CHANNEL&entity_id=UCNRZf29PvGrv1puttSISTpA&time_period=4_weeks&explore_type=TABLE_AND_CHART&metrics_computation_type=DELTA&metric=AVERAGE_WATCH_TIME&granularity=DAY&t_metrics=AVERAGE_WATCH_TIME&t_metrics=AVERAGE_WATCH_PERCENTAGE&t_metrics=RATINGS_LIKES&t_metrics=COMMENTS&t_metrics=SHARINGS&t_metrics=EXTERNAL_VIEWS&t_metrics=EXTERNAL_WATCH_TIME&t_metrics=SUBSCRIBERS_NET_CHANGE&t_metrics=VIDEO_THUMBNAIL_IMPRESSIONS&t_metrics=VIDEO_THUMBNAIL_IMPRESSIONS_VTR&v_metrics=EXTERNAL_VIEWS&v_metrics=EXTERNAL_WATCH_TIME&v_metrics=SUBSCRIBERS_NET_CHANGE&v_metrics=VIDEO_THUMBNAIL_IMPRESSIONS&v_metrics=VIDEO_THUMBNAIL_IMPRESSIONS_VTR&dimension=VIDEO&o_column=RATINGS_LIKES&o_direction=ANALYTICS_ORDER_DIRECTION_DESC

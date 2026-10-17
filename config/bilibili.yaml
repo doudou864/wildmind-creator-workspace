@@ -1,0 +1,16 @@
+platformId: bilibili
+url: https://member.bilibili.com/platform/data-up/video?tab=audience
+analysis: 'text="稿件分析"'
+compare: 'text="稿件对比"'
+export: '.bmc-icon-sprite-export'
+week: 'text="近7天"'
+yesterday: 'text="昨日"'
+maxExportRows: 10
+aliases:
+  封标点击率: 封标点击率星级
+  3秒跳出率: 3 秒跳出率
+accountAliases:
+  净增粉丝: 粉丝净增
+
+matchWindowDays: 2
+historyRange: [21, 30]

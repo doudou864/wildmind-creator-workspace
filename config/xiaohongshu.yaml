@@ -1,0 +1,51 @@
+platformId: xiaohongshu
+listUrl: https://creator.xiaohongshu.com/statistics/data-analysis
+fansUrl: https://creator.xiaohongshu.com/statistics/fans-data
+rowSelector: 'table tbody tr'
+listReady: '.note-detail'
+detailSelector: '.note-detail'
+listScroll: '.d-table__content'
+detailScroll: '.note-detail-contain'
+mainScroll: '.microapp-container:not([style*="display: none"])' 
+chart: '.chart-container canvas'
+chartRightInset: 52
+fansMetrics: [总粉丝数, 新增粉丝数, 流失粉丝数]
+viewport: {width: 1920, height: 1080}
+maxScreens: 30
+detailCheckpoints: [1, 3, 7, 21]
+matchWindowDays: 2
+historyRange: [21, 30]
+aliases:
+  曝光: 曝光数
+  观看: 观看数
+  收藏: 收藏数
+  涨粉: 涨粉数
+  人均观看时长: 平均观看时长
+  2秒退出率: 2秒退出率
+accountAliases:
+  总粉丝数: 粉丝总数
+  新增粉丝数: 新增关注
+  流失粉丝数: 取消关注
+  净涨粉: 粉丝净增
+
+coreTab: '.anchor-title:not(.anchor-title--sticky) button:text-is("核心数据")'
+sourcesTab: '.anchor-title:not(.anchor-title--sticky) button:text-is("观看来源")'
+diagnosticTabs:
+  - selector: 'text="互动表现"'
+    metric: 互动率
+  - selector: 'text="内容深度"'
+    metric: 平均观看时长
+  - selector: 'text="开头吸引力"'
+    metric: 5秒完播率
+requiredDetailMetrics: [同类中位数互动率, 同类中位数平均观看时长, 同类中位数5秒完播率, 观看粉丝占比]
+accountExtras:
+  url: https://creator.xiaohongshu.com/statistics/account/v2
+  ready: 'text="涨粉数据"'
+  growthTab: 'text="涨粉数据"'
+  viewTab: 'text="观看数据"'
+  metrics: [主页访客, 主页转粉率]
+  scroll: '.microapp-container:not([style*="display: none"])'
+  chart: '.area-graph canvas'
+  rightInset: 190
+  viewport: {width: 2560, height: 1080}
+  maxScreens: 15

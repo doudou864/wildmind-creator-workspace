@@ -33,7 +33,7 @@ export class CodexJudgment implements Judgment {
       modelReasoningEffort: config.reasoningEffort,
       ...(config.model ? { model: config.model } : {}),
     });
-    countAI();
+    countAI(images.length > 0);
     const result = await thread.run(
       [
         {

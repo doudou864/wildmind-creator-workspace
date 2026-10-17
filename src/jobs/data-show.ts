@@ -63,7 +63,7 @@ export function showData(database: WorkspaceDatabase, config: WorkspaceConfig, p
   lines.push('\n最近7天运行记录');
   const runs = database.sqlite
     .prepare('SELECT * FROM crawl_logs WHERE started_at>=? AND (? IS NULL OR platform_id=?) ORDER BY started_at DESC')
-    .all(since + 'T00:00:00+08:00', filter, filter) as {
+    .all(new Date(since + 'T00:00:00+08:00').toISOString(), filter, filter) as {
     started_at: string;
     finished_at: string | null;
     platform_id: string;
@@ -75,7 +75,7 @@ export function showData(database: WorkspaceDatabase, config: WorkspaceConfig, p
   for (const run of runs) {
     const t = run.telemetry ? JSON.parse(run.telemetry) : null;
     lines.push(
-      `${new Date(run.started_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })} ${run.platform_id} | 延迟：${yes(t?.delayed)} | 复用同日截图：${yes(t?.reusedScreenshots)} | 打开页面：${t?.pages ?? '未记录'} | AI识别：${t?.aiCalls ?? '未记录'} | 耗时：${run.finished_at ? Math.round((Date.parse(run.finished_at) - Date.parse(run.started_at)) / 1000) + '秒' : '运行中'} | ${run.status}：${run.reason ?? (run.status === 'success' ? '采集成功' : '进行中')} | 需要处理：${yes(t?.attention)}`,
+      `${new Date(run.started_at).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })} ${run.platform_id} | 延迟：${yes(t?.delayed)} | 复用同日截图：${yes(t?.reusedScreenshots)} | 打开页面：${t?.pages ?? '未记录'} | AI识别：${t?.aiReads ?? '未分项记录'} | AI总调用：${t?.aiCalls ?? '未记录'} | 耗时：${run.finished_at ? Math.round((Date.parse(run.finished_at) - Date.parse(run.started_at)) / 1000) + '秒' : '运行中'} | ${run.status}：${run.reason ?? (run.status === 'success' ? '采集成功' : '进行中')} | 需要处理：${yes(t?.attention)}`,
     );
   }
   return lines.join('\n');

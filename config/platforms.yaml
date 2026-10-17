@@ -3,7 +3,7 @@ platforms:
   - { id: xiaohongshu, code: XHS, name: 小红书, active: true, collection: 截图, reviewMetric: 观看数, forms: [视频, 图文], metrics: [net_followers, new_followers, lost_followers] }
   - { id: bilibili, code: BLB, name: B站, active: true, collection: CSV + 截图, reviewMetric: 播放量, forms: [视频], metrics: [net_followers, new_followers, lost_followers] }
   - { id: channels, code: SPH, name: 视频号, active: true, collection: CSV × 2, reviewMetric: 播放量, forms: [视频, 图文], metrics: [net_followers, new_followers, lost_followers] }
-  - { id: youtube, code: YT, name: YouTube, active: true, collection: CSV + 截图, reviewMetric: 观看次数, forms: [视频], metrics: [net_followers, followers] }
+  - { id: youtube, code: YT, name: YouTube, active: true, collection: 截图（CSV待修）, reviewMetric: 观看次数, forms: [视频], metrics: [net_followers, followers] }
   - { id: wechat, code: GZH, name: 公众号, active: false, collection: 待核对, reviewMetric: 阅读人数, forms: [图文], metrics: [net_followers, new_followers, lost_followers] }
   - { id: kuaishou, code: KS, name: 快手, active: false, collection: 截图（待核对）, reviewMetric: 播放量, forms: [视频], metrics: [net_followers, followers] }
   - { id: tiktok, code: TT, name: TikTok, active: false, collection: 截图（待核对）, reviewMetric: 播放量, forms: [视频], metrics: [net_followers, followers] }

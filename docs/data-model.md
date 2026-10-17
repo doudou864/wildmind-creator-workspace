@@ -63,7 +63,7 @@ MetricDefinition 只存在 YAML，不复制到数据库；历史行保留原 met
 | content_id | TEXT / 必填 | 关联 Content | §6.8、7、10；契约 | 总控台 / 平台发布结果关联（后续） |
 | platform_id | TEXT / 必填 | config/platforms.yaml 的平台 ID | §6.8、7、10；契约 | 总控台 / 平台发布结果关联（后续） |
 | platform_post_id | TEXT / 可空 | 平台真实作品 ID，未识别可空 | §6.8、7、10；契约 | 总控台 / 平台发布结果关联（后续） |
-| published_at | TEXT / 可空 | 真实发布时间，未发布/未知可空 | §6.8、7、10；契约 | 总控台 / 平台发布结果关联（后续） |
+| published_at | TEXT / 可空 | 真实发布时间；导出只有日期时保留 YYYY-MM-DD，按北京时间日历计龄，不虚构时分秒；未发布/未知可空 | §6.8、7、10；契约 | 总控台 / 平台发布结果关联（后续） |
 | title | TEXT / 必填 | 标题/名称 | §6.8、7、10；契约 | 总控台 / 平台发布结果关联（后续） |
 | url | TEXT / 可空 | 真实平台作品链接 | §6.8、7、10；契约 | 总控台 / 平台发布结果关联（后续） |
 | checkpoint_ratios | TEXT / 可空 | 检查点到定格倍数的映射，未计算可空 | §6.8、7、10；契约 | 总控台 / 平台发布结果关联（后续） |
@@ -407,8 +407,10 @@ id、platform_id、kind（login / confirmation / risk）、reason、status（pen
 
 key（主键）、value（JSON）、updated_at。保存每天随机启动分钟和已执行时段、成功平台、一次性历史导入状态、检查点完成日期、月度画像状态。实际数字仍在长表，原文仍在 raw_records；该表不用于承载作品指标。迁移 0003 只新增该表，执行前在线备份。
 
-数值来自平台显示文本，单位（如“万”）由确定性代码换算，显示精度保留在同名截图识别 JSON。它不代表平台未展示的更精细计数。每个 PostSnapshot 的 captured_at 对应识别文件时间，来源文件路径由本轮 CrawlLog.archive_paths 保存。首次仅接纳近 30 天视频和图文；范围外作品不建档、不建选题、不写快照。已在上线后积累的历史记录保留。
+数值来自平台显示文本，单位（如“万”）由确定性代码换算，显示精度保留在同名截图识别 JSON。它不代表平台未展示的更精细计数。每个 PostSnapshot 的 captured_at 对应识别文件时间，来源文件路径由本轮 CrawlLog.archive_paths 保存。起号日固定为北京时间 2026-09-17，更早作品不建档；采集生命周期仍是发布后 30 天，范围外作品不建档、不建选题、不写快照。已在上线后积累的历史记录保留。
 
 ## 2026-10-17 精度和运行可观测性
 
-PostSnapshot / AccountDaily 增加 precision（exact/display/unknown）和 rawValue；旧记录无法核对时为 unknown，不默认精确。AccountDaily 增加 backfilled。增长只汇总精确净增，禁止约数总量相减。CrawlLog 增加可空 telemetry：延迟、同日截图复用、页面操作数、AI 调用次数、需要处理项；旧日志显示未记录，耗时从开始/完成时间计算。
+PostSnapshot / AccountDaily 增加 precision（exact/display/unknown）和 rawValue；旧记录无法核对时为 unknown，不默认精确。AccountDaily 增加 backfilled。增长只汇总精确净增，禁止约数总量相减。CrawlLog 增加可空 telemetry：延迟、同日截图复用、页面操作数、AI 总调用次数、截图识别次数（aiReads，旧日志可无此分项）、需要处理项；旧日志显示未记录，耗时从开始/完成时间计算。
+
+第 3 步导出与截图共用长表：视频号、YouTube 优先用平台原生作品 ID 关联，同标题的不同 ID 不合并，改标题不新建作品。只有发布日期的导出保留 YYYY-MM-DD，不虚构时分秒，作品年龄按北京时间日历日计算。YouTube 时钟格式的观看时长由代码转成秒；账号订阅净增只在相邻两日总数均精确时相减，否则为空。

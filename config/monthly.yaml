@@ -1,0 +1,25 @@
+channels:
+  url: https://channels.weixin.qq.com/platform/statistic/follower
+  ready: 'text="关注者画像"'
+  click: 'text="关注者画像"'
+  scroll: '.app-body:not(.micro-whole-app)'
+  maxScreens: 12
+  prompt: '地域只记当前页显示的省份和城市，明确注明是可见排名；顶部数据截止日期如实保留。'
+xiaohongshu:
+  url: https://creator.xiaohongshu.com/statistics/fans-data
+  ready: 'text="粉丝数据趋势"'
+  scroll: '.microapp-container:not([style*="display: none"])' 
+  maxScreens: 12
+  prompt: '只取粉丝画像，不取顶部总粉丝数和趋势日数据；若可见观看时段分布，保存为viewing_times记录。'
+bilibili:
+  url: https://member.bilibili.com/platform/data-up/video?tab=audience
+  ready: 'text="粉丝画像"'
+  scroll: html
+  maxScreens: 14
+  prompt: '当前已核对为近30天粉丝画像标签，本轮连续滚动同一页，后续截屏不重复显示顶部标签。只记录该标签里的性别、年龄、地域；禁止游客/观众画像、兴趣、活跃时间。只抄明确数字，不能从柱高估算比例。地域只记画面显示的排名和比例。'
+youtube:
+  url: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/analytics/tab-build_audience/period-default
+  ready: 'text="年龄和性别"'
+  scroll: 'main#main'
+  maxScreens: 12
+  prompt: '只记录年龄和性别、热门地理位置。当前月度人数、设备、字幕、观看时段均舍弃；样本不足记录后台原话，不虚构分布。'

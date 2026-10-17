@@ -9,5 +9,5 @@ browser:
   confirmationPollSeconds: 30
 schedule:
   timezone: Asia/Shanghai
-  platforms: [douyin]
+  platforms: [douyin, bilibili, youtube, xiaohongshu, channels]
   launchdLabel: com.wildmind.creator.collect

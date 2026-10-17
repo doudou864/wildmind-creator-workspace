@@ -93,3 +93,14 @@ test('万单位只能标为显示精度；精确净增可以求和，约数不�
   expect(missingAccountDates('2026-10-14', '2026-10-17')).toEqual(['2026-10-15', '2026-10-16']);
   expect(missingAccountDates(null, '2026-10-17')).toEqual([]);
 });
+
+test('仅有发布日期的CSV按北京时间日历计龄，凌晨不误判为未来作品', async () => {
+  const { ageInDays, withinRecentWindow, sinceStartDate } = await import('./collection');
+  const now = new Date('2026-10-17T00:30:00+08:00');
+  expect(ageInDays('2026-10-17', now)).toBe(0);
+  expect(ageInDays('2026-10-16', now)).toBe(1);
+  expect(withinRecentWindow('2026-10-17', now, 30)).toBe(true);
+  expect(sinceStartDate('2026-10-17', '2026-09-17', now)).toBe(true);
+  expect(sinceStartDate('2026-09-16', '2026-09-17', now)).toBe(false);
+  expect(withinRecentWindow('2026-09-16', now, 30)).toBe(false);
+});

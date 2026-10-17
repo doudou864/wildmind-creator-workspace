@@ -1,4 +1,15 @@
+function beijingDay(now: Date) {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Shanghai',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(now);
+}
 export function ageInDays(publishedAt: string, now: Date) {
+  // Date-only exports have day precision; never invent an hour or interpret midnight as UTC.
+  if (/^\d{4}-\d{2}-\d{2}$/.test(publishedAt))
+    return (Date.parse(beijingDay(now)) - Date.parse(normalizeDataDate(publishedAt))) / 86400000;
   const published = new Date(publishedAt);
   if (!Number.isFinite(published.getTime())) throw new Error('发布时间无效');
   return Math.floor((now.getTime() - published.getTime()) / 86400000);
@@ -16,7 +27,7 @@ export function historicalKind(age: number, range: [number, number]) {
 export function parseDisplayedNumber(raw: string | null): number | null {
   if (raw === null || ['', '—', '--', '-', '暂无数据', '数据不足'].includes(raw.trim())) return null;
   const text = raw.replace(/[,，\s]/g, '');
-  const match = text.match(/^([+-]?\d+(?:\.\d+)?)(万|亿)?(?:%|秒|s|人|次播放|次|张)?$/);
+  const match = text.match(/^([+-]?\d+(?:\.\d+)?)(万|亿)?(?:%|秒|s|人|次播放|次|张|星)?$/);
   if (!match) throw new Error(`不能解析数值：${raw}`);
   const value = Number(match[1]) * (match[2] === '万' ? 10000 : match[2] === '亿' ? 100000000 : 1);
   if (!Number.isFinite(value)) throw new Error('非有限数值');
@@ -49,6 +60,10 @@ export function matchPost<T extends { title: string; publishedAt: string }>(
 }
 
 export function withinRecentWindow(publishedAt: string, now: Date, days: number) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(publishedAt)) {
+    const age = ageInDays(publishedAt, now);
+    return age >= 0 && age <= days;
+  }
   const elapsed = now.getTime() - Date.parse(publishedAt);
   return Number.isFinite(elapsed) && elapsed >= 0 && elapsed <= days * 86400000;
 }
@@ -69,6 +84,8 @@ export function normalizeDataDate(value: string) {
 
 // Enrollment boundary is fixed; the independent collection lifetime never moves it.
 export function sinceStartDate(publishedAt: string, startDate: string, now: Date) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(publishedAt))
+    return normalizeDataDate(publishedAt) >= startDate && publishedAt <= beijingDay(now);
   const time = Date.parse(publishedAt);
   return Number.isFinite(time) && time >= Date.parse(startDate + 'T00:00:00+08:00') && time <= now.getTime();
 }

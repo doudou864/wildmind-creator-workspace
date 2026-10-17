@@ -25,7 +25,10 @@ test('真实零和未知分开；失败回滚，不导入超30天历史作品，
     const now = new Date('2026-10-17T11:00:00Z');
     const post = { title: '测试作品', publishedAt: '2026-10-14T02:20:00+08:00', form: '视频' as const };
     const key = postKey('douyin', post.title, post.publishedAt);
-    const incoming = [{ ...post, key }];
+    expect(postKey('channels', '相同标题', '2026-10-14', 'id-1')).not.toBe(
+      postKey('channels', '相同标题', '2026-10-14', 'id-2'),
+    );
+    const incoming = [{ ...post, key, platformPostId: 'native-123' }];
     const decisions = new Map([[key, { postId: key, contentId: 'content', topicTitle: '测试选题', form: post.form }]]);
     const reading = screenshotReading.parse({
       status: 'ok',
@@ -91,7 +94,19 @@ test('真实零和未知分开；失败回滚，不导入超30天历史作品，
       2,
     );
     expect(repeat.get(key)?.contentId).toBe('content');
-    const different = { ...incoming[0], key: 'new-post', title: '另一标题' };
+    const renamed = await prepareAssociations(
+      db,
+      'douyin',
+      [{ ...incoming[0], key: 'changed-key', title: '改过的标题' }],
+      {
+        read: async () => {
+          throw new Error('同一平台ID不重新建档');
+        },
+      },
+      2,
+    );
+    expect(renamed.get('changed-key')?.postId).toBe(key);
+    const different = { ...incoming[0], key: 'new-post', title: post.title, platformPostId: 'another-native' };
     await expect(
       prepareAssociations(
         db,

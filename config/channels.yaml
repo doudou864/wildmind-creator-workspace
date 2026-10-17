@@ -1,0 +1,13 @@
+platformId: channels
+postsUrl: https://channels.weixin.qq.com/platform/statistic/post
+accountUrl: https://channels.weixin.qq.com/platform/statistic/follower
+singleTab: 'text="单篇视频"'
+month: 'text="近30天"'
+export: 'text="下载表格"'
+accountReady: 'text="增长详情"'
+matchWindowDays: 2
+historyRange: [21, 30]
+aliases: {}
+accountAliases:
+  关注者总数: 粉丝总数
+  净增关注: 粉丝净增

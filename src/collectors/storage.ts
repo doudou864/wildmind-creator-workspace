@@ -35,10 +35,20 @@ export type CapturedReading = {
   postKey?: string;
   kind: 'list' | 'detail' | 'account';
 };
-export type CollectedPost = { key: string; title: string; publishedAt: string; form: '视频' | '图文' };
-export const postKey = (platformId: string, title: string, publishedAt: string) =>
+export type CollectedPost = {
+  key: string;
+  platformPostId?: string;
+  title: string;
+  publishedAt: string;
+  form: '视频' | '图文';
+};
+export const postKey = (platformId: string, title: string, publishedAt: string, platformPostId?: string) =>
   createHash('sha256')
-    .update([platformId, normalizeTitle(title), publishedAt].join('\n'))
+    .update(
+      (platformPostId ? [platformId, 'native', platformPostId] : [platformId, normalizeTitle(title), publishedAt]).join(
+        '\n',
+      ),
+    )
     .digest('hex');
 const labelKey = (s: string) => s.replace(/\s+/g, '');
 export function metricFor(
@@ -85,7 +95,10 @@ export async function prepareAssociations(
     const old = known.find(
       (p) =>
         p.id === item.key ||
-        (normalizeTitle(p.title) === normalizeTitle(item.title) && p.publishedAt === item.publishedAt),
+        (item.platformPostId && p.platformPostId === item.platformPostId) ||
+        ((!item.platformPostId || !p.platformPostId) &&
+          normalizeTitle(p.title) === normalizeTitle(item.title) &&
+          p.publishedAt === item.publishedAt),
     );
     if (old) {
       decisions.set(item.key, { postId: old.id, contentId: old.contentId, form: item.form });
@@ -213,17 +226,24 @@ export function persistCollection(
             contentId: match.contentId,
             platformId,
             title: item.title,
+            platformPostId: item.platformPostId,
             publishedAt: item.publishedAt,
             removed: false,
             updatedAt: now,
           })
-          .onConflictDoUpdate({ target: posts.id, set: { removed: false, updatedAt: now } })
+          .onConflictDoUpdate({
+            target: posts.id,
+            set: { title: item.title, platformPostId: item.platformPostId, removed: false, updatedAt: now },
+          })
           .run();
       }
       for (const capture of readings) {
         if (capture.reading.status !== 'ok') throw new Error('失败的识别结果禁止入库');
         for (const reading of capture.reading.posts) {
-          const key = capture.postKey ?? postKey(platformId, reading.title, reading.publishedAt);
+          const key =
+            capture.postKey ??
+            incoming.find((p) => p.title === reading.title && p.publishedAt === reading.publishedAt)?.key ??
+            postKey(platformId, reading.title, reading.publishedAt);
           const item = incoming.find((p) => p.key === key);
           const match = decisions.get(key);
           if (!item || !match) throw new Error('识别出了列表以外的作品');
