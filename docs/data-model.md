@@ -2,11 +2,11 @@
 
 数据库：`data/workspace.db`，SQLite WAL，schema：`src/db/schema.ts`，迁移：`src/db/migrations/`。执行 `npm run db:migrate` 会先在线备份再迁移；重复执行不重建表、不清空数据。
 
-业务依据：PRD v1.9 第 10 章是建议实体；字段细节按当前 `docs/service-contracts.md` 与 `src/lib/*-model.ts`。这里只建立持久化底座，不开启尚未实现的 CRUD、采集、AI 或发布服务。
+业务依据：PRD v1.9 第 10 章是建议实体；字段细节按当前 `docs/service-contracts.md` 与 `src/lib/*-model.ts`。持久化底座已接入第 2 步抖音采集；业务页面 CRUD、复盘和发布服务按 ROADMAP 后续步骤接入。
 
 所有普通记录保留 updatedAt，无乐观版本。revision 只在发布记录/回执、消息、商单、后台主题和选题生成任务/结果。表里的 snake_case 与模型 camelCase 对应。JSON 是结构化正文/证据，不存二进制。
 
-MetricDefinition 只存在 YAML，不复制到数据库；历史行保留原 metric_id。删除指标应标 dropped，测试指标验收后删除。数值字段不得用 0 补空。没有任何采集/复盘算法在本步生成数值。
+MetricDefinition 只存在 YAML，不复制到数据库；历史行保留原 metric_id。删除指标应标 dropped，测试指标验收后删除。数值字段不得用 0 补空。采集只保存真实读到的数值；复盘算法在第 4 步实现。
 
 ## accounts
 
@@ -391,7 +391,7 @@ id 就是客户端 UUID requestId；本步只建表，不打开真实发布能�
 | platform_id | TEXT 必填 | 平台 ID |
 | post_id | TEXT 可空 | 关联 posts；账号级原文为空 |
 | data_date | TEXT 必填 | 平台标注的数据日期 |
-| type | TEXT 必填 | diagnosis / audience / viewing_times |
+| type | TEXT 必填 | 原文类型，如 diagnosis / audience / viewing_times / traffic_sources |
 | content | TEXT 必填 | 有效 JSON，保留原文及分布，不塞进数值列 |
 | source_path | TEXT 必填 | data/ 下来源截图或导出文件路径 |
 | captured_at | TEXT 必填 | 读取时间 |
@@ -402,3 +402,9 @@ id 就是客户端 UUID requestId；本步只建表，不打开真实发布能�
 ## attention_items（需要你处理）
 
 id、platform_id、kind（login / confirmation / risk）、reason、status（pending / resolved / failed）、deadline（可空）、space_id / page（可空）、created_at、updated_at。同平台待处理项更新为最新原因；微信确认保留浏览器位置，超过当天 23:00 标为 failed，原因“未确认登录”。账号 login_state 新增 awaiting_confirmation，不当作程序错误。
+
+## collection_state（采集恢复状态）
+
+key（主键）、value（JSON）、updated_at。保存每天随机启动分钟和已执行时段、成功平台、一次性历史导入状态、检查点完成日期、月度画像状态。实际数字仍在长表，原文仍在 raw_records；该表不用于承载作品指标。迁移 0003 只新增该表，执行前在线备份。
+
+数值来自平台显示文本，单位（如“万”）由确定性代码换算，显示精度保留在同名截图识别 JSON。它不代表平台未展示的更精细计数。每个 PostSnapshot 的 captured_at 对应识别文件时间，来源文件路径由本轮 CrawlLog.archive_paths 保存。首次仅接纳近 30 天视频和图文；范围外作品不建档、不建选题、不写快照。已在上线后积累的历史记录保留。

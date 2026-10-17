@@ -61,3 +61,34 @@ test('微信确认按北京时间23点到期，成功前不继续，超时写真
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('用户在微信确认后自动继续一次，处理完成移出清单', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'confirmation-ready-'));
+  const database = await initializeDatabase(path.join(dir, 'workspace.db'));
+  try {
+    requireAttention(database, {
+      platformId: 'channels',
+      kind: 'confirmation',
+      reason: '请在微信里确认登录',
+      deadline: '2026-10-17T15:00:00.000Z',
+      spaceId: 14,
+      page: 'p1',
+    });
+    let continued = 0;
+    const browser = new EgoBrowser(process.cwd(), async () => ({
+      url: 'https://channels.weixin.qq.com/platform',
+      positive: ['视频号ID:', '关注者', '昨日数据'],
+      negative: [],
+    }));
+    const resume = async () => {
+      continued++;
+    };
+    await checkConfirmations(database, resume, browser, '2026-10-17T14:00:00.000Z');
+    await checkConfirmations(database, resume, browser, '2026-10-17T14:01:00.000Z');
+    expect(continued).toBe(1);
+    expect(pendingAttention(database)).toHaveLength(0);
+  } finally {
+    database.sqlite.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});

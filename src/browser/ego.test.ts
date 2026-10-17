@@ -73,3 +73,18 @@ test('微信确认按钮只在尚未登录时点击，不输入密码，不注�
   expect(script).not.toContain('Network.setCookies');
   expect(script).not.toContain('.fill(');
 });
+
+test('仍显示账号区域但出现验证码时，也不能判定已登录可采集', async () => {
+  const config = (await loadBrowserConfig())[0];
+  const result = detectLogin(config, 'https://creator.douyin.com/creator-micro/home', '抖音号 粉丝指数 验证码');
+  expect(result.state).toBe('unknown');
+  expect(result.reason).toContain('需要处理');
+});
+
+test('断网按调度重试，用户接管优先于任何网络错误', async () => {
+  const { egoFailure } = await import('./ego');
+  expect(egoFailure('PageNavigationError net::ERR_INTERNET_DISCONNECTED')).toBe('网络连接失败，等待配置的重试时段');
+  expect(egoFailure('控制权 net::ERR_INTERNET_DISCONNECTED')).toContain('控制权');
+  expect(egoFailure('TimeoutError: popup timed out')).toContain('页面等待超时');
+  expect(egoFailure('unknown')).toContain('不自动重试');
+});

@@ -1,0 +1,5 @@
+# null 使用本机 ChatGPT 登录下的默认模型；不在代码中写死模型名。
+model: null
+codexPath: /Users/a1234/.local/bin/codex
+timeoutMs: 180000
+reasoningEffort: low

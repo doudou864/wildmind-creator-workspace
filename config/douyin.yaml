@@ -1,0 +1,38 @@
+platformId: douyin
+listUrl: https://creator.douyin.com/creator-micro/content/manage
+accountUrl: https://creator.douyin.com/creator-micro/data-center/operation
+listReady: '[class*="info-title-text-"]'
+listScroll: '[class*="list-scroll-"]'
+cardSelector: '[class*="video-card-content-"]'
+titleSelector: '[class*="info-title-text-"]'
+accountMonthSelector: 'span[id^="addon-"]:text-is("近30天")'
+accountYesterdaySelector: 'span[id^="addon-"]:text-is("昨天")'
+detailTabs: [总览, 流量分析, 观众分析]
+expandSources: 'text="展开更多"'
+maxScreens: 160
+historyRange: [21, 30]
+detailCheckpoints: [1, 3, 7, 21]
+matchWindowDays: 2
+aliases:
+  搜索: 搜索流量占比
+  推荐页: 推荐流量占比
+  播放: 播放量
+  点赞: 点赞量
+  评论: 评论量
+  分享: 分享量
+  收藏: 收藏量
+  吸粉量: 涨粉量
+  2s跳出率: 2 秒跳出率
+  2秒跳出率: 2 秒跳出率
+  5s完播率: 5 秒完播率
+  5秒完播率: 5 秒完播率
+accountAliases:
+  总播放量: 播放量
+  总粉丝量: 粉丝总数
+  吸粉量: 新增关注
+  脱粉量: 取消关注
+sourceGroups:
+  推荐流量占比: [推荐页]
+  搜索流量占比: [搜索]
+  私域流量占比: [个人主页, 关注页, 消息页, 朋友页]
+  其他流量占比: [其他, 精选App]

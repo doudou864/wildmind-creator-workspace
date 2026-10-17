@@ -5,6 +5,16 @@ import { loadConfig } from '../lib/config.ts';
 import { detectLogin, loadBrowserConfig, type BrowserPlatform } from './config.ts';
 import type { LoginResult, WorkspaceBrowser } from './interface.ts';
 
+export function egoFailure(output: string) {
+  if (/EGO_.*(?:CONTROL|INACTIVE|UNASSIGNED)|control.*(?:lost|user)|控制权/i.test(output))
+    return '控制权已交给用户；请在处理后恢复';
+  if (/net::ERR_(?:INTERNET_DISCONNECTED|NAME_NOT_RESOLVED|CONNECTION_[A-Z_]+|NETWORK_CHANGED|TIMED_OUT)/.test(output))
+    return '网络连接失败，等待配置的重试时段';
+  if (/TimeoutError|timed out|timeout exceeded/i.test(output))
+    return '页面等待超时，弹窗或页面元素未按时出现；等待配置的重试时段';
+  return 'ego 操作失败或控制权已交给用户；请查看浏览器，不自动重试';
+}
+
 // The CLI owns the browser; no platform HTTP/API calls occur here.
 export function runEgo(script: string): Promise<unknown> {
   return new Promise((resolve, reject) => {
@@ -27,7 +37,7 @@ export function runEgo(script: string): Promise<unknown> {
     child.on('close', (code) => {
       clearTimeout(timeout);
       if (code !== 0) {
-        reject(new Error('ego 操作失败或控制权已交给用户；请查看浏览器，不自动重试'));
+        reject(new Error(egoFailure(output)));
         return;
       }
       const line = output.split('\n').findLast((line) => line.startsWith('WORKSPACE_RESULT:'));
@@ -61,11 +71,11 @@ async function saveState(page){
 async function navigate(page){
  try{await page.goto(cfg.url);}catch(e){if(!String(e).includes('navigation committed'))throw e;}
 }
-function verified(o){return new URL(o.url).origin===new URL(cfg.url).origin && cfg.loggedInPath && new URL(o.url).pathname.includes(cfg.loggedInPath) && cfg.loggedIn.length>0 && o.positive.length===cfg.loggedIn.length && !o.negative.length;}
+function verified(o){return new URL(o.url).origin===new URL(cfg.url).origin && cfg.loggedInPath && new URL(o.url).pathname.includes(cfg.loggedInPath) && cfg.loggedIn.length>0 && o.positive.length===cfg.loggedIn.length && !o.negative.length && !(o.risk?.length);}
 async function observe(page){
  // Give automatic login redirects time to finish; only return booleans/URL, never page text.
  try{await page.waitForFunction((c)=>c.loggedIn.length>0 && c.loggedIn.every(m=>document.body.innerText.includes(m)),cfg,{timeout:10000});}catch{}
- const observed=await page.evaluate(c=>({url:location.href,positive:c.loggedIn.filter(m=>document.body.innerText.includes(m)),negative:c.loggedOut.filter(m=>document.body.innerText.includes(m))}),cfg);
+ const observed=await page.evaluate(c=>({url:location.href,positive:c.loggedIn.filter(m=>document.body.innerText.includes(m)),negative:c.loggedOut.filter(m=>document.body.innerText.includes(m)),risk:c.riskMarkers.filter(m=>document.body.innerText.includes(m))}),cfg);
  return observed;
 }
 `;
@@ -101,7 +111,7 @@ console.log('WORKSPACE_RESULT:'+JSON.stringify({spaceId:task.spaceId,page:page.l
 if(verified(observed)){await saveState(page);${this.testSpaceId ? '' : 'await task.finish({keep:[page.label]});'}}else await task.handOff();`)) as {
       spaceId: number;
       page: string;
-      observed: { url: string; positive: string[]; negative: string[] };
+      observed: { url: string; positive: string[]; negative: string[]; risk?: string[] };
     };
     const result = this.result(config, opened.observed);
     return { spaceId: opened.spaceId, page: opened.page, result: result.state === 'logged_in' ? result : undefined };
@@ -123,6 +133,7 @@ console.log('WORKSPACE_RESULT:'+JSON.stringify(await observe(page)));`)) as {
       url: string;
       positive: string[];
       negative: string[];
+      risk?: string[];
     };
     return { ...this.result(config, observed), spaceId, page: label };
   }
@@ -134,6 +145,7 @@ const observed=await observe(page);console.log('WORKSPACE_RESULT:'+JSON.stringif
       url: string;
       positive: string[];
       negative: string[];
+      risk?: string[];
     };
     return this.result(config, observed);
   }
@@ -142,14 +154,18 @@ const observed=await observe(page);console.log('WORKSPACE_RESULT:'+JSON.stringif
     const observed = (await this.execute(`${stateScript(this.root, config)}
 const task=await takeOverTaskSpace(${JSON.stringify(spaceId)});const page=task.page(${JSON.stringify(label)});
 const observed=await observe(page);if(verified(observed))await saveState(page);console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));
-await task.finish({keep:[page.label]});`)) as { url: string; positive: string[]; negative: string[] };
+await task.finish({keep:[page.label]});`)) as { url: string; positive: string[]; negative: string[]; risk?: string[] };
     return this.result(config, observed);
   }
   private result(
     config: BrowserPlatform,
-    observed: { url: string; positive: string[]; negative: string[] },
+    observed: { url: string; positive: string[]; negative: string[]; risk?: string[] },
   ): LoginResult {
-    const result = detectLogin(config, observed.url, [...observed.positive, ...observed.negative].join('\n'));
+    const result = detectLogin(
+      config,
+      observed.url,
+      [...observed.positive, ...observed.negative, ...(observed.risk ?? [])].join('\n'),
+    );
     return {
       platformId: config.id,
       ...result,
@@ -184,6 +200,7 @@ console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));`)) as {
           url: string;
           positive: string[];
           negative: string[];
+          risk?: string[];
         };
         const result = this.result(config, observed);
         if (result.state === 'awaiting_confirmation') {

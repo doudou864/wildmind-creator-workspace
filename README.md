@@ -33,7 +33,7 @@ Node.js 22 LTS、npm。`npm ci` 后先执行 `npm run db:migrate`，再执行 `n
 
 ## 当前服务状态
 
-PRD 第 13 章第 1 步已建立 SQLite / Drizzle 数据底座、配置加载、浏览器登录检查与抓取日志。业务页面的存储/AI/发布接口尚未接入：`src/lib/workspace-service.ts` 是正式服务接入边界：返回空业务记录和不可用能力标记，不返回假数据。写入与生成接口返回 HTTP 503，页面禁用对应操作并显示原因。
+ROADMAP 第 1 步已建立 SQLite / Drizzle 数据底座、配置加载、浏览器登录检查与抓取日志。业务页面的存储/AI/发布接口尚未接入：`src/lib/workspace-service.ts` 是正式服务接入边界：返回空业务记录和不可用能力标记，不返回假数据。写入与生成接口返回 HTTP 503，页面禁用对应操作并显示原因。
 
 表单填写和本地图片预览只存在于当前页面，**没有保存或上传**。素材版本、选题持久化与真实生成须在服务接入后才能使用。旧演示资料移到 `tests/fixtures/`，不被运行页面导入；旧浏览器演示键未读取、未迁移、未删除。
 
@@ -67,4 +67,15 @@ PRD 第 13 章第 1 步已建立 SQLite / Drizzle 数据底座、配置加载、
 
 `config/browser.yaml` 管理后台地址与已实测的页面标记。所有配置文件均在运行时读取，修改后重启服务即可生效，不需要重新构建；当前已打开页面需刷新。`metrics.yaml` 的每个 binding 明确平台、形式、级别、页面、方式、频率和确认状态；pending 不作为已验证采集规则。指标 ID 永不复用，正式指标停用设 dropped。
 
-数据字段与待确认问题：[data-model.md](docs/data-model.md)。`src/jobs/crawl-log.ts` 提供开始和结束函数，结束后自动备份；第 2 步采集接入时直接调用。当前没有执行数据抓取或 AI 识别。
+数据字段与已确认口径：[data-model.md](docs/data-model.md)。`src/jobs/crawl-log.ts` 提供开始和结束函数，结束后自动备份；第 2 步采集接入时直接调用。第 2 步采集实现与运行验收见文末；业务前端仍待后续步骤接入。
+
+## 抖音采集（ROADMAP 第 2 步）
+
+- `npm run collect`：立即采集抖音；首次及日常都只采近 30 天的视频和图文，详情按检查点/补抓/异常进入。
+- `npm run collect:attention`：查看“需要你处理”。
+- `npm run collect:resume`：处理登录/风控后继续待处理的平台。
+- `npm run collect:install`：安装本机 launchd；按 `config/parameters.yaml` 的时间窗口选择每日随机时间，失败按重试时间执行。轮询间隔取 `config/collection.yaml`，同一时刻只有一个采集任务。
+- 验证码/登录中断只记录并通知，不破解、不输入密码。视频号微信确认由轮询检测，23:00 到期写“未确认登录”；视频号采集器本身按第 3 步接入。
+- `config/ai.yaml` 的 model 为 null 时使用本机 Codex 默认模型；截图识别通过经批准安装的 Codex SDK。失败不填写估计值。
+- 截图与识别 JSON：`data/captures/`；运行日志：`data/jobs/collector.log` 与 `collector-errors.log`；数据库每次结束采集后备份，保留 7 份。
+- 审查 A 的三天运行和人工抽查须另外通过，不能仅凭自动测试宣称完成。

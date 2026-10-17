@@ -330,7 +330,7 @@ export const rawRecords = sqliteTable(
     platformId: text('platform_id').notNull(),
     postId: text('post_id').references(() => posts.id),
     dataDate: text('data_date').notNull(),
-    type: text('type', { enum: ['diagnosis', 'audience', 'viewing_times'] }).notNull(),
+    type: text('type').notNull(),
     content: json<Record<string, unknown>>('content').notNull(),
     sourcePath: text('source_path').notNull(),
     capturedAt: text('captured_at').notNull(),
@@ -352,5 +352,11 @@ export const attentionItems = sqliteTable('attention_items', {
   spaceId: integer('space_id'),
   page: text('page'),
   createdAt: text('created_at').notNull(),
+  updatedAt: updatedAt(),
+});
+
+export const collectionState = sqliteTable('collection_state', {
+  key: text('key').primaryKey(),
+  value: json<Record<string, unknown>>('value').notNull(),
   updatedAt: updatedAt(),
 });

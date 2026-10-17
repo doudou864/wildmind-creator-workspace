@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
+import { loadBrowserPolicy } from './policy.ts';
 const platform = z
   .object({
     id: z.string().regex(/^[a-z0-9_-]+$/),
@@ -10,6 +11,7 @@ const platform = z
     loggedIn: z.array(z.string().min(1)),
     loggedOut: z.array(z.string().min(1)),
     loggedInPath: z.string().nullable(),
+    riskMarkers: z.array(z.string()).default([]),
     confirmation: z.object({ button: z.string(), message: z.string(), deadline: z.string() }).optional(),
   })
   .refine(
@@ -25,7 +27,8 @@ export async function loadBrowserConfig(root = process.cwd()) {
     .parse(parse(await readFile(path.join(root, 'config/browser.yaml'), 'utf8')));
   if (new Set(config.platforms.map((p) => p.id)).size !== config.platforms.length)
     throw new Error('浏览器平台 ID 重复');
-  return config.platforms;
+  const policy = await loadBrowserPolicy(root);
+  return config.platforms.map((p) => ({ ...p, riskMarkers: policy.riskMarkers }));
 }
 export function detectLogin(
   config: BrowserPlatform,
@@ -38,6 +41,8 @@ export function detectLogin(
   } catch {
     return { state: 'unknown', reason: '页面地址无法识别' };
   }
+  const risk = config.riskMarkers.find((marker) => text.includes(marker));
+  if (risk) return { state: 'unknown', reason: `需要处理：${risk}` };
   const onBackend = parsed.origin === new URL(config.url).origin;
   const loggedIn =
     onBackend &&
