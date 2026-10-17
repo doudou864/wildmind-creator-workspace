@@ -1,3 +1,5 @@
+import { PageCoverage } from '../pagination.ts';
+import { loadCapacity, checkCapacity } from '../capacity.ts';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { parse } from 'yaml';
@@ -33,6 +35,7 @@ export async function collectYoutube(
       platformId: z.string(),
       contentUrls: z.array(z.url()),
       contentReady: z.string(),
+      nextPage: z.string(),
       rowSelector: z.string(),
       titleSelector: z.string(),
       dateSelector: z.string(),
@@ -55,17 +58,27 @@ export async function collectYoutube(
   const folder = `data/captures/${cfg.platformId}/${today}/${randomUUID()}`;
   await mkdir(folder, { recursive: true, mode: 0o700 });
   session.viewport = cfg.viewport;
+  const capacity = await loadCapacity();
   const metadata: { title: string; href: string; date: string }[] = [];
   for (const url of cfg.contentUrls) {
     await session.navigate(url, cfg.contentReady);
-    const state = await session.inspect(cfg.platformId);
-    const rows = await session.run<{ title: string; href: string; date: string }[]>(
-      `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(cfg=>Array.from(document.querySelectorAll(cfg.rowSelector)).map(row=>({title:row.querySelector(cfg.titleSelector)?.textContent?.trim()??'',href:row.querySelector(cfg.titleSelector)?.getAttribute('href')??'',date:row.querySelector(cfg.dateSelector)?.textContent?.trim()??''})),${JSON.stringify(cfg)})));`,
-    );
-    const count = state.text.match(/第\s*1\s*-\s*(\d+)\s*条，共\s*(\d+)\s*条/);
-    if (!count || Number(count[1]) !== Number(count[2]) || rows.length !== Number(count[2]))
-      throw new Error('YouTube内容列表分页或条数未核对，不能漏采');
-    metadata.push(...rows);
+    const coverage = new PageCoverage();
+    for (let pageIndex = 0; pageIndex < capacity.maxPages; pageIndex++) {
+      const state = await session.inspect(cfg.platformId);
+      const rows = await session.run<{ title: string; href: string; date: string }[]>(
+        `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(cfg=>Array.from(document.querySelectorAll(cfg.rowSelector)).map(row=>({title:row.querySelector(cfg.titleSelector)?.textContent?.trim()??'',href:row.querySelector(cfg.titleSelector)?.getAttribute('href')??'',date:row.querySelector(cfg.dateSelector)?.textContent?.trim()??''})),${JSON.stringify(cfg)})));`,
+      );
+      const count = state.text.match(/第\s*\d+\s*[-–]\s*(\d+)\s*条，共\s*(\d+)\s*条/);
+      if (!count) throw new Error('YouTube列表总数无法确认');
+      const done = coverage.add(
+        rows.map((r) => r.href),
+        Number(count[2]),
+      );
+      metadata.push(...rows);
+      if (done) break;
+      await session.click(cfg.nextPage);
+    }
+    coverage.finish();
   }
   const incoming: CollectedPost[] = [];
   for (const item of metadata) {
@@ -87,6 +100,7 @@ export async function collectYoutube(
         key: postKey(cfg.platformId, item.title, publishedAt, idMatch[1]),
       });
   }
+  checkCapacity(database, cfg.platformId, incoming.length, capacity);
   if (!metadata.length) throw new Error('YouTube内容列表为空，需核验页面');
   const readings: CapturedReading[] = [];
   const allowed = workspace.metrics

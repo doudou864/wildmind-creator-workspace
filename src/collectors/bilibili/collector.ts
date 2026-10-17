@@ -1,3 +1,5 @@
+import { exportRecentPosts } from './export.ts';
+import { loadCapacity, checkCapacity } from '../capacity.ts';
 import { captureMonthly } from '../monthly.ts';
 import { writeState } from '../state.ts';
 import { bilibiliMetric } from './csv.ts';
@@ -11,8 +13,8 @@ import { CollectionSession } from '../../browser/collection-session.ts';
 import { shanghaiDate } from '../../browser/policy.ts';
 import { type Judgment } from '../../ai/structured.ts';
 import { loadConfig } from '../../lib/config.ts';
-import { sinceStartDate, withinRecentWindow, normalizeDataDate } from '../../core/collection.ts';
-import { parseCsv, chinesePublishedAt } from '../csv.ts';
+import { normalizeDataDate } from '../../core/collection.ts';
+import { chinesePublishedAt } from '../csv.ts';
 import { postKey, prepareAssociations, persistCollection, type CapturedReading } from '../storage.ts';
 import { screenshotReading } from '../recognition.ts';
 export async function collectBilibili(
@@ -30,7 +32,16 @@ export async function collectBilibili(
       export: z.string(),
       week: z.string(),
       yesterday: z.string(),
-      maxExportRows: z.number(),
+      selection: z.object({
+        choose: z.string(),
+        card: z.string(),
+        title: z.string(),
+        date: z.string(),
+        scroll: z.string(),
+        confirm: z.string(),
+        batchSize: z.number().int().positive(),
+        maxSegments: z.number().int().positive(),
+      }),
       matchWindowDays: z.number(),
       historyRange: z.tuple([z.number(), z.number()]),
       aliases: z.record(z.string(), z.string()),
@@ -46,34 +57,40 @@ export async function collectBilibili(
   await session.click(cfg.analysis);
   await session.click(cfg.compare);
   await session.inspect(cfg.platformId);
-  const csv = `${folder}/posts.csv`;
-  await session.download(cfg.export, csv);
-  paths.push(csv);
-  const rows = parseCsv(await readFile(csv, 'utf8'));
-  if (!rows.length) throw new Error('稿件导出为空，需核对后台');
-  const all = rows.map((row) => ({ row, publishedAt: chinesePublishedAt(row['发布时间']) }));
-  const eligible = all.filter(
-    (p) =>
-      sinceStartDate(p.publishedAt, workspace.parameters.startDate, now) &&
-      withinRecentWindow(p.publishedAt, now, workspace.parameters.recentWindow),
+  const capacity = await loadCapacity();
+  const rows = await exportRecentPosts(
+    session,
+    cfg.platformId,
+    cfg.selection,
+    cfg.export,
+    folder,
+    paths,
+    workspace.parameters.startDate,
+    workspace.parameters.recentWindow,
+    now,
+    (count) => checkCapacity(database, cfg.platformId, count, capacity),
   );
-  if (rows.length >= cfg.maxExportRows && eligible.length === rows.length)
-    throw new Error('近期稿件超过导出默认范围，需核对稿件选择，不能静默漏采');
+  const eligible = rows.map(({ row, sourcePath }) => ({
+    row,
+    sourcePath,
+    publishedAt: chinesePublishedAt(row['发布时间']),
+  }));
   const incoming = eligible.map(({ row, publishedAt }) => ({
     title: row['视频标题'],
     publishedAt,
     form: '视频' as const,
     key: postKey(cfg.platformId, row['视频标题'], publishedAt),
   }));
-  const readings: CapturedReading[] = [
-    {
-      sourcePath: csv,
-      capturedAt: now.toISOString(),
-      kind: 'list',
-      reading: screenshotReading.parse({
-        status: 'ok',
-        reason: null,
-        posts: eligible.map(({ row, publishedAt }) => ({
+  const readings: CapturedReading[] = [...new Set(eligible.map((p) => p.sourcePath))].map((sourcePath) => ({
+    sourcePath,
+    capturedAt: now.toISOString(),
+    kind: 'list',
+    reading: screenshotReading.parse({
+      status: 'ok',
+      reason: null,
+      posts: eligible
+        .filter((p) => p.sourcePath === sourcePath)
+        .map(({ row, publishedAt }) => ({
           title: row['视频标题'],
           publishedAt,
           form: '视频',
@@ -81,12 +98,11 @@ export async function collectBilibili(
             .filter(([label]) => !['视频标题', '发布时间'].includes(label))
             .map(([label, raw]) => bilibiliMetric(label, raw, cfg.aliases)),
         })),
-        account: { dataDate: null, metrics: [] },
-        records: [],
-        signals: [],
-      }),
-    },
-  ];
+      account: { dataDate: null, metrics: [] },
+      records: [],
+      signals: [],
+    }),
+  }));
   await session.navigate(cfg.url, cfg.week);
   await session.click(cfg.week);
   await session.click(cfg.yesterday);

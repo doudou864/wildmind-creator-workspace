@@ -401,7 +401,7 @@ id 就是客户端 UUID requestId；本步只建表，不打开真实发布能�
 
 ## attention_items（需要你处理）
 
-id、platform_id、kind（login / confirmation / risk）、reason、status（pending / resolved / failed）、deadline（可空）、space_id / page（可空）、created_at、updated_at。同平台待处理项更新为最新原因；微信确认保留浏览器位置，超过当天 23:00 标为 failed，原因“未确认登录”。账号 login_state 新增 awaiting_confirmation，不当作程序错误。
+id、platform_id、kind（login / confirmation / risk / capacity）、reason、status（pending / resolved / failed）、deadline（可空）、space_id / page（可空）、created_at、updated_at。同平台同类型待处理项更新为最新原因；容量提醒与登录/风控共存，采集成功只解除登录类阻塞，不清除容量提醒，容量回落到阈值以下才解除；微信确认保留浏览器位置，超过当天 23:00 标为 failed，原因“未确认登录”。账号 login_state 新增 awaiting_confirmation，不当作程序错误。
 
 ## collection_state（采集恢复状态）
 
@@ -414,3 +414,5 @@ key（主键）、value（JSON）、updated_at。保存每天随机启动分钟�
 PostSnapshot / AccountDaily 增加 precision（exact/display/unknown）和 rawValue；旧记录无法核对时为 unknown，不默认精确。AccountDaily 增加 backfilled。增长只汇总精确净增，禁止约数总量相减。CrawlLog 增加可空 telemetry：延迟、同日截图复用、页面操作数、AI 总调用次数、截图识别次数（aiReads，旧日志可无此分项）、需要处理项；旧日志显示未记录，耗时从开始/完成时间计算。
 
 第 3 步导出与截图共用长表：视频号、YouTube 优先用平台原生作品 ID 关联，同标题的不同 ID 不合并，改标题不新建作品。只有发布日期的导出保留 YYYY-MM-DD，不虚构时分秒，作品年龄按北京时间日历日计算。YouTube 时钟格式的观看时长由代码转成秒；账号订阅净增只在相邻两日总数均精确时相减，否则为空。
+
+分页容量由 config/collection.yaml 的 capacity 配置：近期作品 80 条提前提醒、100 条上限（可调整），仅统计起号日以后且在跟踪期的作品。B站每批最多10条并核对CSV名单；小红书/YouTube按页面总数核对逐页覆盖。capacity 复用原有 TEXT kind 字段，无数据库结构变更。

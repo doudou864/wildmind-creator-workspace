@@ -362,7 +362,7 @@ export const rawRecords = sqliteTable(
 export const attentionItems = sqliteTable('attention_items', {
   id: id(),
   platformId: text('platform_id').notNull(),
-  kind: text('kind', { enum: ['login', 'confirmation', 'risk'] }).notNull(),
+  kind: text('kind', { enum: ['login', 'confirmation', 'risk', 'capacity'] }).notNull(),
   reason: text('reason').notNull(),
   status: text('status', { enum: ['pending', 'resolved', 'failed'] }).notNull(),
   deadline: text('deadline'),

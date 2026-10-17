@@ -49,3 +49,5 @@ accountExtras:
   rightInset: 190
   viewport: {width: 2560, height: 1080}
   maxScreens: 15
+
+nextPage: ".d-pagination-page >> nth=-1"

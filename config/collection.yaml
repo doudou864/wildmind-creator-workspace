@@ -11,3 +11,8 @@ schedule:
   timezone: Asia/Shanghai
   platforms: [douyin, bilibili, youtube, xiaohongshu, channels]
   launchdLabel: com.wildmind.creator.collect
+# 对近期有效作品计数；翻页会读全，达到预警阈值先提示，上限之外不写入残缺批次。
+capacity:
+  warnAt: 80
+  maxRecentWorks: 100
+  maxPages: 100

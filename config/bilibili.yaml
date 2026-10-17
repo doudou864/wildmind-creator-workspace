@@ -5,7 +5,15 @@ compare: 'text="稿件对比"'
 export: '.bmc-icon-sprite-export'
 week: 'text="近7天"'
 yesterday: 'text="昨日"'
-maxExportRows: 10
+selection:
+  choose: 'text="稿件选择"'
+  card: '.arcp-archive'
+  title: '.arcp-archive-title'
+  date: '.arcp-archive-pubtime'
+  scroll: '.arcp-left .simplebar-content-wrapper'
+  confirm: '.arcp-queue-confirm'
+  batchSize: 10
+  maxSegments: 100
 aliases:
   封标点击率: 封标点击率星级
   3秒跳出率: 3 秒跳出率

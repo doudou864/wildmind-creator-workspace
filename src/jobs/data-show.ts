@@ -1,3 +1,4 @@
+import { pendingAttention } from './attention.ts';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import type { WorkspaceConfig } from '../lib/config.ts';
 import { shanghaiDate } from '../browser/policy.ts';
@@ -5,7 +6,9 @@ import { exactGrowth } from '../core/collection.ts';
 export function showData(database: WorkspaceDatabase, config: WorkspaceConfig, platform?: string, now = new Date()) {
   if (platform && !config.platforms.some((p) => p.id === platform)) throw new Error(`未知平台：${platform}`);
   const since = shanghaiDate(new Date(now.getTime() - 6 * 86400000));
-  const lines: string[] = [];
+  const lines: string[] = ['需要你处理'];
+  for (const item of pendingAttention(database).filter((x) => !platform || x.platformId === platform))
+    lines.push(`${item.platformId}：${item.reason}`);
   const metricName = (id: string) => config.metrics.find((m) => m.id === id)?.name ?? id;
   const value = (row: { value: number | null; precision: string; raw_value: string | null }) =>
     `${row.raw_value ?? row.value ?? '未知'}${row.precision === 'display' ? '（约数/显示精度）' : row.precision === 'unknown' ? '（精度未记录）' : ''}`;

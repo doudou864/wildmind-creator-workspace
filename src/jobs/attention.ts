@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, ne } from 'drizzle-orm';
 import { attentionItems } from '../db/schema.ts';
 import type { WorkspaceDatabase } from '../db/database.ts';
 export function pendingAttention(database: WorkspaceDatabase) {
@@ -12,7 +12,7 @@ export function requireAttention(
   input: Pick<typeof attentionItems.$inferInsert, 'platformId' | 'kind' | 'reason' | 'deadline' | 'spaceId' | 'page'>,
   now = new Date().toISOString(),
 ) {
-  const existing = pendingAttention(database).find((x) => x.platformId === input.platformId);
+  const existing = pendingAttention(database).find((x) => x.platformId === input.platformId && x.kind === input.kind);
   const item = { ...input, updatedAt: now };
   if (existing) {
     database.db.update(attentionItems).set(item).where(eq(attentionItems.id, existing.id)).run();
@@ -29,7 +29,13 @@ export function resolveAttention(database: WorkspaceDatabase, platformId: string
   database.db
     .update(attentionItems)
     .set({ status: 'resolved', updatedAt: now })
-    .where(and(eq(attentionItems.platformId, platformId), eq(attentionItems.status, 'pending')))
+    .where(
+      and(
+        eq(attentionItems.platformId, platformId),
+        eq(attentionItems.status, 'pending'),
+        ne(attentionItems.kind, 'capacity'),
+      ),
+    )
     .run();
 }
 export function expireConfirmations(database: WorkspaceDatabase, now = new Date().toISOString()) {

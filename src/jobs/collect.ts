@@ -97,14 +97,14 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
     const slot =
       mode === 'scheduled' ? dueSlot(now, Number(state.chosen), schedule.retries, attempted, !!state.succeeded) : mode;
     if (!slot) return;
-    const pending = pendingAttention(database);
+    const pending = pendingAttention(database).filter((x) => x.kind !== 'capacity');
     const refreshed = readState(database, key) ?? state;
     const successful = new Set(
       Array.isArray(refreshed.successfulPlatforms) ? (refreshed.successfulPlatforms as string[]) : [],
     );
     const ids =
       mode === 'resume'
-        ? pending.filter((x) => x.kind !== 'confirmation').map((x) => x.platformId)
+        ? [...new Set(pending.filter((x) => x.kind !== 'confirmation').map((x) => x.platformId))]
         : schedule.platforms.filter(
             (id) => !pending.some((x) => x.platformId === id) && (mode === 'manual' || !successful.has(id)),
           );

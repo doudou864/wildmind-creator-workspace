@@ -23,5 +23,7 @@ aliases:
 accountAliases:
   当前订阅人数: 粉丝总数
   订阅总数: 粉丝总数
-reportScroll: html
+reportScroll: '#scrollable-content-container'
 reportUrl: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/analytics/tab-overview/period-default/explore?entity_type=CHANNEL&entity_id=UCNRZf29PvGrv1puttSISTpA&time_period=4_weeks&explore_type=TABLE_AND_CHART&metrics_computation_type=DELTA&metric=AVERAGE_WATCH_TIME&granularity=DAY&t_metrics=AVERAGE_WATCH_TIME&t_metrics=AVERAGE_WATCH_PERCENTAGE&t_metrics=RATINGS_LIKES&t_metrics=COMMENTS&t_metrics=SHARINGS&t_metrics=EXTERNAL_VIEWS&t_metrics=EXTERNAL_WATCH_TIME&t_metrics=SUBSCRIBERS_NET_CHANGE&t_metrics=VIDEO_THUMBNAIL_IMPRESSIONS&t_metrics=VIDEO_THUMBNAIL_IMPRESSIONS_VTR&v_metrics=EXTERNAL_VIEWS&v_metrics=EXTERNAL_WATCH_TIME&v_metrics=SUBSCRIBERS_NET_CHANGE&v_metrics=VIDEO_THUMBNAIL_IMPRESSIONS&v_metrics=VIDEO_THUMBNAIL_IMPRESSIONS_VTR&dimension=VIDEO&o_column=RATINGS_LIKES&o_direction=ANALYTICS_ORDER_DIRECTION_DESC
+
+nextPage: 'loc=role:button[name="转到下一页"]'
