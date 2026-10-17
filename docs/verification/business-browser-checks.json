@@ -1,0 +1,110 @@
+[
+  {
+    "name": "无演示内容，视频封面三个比例",
+    "passed": true
+  },
+  {
+    "name": "公众号两种固定输出",
+    "passed": true
+  },
+  {
+    "name": "文章正文逐段配图",
+    "passed": true
+  },
+  {
+    "name": "抖音图文保留同稿正文并使用竖版",
+    "passed": true
+  },
+  {
+    "name": "自由生图单一比例",
+    "passed": true
+  },
+  {
+    "name": "服务未接入不允许假生成或保存",
+    "passed": true
+  },
+  {
+    "name": "取消放弃保留表单",
+    "passed": true
+  },
+  {
+    "name": "离开业务页提示未保存",
+    "passed": true
+  },
+  {
+    "name": "本地图片可预览但明确未上传",
+    "passed": true
+  },
+  {
+    "name": "损坏图片不替换此前有效预览",
+    "passed": true
+  },
+  {
+    "name": "新建清空未保存任务",
+    "passed": true
+  },
+  {
+    "name": "1728无横向溢出",
+    "passed": true
+  },
+  {
+    "name": "1440无横向溢出",
+    "passed": true
+  },
+  {
+    "name": "选题无假候选且样本未知",
+    "passed": true
+  },
+  {
+    "name": "总控台展示命中率分组与待接入状态",
+    "passed": true
+  },
+  {
+    "name": "接口夹具：D1与D3分别显示异常",
+    "passed": true
+  },
+  {
+    "name": "接口夹具：预估命中率按分组显示",
+    "passed": true
+  },
+  {
+    "name": "接口夹具：历史终判与零分母",
+    "passed": true
+  },
+  {
+    "name": "接口夹具：逐检查点缺失原因与采集时间",
+    "passed": true
+  },
+  {
+    "name": "刷新撤销测试夹具，业务数据仍为空",
+    "passed": true
+  },
+  {
+    "name": "接口夹具：来源已移除仍可见候选",
+    "passed": true
+  },
+  {
+    "name": "接口冲突不乐观覆盖原选择",
+    "passed": true
+  },
+  {
+    "name": "已定格理由与数值使用同一份快照",
+    "passed": true
+  },
+  {
+    "name": "生成失败不丢表单也不假报成功",
+    "passed": true
+  },
+  {
+    "name": "保存失败继续显示未保存",
+    "passed": true
+  },
+  {
+    "name": "测试夹具刷新后移除，真实能力保持不可用",
+    "passed": true
+  },
+  {
+    "name": "预估与已定稿同时显示",
+    "passed": true
+  }
+]

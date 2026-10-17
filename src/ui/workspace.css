@@ -164,3 +164,15 @@ dialog::backdrop { background: var(--bg); opacity: .8; }
   .works-table td { padding: 7px 0; }
 }
 @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+.checkpoint-note { display: block; font-size: 10px; margin-top: 3px; }
+.checkpoint-details h3 { font: 600 14px var(--font-mono); }
+.checkpoint-details > section { border-top: 1px solid var(--line); padding-top: 8px; }
+.hit-groups { display: grid; grid-template-columns: 1fr 1fr; margin: 18px 0; }
+.hit-groups > div + div { border-left: 1px solid var(--line); padding-left: 20px; }
+.hit-groups strong { display: block; font-size: 32px; margin: 6px 0; }
+.hit-groups p { line-height: 1.8; }
+.hit-rates select { background: var(--card); border: 1px solid var(--line); padding: 4px; }
+.hit-period { border-top:1px solid var(--line-soft); margin-top:14px; padding-top:12px; }
+.hit-period h3 { display:flex; justify-content:space-between; align-items:center; font-size:12px; font-weight:500; margin:0; }
+.hit-period .hit-groups { margin:12px 0; }
+.hit-period .hit-groups strong { font-size:25px; }

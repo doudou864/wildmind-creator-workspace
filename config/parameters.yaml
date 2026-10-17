@@ -16,3 +16,6 @@ topicCandidateCount: 20
 topicExploreMin: 2
 topicExploreMax: 3
 topicFireMinimum: 20
+anomalyCheckpoints: [1, 3]
+reviewPlatforms: [douyin, wechat]
+conclusionMinimum: 30

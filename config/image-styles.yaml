@@ -1,0 +1,44 @@
+# 图片用途、比例与风格均在此维护。固定多比例用途会一次列出全部输出。
+uploadMaxMB: 20
+acceptedTypes: [image/png, image/jpeg]
+styles:
+  - id: default
+    name: 通用清晰风格
+    prompt: 主次清晰、文字易读、主体明确；按用途与比例调整构图。
+purposes:
+  - id: video_cover
+    name: 视频封面
+    description: 一次准备三种比例，分别用于各平台封面。
+    ratios: ['3:4', '4:3', '16:9']
+    contentMode: theme
+    references: ['3:4 自动参考小红书历史封面点击率', '16:9 自动参考 YouTube 历史点击率', '横版同时参考 B 站封面星级']
+  - id: wechat_cover
+    name: 公众号封面
+    description: 同时准备头图与转发卡片。
+    ratios: ['2.35:1', '1:1']
+    contentMode: theme
+    references: []
+  - id: illustration
+    name: 文章插图
+    description: 按空行分段，优先复用已有图片，为尚未配图的段落生成。
+    ratios: ['4:3']
+    contentMode: paragraphs
+    references: []
+  - id: douyin_images
+    name: 抖音图文配图
+    description: 使用与公众号相同的正文，按竖版比例重新配图。
+    ratios: ['3:4']
+    contentMode: paragraphs
+    references: []
+  - id: free
+    name: 自由生图
+    description: 输入需求，自由选择比例。
+    ratios: ['1:1', '3:4', '4:3', '16:9']
+    contentMode: free
+    references: []
+  - id: upload
+    name: 上传素材
+    description: 保存自己制作的图片，或为已有图片上传一个新版本。
+    ratios: []
+    contentMode: upload
+    references: []

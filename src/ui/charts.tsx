@@ -6,7 +6,7 @@ import { BarChart, LineChart, PictorialBarChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
 import type { EChartsCoreOption } from 'echarts/core';
-import type { Day } from '@/lib/demo';
+import type { Day } from '@/lib/workspace-model';
 import { chartTheme } from './chart-theme';
 
 echarts.use([BarChart, LineChart, PictorialBarChart, GridComponent, TooltipComponent, SVGRenderer]);

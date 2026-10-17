@@ -10,6 +10,7 @@ const platformSchema = z.object({
 });
 const metricSchema = z.object({ id: z.string(), name: z.string(), unit: z.string(), level: z.enum(['core', 'secondary']), scope: z.literal('account') });
 const parametersSchema = z.object({
+  anomalyCheckpoints: z.array(z.number().int().positive()), reviewPlatforms: z.array(z.string()), conclusionMinimum: z.number().int().positive(),
   timeRanges: z.array(z.number().int().positive()).min(1), defaultRange: z.number().int().positive(),
   recentWindow: z.number().int().positive(), checkpoints: z.array(z.number().int().positive()),
   hitThreshold: z.number().positive(), ratioPerCell: z.number().positive(), ratioCells: z.number().int().positive(),
