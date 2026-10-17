@@ -19,6 +19,10 @@ platforms:
     loggedOut: [扫码登录, 密码登录]
     loggedInPath: /platform/home
   - id: channels
+    confirmation:
+      button: 'text="微信快捷登录"'
+      message: 请在微信里确认登录
+      deadline: "23:00"
     url: https://channels.weixin.qq.com/
     domains: [channels.weixin.qq.com]
     loggedIn: ["视频号ID:", 关注者, 昨日数据]

@@ -43,7 +43,7 @@ export const accounts = sqliteTable('accounts', {
   platformId: text('platform_id').primaryKey(),
   platformAccountId: text('platform_account_id'),
   displayName: text('display_name'),
-  loginState: text('login_state', { enum: ['logged_in', 'logged_out', 'unknown'] })
+  loginState: text('login_state', { enum: ['logged_in', 'logged_out', 'unknown', 'awaiting_confirmation'] })
     .notNull()
     .default('unknown'),
   checkedAt: text('checked_at'),
@@ -319,6 +319,38 @@ export const publishRequests = sqliteTable('publish_requests', {
   input: json<Record<string, unknown>>('input').notNull(),
   result: json<Record<string, unknown>>('result'),
   status: text('status', { enum: ['queued', 'running', 'completed', 'failed', 'unknown'] }).notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: updatedAt(),
+});
+
+export const rawRecords = sqliteTable(
+  'raw_records',
+  {
+    id: id(),
+    platformId: text('platform_id').notNull(),
+    postId: text('post_id').references(() => posts.id),
+    dataDate: text('data_date').notNull(),
+    type: text('type', { enum: ['diagnosis', 'audience', 'viewing_times'] }).notNull(),
+    content: json<Record<string, unknown>>('content').notNull(),
+    sourcePath: text('source_path').notNull(),
+    capturedAt: text('captured_at').notNull(),
+    updatedAt: updatedAt(),
+  },
+  (t) => [
+    check('raw_record_json', sql`json_valid(${t.content})`),
+    check('raw_record_source', sql`${t.sourcePath} LIKE 'data/%' AND instr(${t.sourcePath}, '..') = 0`),
+  ],
+);
+
+export const attentionItems = sqliteTable('attention_items', {
+  id: id(),
+  platformId: text('platform_id').notNull(),
+  kind: text('kind', { enum: ['login', 'confirmation', 'risk'] }).notNull(),
+  reason: text('reason').notNull(),
+  status: text('status', { enum: ['pending', 'resolved', 'failed'] }).notNull(),
+  deadline: text('deadline'),
+  spaceId: integer('space_id'),
+  page: text('page'),
   createdAt: text('created_at').notNull(),
   updatedAt: updatedAt(),
 });

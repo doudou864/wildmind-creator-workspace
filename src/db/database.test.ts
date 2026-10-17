@@ -44,6 +44,7 @@ describe('本机数据底座', () => {
       'messages',
       'deals',
       'topic_signals',
+      'raw_records',
       'publish_records',
       'publish_receipts',
       'topic_generation_results',
@@ -185,4 +186,22 @@ test('完整指标字典不混用账号与作品口径，星级不是百分比',
   expect(metrics.find((m) => m.name === '视频推荐来源占比')?.kind).toBe('number');
   for (const section of ['8.1', '8.1.1', '8.2', '8.3', '8.4', '8.5', '8.6', '8.7', '8.8'])
     expect(metrics.some((m) => m.bindings.some((b) => b.prd === section))).toBe(true);
+});
+
+test('原文记录允许账号级空作品，拒绝非法 JSON 和失去来源，迁移不覆盖原文', async () => {
+  const database = await fixture();
+  const insert = database.sqlite.prepare(
+    'INSERT INTO raw_records (id, platform_id, post_id, data_date, type, content, source_path, captured_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+  );
+  insert.run('raw', 'douyin', null, '2026-10-16', 'audience', '{"女性":"42%"}', 'data/captures/a.png', 'now', 'now');
+  expect(() =>
+    insert.run('bad', 'douyin', null, '2026-10-16', 'audience', 'not json', 'data/captures/a.png', 'now', 'now'),
+  ).toThrow();
+  expect(() => insert.run('bad', 'douyin', null, '2026-10-16', 'audience', '{}', '../a.png', 'now', 'now')).toThrow();
+  const second = await initializeDatabase(database.filename);
+  connections.push(second);
+  expect(second.sqlite.prepare('SELECT post_id,content FROM raw_records').get()).toEqual({
+    post_id: null,
+    content: '{"女性":"42%"}',
+  });
 });

@@ -8,6 +8,20 @@
       "when": 1792230741347,
       "tag": "0000_remarkable_grey_gargoyle",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1792235445658,
+      "tag": "0001_familiar_meltdown",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1792235520533,
+      "tag": "0002_old_randall",
+      "breakpoints": true
     }
   ]
 }

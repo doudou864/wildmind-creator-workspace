@@ -21,14 +21,14 @@ describe('真实后台登录检查', () => {
     expect(detectLogin({ ...config, loggedIn: [], loggedInPath: null }, config.url, '首页 数据中心').state).toBe(
       'unknown',
     );
-    expect(detectLogin(config, config.url, '登录视频号助手').state).toBe('logged_out');
+    expect(detectLogin(config, config.url, '登录视频号助手').state).toBe('awaiting_confirmation');
   });
   test('视频号须同时核对后台地址和已实测的账号区域', async () => {
     const config = (await loadBrowserConfig()).find((p) => p.id === 'channels')!;
     expect(detectLogin(config, 'https://channels.weixin.qq.com/platform', '视频号ID: 关注者 昨日数据').state).toBe(
       'logged_in',
     );
-    expect(detectLogin(config, config.url, '登录视频号助手 微信快捷登录').state).toBe('logged_out');
+    expect(detectLogin(config, config.url, '登录视频号助手 微信快捷登录').state).toBe('awaiting_confirmation');
     expect(detectLogin(config, 'https://channels.weixin.qq.com/platform', '昨日数据').state).toBe('unknown');
   });
   test('控制权/CLI错误时停止后续浏览，不自动重试', async () => {
@@ -53,8 +53,23 @@ describe('真实后台登录检查', () => {
     const results = await browser.checkLogins(['douyin']);
     expect(results[0].state).toBe('logged_in');
     expect(scripts[1]).toContain('mode:0o600');
-    expect(scripts[1]).toContain('Network.setCookies');
+    expect(scripts[1]).not.toContain('Network.setCookies');
+    expect(scripts[1]).not.toContain('addScriptToEvaluateOnNewDocument');
     expect(scripts[1]).not.toContain('console.log(cookies)');
     expect(scripts[2]).toContain('finish({keep:[]})');
   });
+});
+
+test('微信确认按钮只在尚未登录时点击，不输入密码，不注入登录资料', async () => {
+  let script = '';
+  const browser = new EgoBrowser(process.cwd(), async (value) => {
+    script = value;
+    return { url: 'https://channels.weixin.qq.com/', positive: [], negative: ['登录视频号助手'] };
+  });
+  const result = await browser.requestConfirmation('channels', 14);
+  expect(result.state).toBe('awaiting_confirmation');
+  expect(script).toContain('微信快捷登录');
+  expect(script).toContain('if(!verified(before))');
+  expect(script).not.toContain('Network.setCookies');
+  expect(script).not.toContain('.fill(');
 });

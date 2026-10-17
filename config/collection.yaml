@@ -1,0 +1,9 @@
+# 节奏可调；计数包含登录、列表翻页和详情导航，每天所有平台合计。
+browser:
+  actionDelayMs: [1500, 3500]
+  platformDelayMs: [8000, 16000]
+  dwellMs: [2500, 5000]
+  scrollPixels: [350, 650]
+  dailyPageLimit: 200
+  riskMarkers: [验证码, 拖动滑块, 安全验证, 访问频繁, 异常登录, 账号存在风险]
+  confirmationPollSeconds: 30

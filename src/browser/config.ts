@@ -10,6 +10,7 @@ const platform = z
     loggedIn: z.array(z.string().min(1)),
     loggedOut: z.array(z.string().min(1)),
     loggedInPath: z.string().nullable(),
+    confirmation: z.object({ button: z.string(), message: z.string(), deadline: z.string() }).optional(),
   })
   .refine(
     (p) =>
@@ -30,7 +31,7 @@ export function detectLogin(
   config: BrowserPlatform,
   url: string,
   text: string,
-): { state: 'logged_in' | 'logged_out' | 'unknown'; reason: string } {
+): { state: 'logged_in' | 'logged_out' | 'unknown' | 'awaiting_confirmation'; reason: string } {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -46,6 +47,7 @@ export function detectLogin(
     config.loggedIn.every((marker) => text.includes(marker));
   const loggedOut = config.loggedOut.some((marker) => text.includes(marker));
   if (loggedIn && !loggedOut) return { state: 'logged_in', reason: '已核实后台身份区域与后台地址' };
+  if (loggedOut && !loggedIn && config.confirmation) return { state: 'awaiting_confirmation', reason: '需要微信确认' };
   if (loggedOut && !loggedIn) return { state: 'logged_out', reason: '后台显示登录入口，请登录' };
   return {
     state: 'unknown',

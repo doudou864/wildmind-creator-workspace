@@ -2,7 +2,7 @@
 
 数据库：`data/workspace.db`，SQLite WAL，schema：`src/db/schema.ts`，迁移：`src/db/migrations/`。执行 `npm run db:migrate` 会先在线备份再迁移；重复执行不重建表、不清空数据。
 
-业务依据：PRD v1.8 第 10 章是建议实体；字段细节按当前 `docs/service-contracts.md` 与 `src/lib/*-model.ts`。这里只建立持久化底座，不开启尚未实现的 CRUD、采集、AI 或发布服务。
+业务依据：PRD v1.9 第 10 章是建议实体；字段细节按当前 `docs/service-contracts.md` 与 `src/lib/*-model.ts`。这里只建立持久化底座，不开启尚未实现的 CRUD、采集、AI 或发布服务。
 
 所有普通记录保留 updatedAt，无乐观版本。revision 只在发布记录/回执、消息、商单、后台主题和选题生成任务/结果。表里的 snake_case 与模型 camelCase 对应。JSON 是结构化正文/证据，不存二进制。
 
@@ -17,7 +17,7 @@ MetricDefinition 只存在 YAML，不复制到数据库；历史行保留原 met
 | platform_id | TEXT 主键 / 必填 | config/platforms.yaml 的平台 ID | §10、11.1；契约 | 登录命令 / 发布中心 accounts |
 | platform_account_id | TEXT / 可空 | platform_account_id，对应同名契约字段/实体关联 | §10、11.1；契约 | 登录命令 / 发布中心 accounts |
 | display_name | TEXT / 可空 | display_name，对应同名契约字段/实体关联 | §10、11.1；契约 | 登录命令 / 发布中心 accounts |
-| login_state | TEXT / 必填 | logged_in / logged_out / unknown | §10、11.1；契约 | 登录命令 / 发布中心 accounts |
+| login_state | TEXT / 必填 | logged_in / logged_out / unknown / awaiting_confirmation | §10、11.1；契约 | 登录命令 / 发布中心 accounts |
 | checked_at | TEXT / 可空 | 最近登录检查时间 | §10、11.1；契约 | 登录命令 / 发布中心 accounts |
 | reason | TEXT / 可空 | 真实失败/未知原因，不填估计结果 | §10、11.1；契约 | 登录命令 / 发布中心 accounts |
 | state_path | TEXT / 可空 | data/browser/ 登录资料文件路径 | §10、11.1；契约 | 登录命令 / 发布中心 accounts |
@@ -383,11 +383,22 @@ id 就是客户端 UUID requestId；本步只建表，不打开真实发布能�
 - deals.suggestion：id、status、reason、expectedRevision、evidenceMessageId、evidenceRevision（§6.7，Deal）。
 - publish_attempts.receipt：与 publish_receipts 完整对应，含当时 revision；发布请求 input/result 保存对应接口快照（§6.5）。
 
-## 待确认
+## raw_records（原文记录）
 
-1. **B站封标点击率单位**：PRD §8.5 写“只记星级”，采集备注又写“星级或百分位按导出原值”。当前字典按主表保留星级定义；首次 CSV 若给百分位，需确认是否另建指标，不能把百分位当星级。
-2. **小红书图文、公众号、视频号图文、快手、TikTok、X**：按 PRD §8.3/8.4/8.7/8.8 列全框架，pending 标记保留；具体页面、字段、公众号完读率是否提供，等首发真实后台核对，不自动采集。
-3. **文字/分布型指标的落库口径**：PRD 要存诊断文字、月度画像与观看时段，但 §10 的两张快照表仅有数值。搜索词可进 TopicSignal；其他文字/分布是否另建原文记录表，需确认后再加迁移，当前不塞进数值列。
-4. **Layout 的实体粒度**：PRD §10 表述为“每平台版本”，现有契约是一个 LayoutDocument 含三版 variants。当前按现有接口完整存储，并为每次确认单独建快照；是否要改成每版一行，请确认后再做增量迁移。
+| 字段 | 类型 / 空值 | 含义 |
+|---|---|---|
+| id | TEXT 主键 | 记录 ID |
+| platform_id | TEXT 必填 | 平台 ID |
+| post_id | TEXT 可空 | 关联 posts；账号级原文为空 |
+| data_date | TEXT 必填 | 平台标注的数据日期 |
+| type | TEXT 必填 | diagnosis / audience / viewing_times |
+| content | TEXT 必填 | 有效 JSON，保留原文及分布，不塞进数值列 |
+| source_path | TEXT 必填 | data/ 下来源截图或导出文件路径 |
+| captured_at | TEXT 必填 | 读取时间 |
+| updated_at | TEXT 必填 | 更新时间 |
 
-以上待确认项不产生假数据，也不阻断数据库、配置加载、登录检查和日志基础设施。
+搜索词仍进 TopicSignal。B站星级和百分位使用不同指标 id，基线和异常仅在同一指标内比较。未发布的平台/形式保留 pending，第 12 步首发后核对。排版保持一个 LayoutDocument 含三个版本，每次确认存快照。以上四项已于 PRD v1.9 确认。
+
+## attention_items（需要你处理）
+
+id、platform_id、kind（login / confirmation / risk）、reason、status（pending / resolved / failed）、deadline（可空）、space_id / page（可空）、created_at、updated_at。同平台待处理项更新为最新原因；微信确认保留浏览器位置，超过当天 23:00 标为 failed，原因“未确认登录”。账号 login_state 新增 awaiting_confirmation，不当作程序错误。

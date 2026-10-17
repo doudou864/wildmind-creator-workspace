@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import path from 'node:path';
+import { loadBrowserPolicy, pause, randomBetween, consumePage } from './policy.ts';
 import { loadConfig } from '../lib/config.ts';
 import { detectLogin, loadBrowserConfig, type BrowserPlatform } from './config.ts';
 import type { LoginResult, WorkspaceBrowser } from './interface.ts';
@@ -48,21 +49,6 @@ const cfg=${JSON.stringify(config)};
 const directory=${JSON.stringify(path.join(root, 'data/browser'))};
 const filename=${JSON.stringify(path.join(root, 'data/browser', `${config.id}.json`))};
 const scoped=(cookie)=>cfg.domains.some(d=>cookie.domain.replace(/^\\./,'')===d || cookie.domain.endsWith('.'+d));
-async function restore(page){
- let state;try{state=JSON.parse(await fs.readFile(filename,'utf8'));}catch(e){if(e.code==='ENOENT')return;throw new Error('登录资料无法读取');}
- const live=(await page.cdp('Network.getAllCookies')).cookies.filter(scoped);
- if(live.length)return;
- const cookies=state.cookies.filter(scoped).filter(c=>!c.expires || c.expires<0 || c.expires>Date.now()/1000).map(c=>{
-  const result={name:c.name,value:c.value,domain:c.domain,path:c.path,secure:c.secure,httpOnly:c.httpOnly,sameSite:c.sameSite};
-  if(c.expires>0)result.expires=c.expires;
-  if(c.partitionKey)result.partitionKey=c.partitionKey;
-  return result;
- });
- if(cookies.length)await page.cdp('Network.setCookies',{cookies});
- if(state.origin===new URL(cfg.url).origin && state.localStorage){
-  await page.cdp('Page.addScriptToEvaluateOnNewDocument',{source:'if(location.origin==='+JSON.stringify(state.origin)+'){const values='+JSON.stringify(state.localStorage)+';for(const [k,v] of Object.entries(values))if(localStorage.getItem(k)===null)localStorage.setItem(k,v);}'});
- }
-}
 async function saveState(page){
  const cookies=(await page.cdp('Network.getAllCookies')).cookies.filter(scoped);
  const storage=await page.evaluate(()=>({origin:location.origin,localStorage:Object.fromEntries(Object.entries(localStorage))}));
@@ -98,11 +84,18 @@ export class EgoBrowser implements WorkspaceBrowser {
     if (!config) throw new Error('没有该平台的后台配置');
     return config;
   }
+  private async beforePage(platformChange = false) {
+    if (this.execute !== runEgo) return;
+    const policy = await loadBrowserPolicy(this.root);
+    await consumePage(this.root);
+    await pause(randomBetween(platformChange ? policy.platformDelayMs : policy.actionDelayMs));
+  }
   async openLogin(platformId: string) {
     const config = await this.config(platformId);
+    await this.beforePage();
     const opened = (await this.execute(`${stateScript(this.root, config)}
 const task=await taskSpace(${this.testSpaceId ?? JSON.stringify('工作台登录 ' + platformId + ' ' + Date.now())});
-const page=task.page('p1');await restore(page);await navigate(page);
+const page=task.page('p1');await navigate(page);
 const observed=await observe(page);
 console.log('WORKSPACE_RESULT:'+JSON.stringify({spaceId:task.spaceId,page:page.label,observed}));
 if(verified(observed)){await saveState(page);${this.testSpaceId ? '' : 'await task.finish({keep:[page.label]});'}}else await task.handOff();`)) as {
@@ -114,6 +107,36 @@ if(verified(observed)){await saveState(page);${this.testSpaceId ? '' : 'await ta
     return { spaceId: opened.spaceId, page: opened.page, result: result.state === 'logged_in' ? result : undefined };
   }
 
+  async requestConfirmation(platformId: string, spaceId: number, label = 'p1') {
+    const config = await this.config(platformId);
+    if (!config.confirmation) throw new Error('平台没有快捷确认登录配置');
+    const policy = await loadBrowserPolicy(this.root);
+    const observed = (await this.execute(`${stateScript(this.root, config)}
+const task=await taskSpace(${spaceId});const page=task.page(${JSON.stringify(label)});
+const before=await observe(page);
+if(!verified(before)) {
+ await page.snapshot();
+ await page.waitForTimeout(${randomBetween(policy.actionDelayMs)});
+ await page.click(${JSON.stringify(config.confirmation.button)});
+}
+console.log('WORKSPACE_RESULT:'+JSON.stringify(await observe(page)));`)) as {
+      url: string;
+      positive: string[];
+      negative: string[];
+    };
+    return { ...this.result(config, observed), spaceId, page: label };
+  }
+  async observeLogin(platformId: string, spaceId: number, label = 'p1') {
+    const config = await this.config(platformId);
+    const observed = (await this.execute(`${stateScript(this.root, config)}
+const task=await taskSpace(${spaceId});const page=task.page(${JSON.stringify(label)});
+const observed=await observe(page);console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));`)) as {
+      url: string;
+      positive: string[];
+      negative: string[];
+    };
+    return this.result(config, observed);
+  }
   async finishLogin(platformId: string, spaceId: number, label: string) {
     const config = await this.config(platformId);
     const observed = (await this.execute(`${stateScript(this.root, config)}
@@ -139,8 +162,11 @@ await task.finish({keep:[page.label]});`)) as { url: string; positive: string[];
       .filter((p) => p.active)
       .map((p) => p.id);
     const ids = [...new Set(platformIds ?? active)];
-    const configs = await Promise.all(ids.map((id) => this.config(id)));
+    const configs = (await Promise.all(ids.map((id) => this.config(id)))).sort(
+      (a, b) => Number(!!a.confirmation) - Number(!!b.confirmation),
+    );
     let stopped = false;
+    let awaiting = false;
     const results: LoginResult[] = [];
     // One TaskSpace for the complete check command, all platforms reuse p1.
     const spaceId = (await this.execute(
@@ -149,8 +175,9 @@ await task.finish({keep:[page.label]});`)) as { url: string; positive: string[];
     for (const config of configs) {
       const id = config.id;
       try {
+        await this.beforePage(results.length > 0);
         const observed = (await this.execute(`${stateScript(this.root, config)}
-const task=await taskSpace(${spaceId});const page=task.page('p1');await restore(page);await navigate(page);
+const task=await taskSpace(${spaceId});const page=task.page('p1');await navigate(page);
 const observed=await observe(page);
 if(verified(observed))await saveState(page);
 console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));`)) as {
@@ -158,7 +185,13 @@ console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));`)) as {
           positive: string[];
           negative: string[];
         };
-        results.push(this.result(config, observed));
+        const result = this.result(config, observed);
+        if (result.state === 'awaiting_confirmation') {
+          awaiting = true;
+          result.spaceId = spaceId;
+          result.page = 'p1';
+        }
+        results.push(result);
       } catch (error) {
         results.push({
           platformId: id,
@@ -172,7 +205,7 @@ console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));`)) as {
         break;
       }
     }
-    if (!this.testSpaceId && !stopped)
+    if (!this.testSpaceId && !stopped && !awaiting)
       await this.execute(
         `const t=await taskSpace(${spaceId});await t.finish({keep:[]});console.log('WORKSPACE_RESULT:true');`,
       );
