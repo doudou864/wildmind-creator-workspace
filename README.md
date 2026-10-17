@@ -1,6 +1,6 @@
 # WILDMIND · 野生脑洞工作台
 
-依据 `docs/wildmind-creator-workspace-PRD-v1.7.md` 与 `docs/design.md` 开发的本机业务前端。目前包含总控台、选题中心、生图中心、排版中心、发布中心。正常页面不加载演示数据。
+依据 `docs/wildmind-creator-workspace-PRD-v1.7.md` 与 `docs/design.md` 开发的本机业务前端。目前包含总控台、选题中心、生图中心、排版中心、发布中心、互动收件箱。正常页面不加载演示数据。
 
 ## 运行与检查
 
@@ -11,6 +11,7 @@ Node.js 22 LTS、npm。`npm ci` 后执行 `npm run dev`，打开 http://127.0.0.
 - `node --experimental-strip-types scripts/check-business.mjs`：业务边界断言，不安装新测试依赖。
 - `node --experimental-strip-types scripts/check-layouts.mjs`：排版独立编辑、确认与配图边界断言。
 - `node --experimental-strip-types scripts/check-publishing.mjs`：发布来源、封面映射、确认稿只读、定时与重试边界。
+- `node --experimental-strip-types scripts/check-inbox.mjs`：回复证据、会话去重、三分类、主题来源、选题同步边界。
 - `npm start`：启动生产服务（先停止开发服务）。
 
 ## 已实现的前端
@@ -22,6 +23,8 @@ Node.js 22 LTS、npm。`npm ci` 后执行 `npm run dev`，打开 http://127.0.0.
 - `/layouts` 排版中心：来源结构识别、三版并排独立编辑、段落排序/配图、公众号双封面、抖音竖版图集与滑动预览、X 简化结构、独立确认与交接操作边界、未保存提醒。
 
 - `/publishing` 发布中心：视频、排版确认稿、小红书图文三个入口；本机文件预览、按作品自动带出封面、逐平台文案/标签/时间、复制文案、人工核对清单、批次与逐平台回执。确认稿只读，未知结果禁止重发。
+
+- `/inbox` 互动收件箱：评论/私信、平台/分类/回复状态筛选、搜索、分页、原文与上下文、读取与分类证据、需求主题来源、商单自动流转状态和选题同步入口。平台全程只读；私信按会话去重计待回复，不提供手工状态标记。
 
 ## 当前服务状态
 
@@ -36,6 +39,7 @@ Node.js 22 LTS、npm。`npm ci` 后执行 `npm run dev`，打开 http://127.0.0.
 - `config/platforms.yaml`、`config/metrics.yaml`：平台与当前前端使用的指标子集。
 - `config/parameters.yaml`：检查点、异常阈值、复盘平台、样本门槛与候选数量。
 - `config/选题输入渠道.md`：内置及外部来源，停用仅影响后续生成。
+- `config/inbox.yaml`：三种业务分类、评论/私信类型与列表分页大小。
 - `config/publishing-templates.yaml`：发布来源、平台封面映射、模板、文件限制和图数上限；未知的平台限制与观看时段保持空值，未核验模板阻止实际发布。
 - `config/layout-styles.yaml`：固定正文风格、排版平台、公众号封面比例、抖音配图比例与工作台图数上限。
 - `config/image-styles.yaml`：生图用途、比例、风格、参考来源与上传限制。

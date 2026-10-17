@@ -1,0 +1,26 @@
+[
+  {
+    "name": "read",
+    "status": 200
+  },
+  {
+    "name": "unavailable",
+    "status": 503
+  },
+  {
+    "name": "missing revision",
+    "status": 400
+  },
+  {
+    "name": "manual reply forbidden",
+    "status": 400
+  },
+  {
+    "name": "override category forbidden",
+    "status": 400
+  },
+  {
+    "name": "negative revision",
+    "status": 400
+  }
+]
