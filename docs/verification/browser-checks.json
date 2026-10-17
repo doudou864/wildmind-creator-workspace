@@ -1,0 +1,75 @@
+[
+  {
+    "name": "1728 无横向溢出",
+    "pass": true
+  },
+  {
+    "name": "演示标识与 8 条作品",
+    "pass": true
+  },
+  {
+    "name": "7D 同步趋势与粉丝",
+    "pass": true
+  },
+  {
+    "name": "90D 数据切换",
+    "pass": true
+  },
+  {
+    "name": "平台切换重置指标与作品",
+    "pass": true
+  },
+  {
+    "name": "缺失一天不计算区间净增",
+    "pass": true
+  },
+  {
+    "name": "指标切换",
+    "pass": true
+  },
+  {
+    "name": "图文样本不足不显示伪倍数",
+    "pass": true
+  },
+  {
+    "name": "详情解释样本不足",
+    "pass": true
+  },
+  {
+    "name": "Escape 关闭并恢复焦点",
+    "pass": true
+  },
+  {
+    "name": "重抓不伪造成功且保留最近成功时间",
+    "pass": true
+  },
+  {
+    "name": "商单为零并说明未接入",
+    "pass": true
+  },
+  {
+    "name": "未运营平台显示空值而不是虚构数据",
+    "pass": true
+  },
+  {
+    "name": "无数据状态清除演示数值和成功状态",
+    "pass": true
+  },
+  {
+    "name": "YouTube 不填估计的新增或取消关注",
+    "pass": true
+  },
+  {
+    "name": "1440 无横向溢出且图表加载",
+    "pass": true,
+    "note": "首次检查只等到了第一张图，等待三张图全部挂载后复测通过。"
+  },
+  {
+    "name": "细针图标注 -30D / -1D",
+    "pass": true
+  },
+  {
+    "name": "趋势图悬停显示精确值 128,402",
+    "pass": true
+  }
+]

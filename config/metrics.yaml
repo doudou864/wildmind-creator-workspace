@@ -1,0 +1,7 @@
+# 总控台前端当前使用的账号指标子集，不代表完整采集字典。
+metrics:
+  - { id: daily_views, name: 播放量, unit: 次, level: secondary, scope: account }
+  - { id: followers, name: 粉丝总数, unit: 人, level: core, scope: account }
+  - { id: net_followers, name: 粉丝净增, unit: 人, level: core, scope: account }
+  - { id: new_followers, name: 新增关注, unit: 人, level: core, scope: account }
+  - { id: lost_followers, name: 取消关注, unit: 人, level: core, scope: account }

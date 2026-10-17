@@ -1,0 +1,10 @@
+@font-face { font-family: 'JetBrains Mono'; src: url('/fonts/JetBrainsMono-Bold.woff2') format('woff2'); font-style: normal; font-weight: 600 700; font-display: swap; }
+@font-face { font-family: 'JetBrains Mono'; src: url('/fonts/JetBrainsMono-Regular.woff2') format('woff2'); font-style: normal; font-weight: 400; font-display: swap; }
+:root {
+  --bg: #D9D7D3; --card: #EEECE8; --line: #BDBBB7; --line-soft: #CFCDC7;
+  --ink: #1A1A1A; --ink-2: #7A7873; --ink-3: #A3A19C; --accent: #FF5A1E; --accent-dark: #C9400F;
+  --hover: #E6E4DF;
+  --font-body: 'PingFang SC', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'PingFang SC', monospace;
+}
+@theme inline { --color-background: var(--bg); --color-foreground: var(--ink); --font-sans: var(--font-body); --font-mono: var(--font-mono); }

@@ -1,0 +1,14 @@
+timeRanges: [7, 30, 90]
+defaultRange: 30
+recentWindow: 30
+checkpoints: [3, 7, 21]
+hitThreshold: 1.5
+ratioPerCell: 0.35
+ratioCells: 10
+chartRows: 12
+baselineSamples: 20
+baselineMinimum: 5
+anomalyHigh: 3
+anomalyLow: 0.3
+syncWindow: '10:32–10:45'
+retryTimes: ['11:00', '11:30']
