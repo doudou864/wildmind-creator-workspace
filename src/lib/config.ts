@@ -10,6 +10,7 @@ const platformSchema = z.object({
   active: z.boolean(),
   collection: z.string(),
   reviewMetric: z.string(),
+  reviewMetricByForm: z.record(z.string(), z.string()).optional(),
   forms: z.array(z.string()).min(1),
   metrics: z.array(z.string()).min(1),
 });

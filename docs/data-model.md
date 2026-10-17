@@ -435,3 +435,6 @@ PostSnapshot / AccountDaily 增加 precision（exact/display/unknown）和 rawVa
 ## image_tasks（后台生图任务）
 
 迁移 0006 仅新增表，迁移前备份。id 为客户端请求 UUID（幂等键）；input 为校验后的完整生图要求；status 为 queued/running/success/failed；pid 标识独立后台进程；asset_ids 为成功素材 ID；reason、created_at、updated_at 记录原因与时间。页面只查询，不计次数；真正调用次数仍在 image_generations。重复提交相同请求返回原记录；进程异常退出标为失败，不自动重试扣额度。
+
+### 复盘检查点（第4步）
+`review_checkpoints` 按作品、检查日、指标唯一保存结果。包含原始快照 id、基线作品 id、样本数、中位数、倍数、补抓来源和不足原因；首次有有效采集后写入，之后不更新。未到点/缺失不冻结，允许后续补抓。样本不足也如实定格，不用未来数据回填旧倍数。采集成功后刷新复盘，再备份。

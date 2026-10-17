@@ -1,3 +1,5 @@
+import { refreshReviews } from '../lib/review-store.ts';
+import { loadConfig } from '../lib/config.ts';
 import { collectYoutube } from '../collectors/youtube/collector.ts';
 import { collectChannels } from '../collectors/channels/collector.ts';
 import { telemetry } from './telemetry.ts';
@@ -160,6 +162,7 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
         const collector = collectors.get(id);
         if (!collector) throw new Error('该平台采集器尚未接入，未伪造成功');
         const result = await collector(database, new CollectionSession(activeSpace), new CodexJudgment(), paths);
+        refreshReviews(database, await loadConfig());
         await finishCrawl(database, crawlId, { status: 'success', archivePaths: paths });
         resolveAttention(database, id);
         successful.add(id);

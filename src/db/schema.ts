@@ -403,3 +403,18 @@ export const imageTasks = sqliteTable('image_tasks', {
   createdAt: text('created_at').notNull(),
   updatedAt: updatedAt(),
 });
+
+export const reviewCheckpoints = sqliteTable(
+  'review_checkpoints',
+  {
+    id: id(),
+    postId: text('post_id')
+      .notNull()
+      .references(() => posts.id),
+    day: integer('day').notNull(),
+    metricId: text('metric_id').notNull(),
+    result: json<import('../core/review').FrozenPoint>('result').notNull(),
+    createdAt: text('created_at').notNull(),
+  },
+  (t) => [uniqueIndex('review_post_day_metric').on(t.postId, t.day, t.metricId)],
+);
