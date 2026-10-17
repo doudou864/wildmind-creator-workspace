@@ -1,0 +1,74 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/layouts",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/layouts",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/layouts",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/layouts/test",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/layouts/test",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/layouts/test/actions",
+    "action": "confirm",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/layouts/test/actions",
+    "action": "send",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/layouts/test/actions",
+    "action": "revise",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/layouts/test/actions",
+    "action": "ai",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/layouts/test/actions",
+    "action": "ai",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/layouts/test/actions",
+    "action": "publish",
+    "status": 400,
+    "passed": true
+  }
+]

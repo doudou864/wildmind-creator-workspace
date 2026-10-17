@@ -1,0 +1,50 @@
+[
+  {
+    "name": "空态：服务操作不可用，无示例文章",
+    "passed": true
+  },
+  {
+    "name": "三版从同一标题初始化",
+    "passed": true
+  },
+  {
+    "name": "公众号编辑不串改其他版本",
+    "passed": true
+  },
+  {
+    "name": "公众号引用与加粗正常，X 移除引用样式",
+    "passed": true
+  },
+  {
+    "name": "文本中的 HTML 不执行",
+    "passed": true
+  },
+  {
+    "name": "1440 三栏等宽无页面横向溢出",
+    "passed": true
+  },
+  {
+    "name": "1728 无横向溢出",
+    "passed": true
+  },
+  {
+    "name": "新建先提示未保存编辑",
+    "passed": true
+  },
+  {
+    "name": "取消新建保留稿件",
+    "passed": true
+  },
+  {
+    "name": "跨板块导航同样保护未保存稿件",
+    "passed": true
+  },
+  {
+    "name": "封面选择提示正确比例与空库",
+    "passed": true
+  },
+  {
+    "name": "明确放弃后回到空白来源",
+    "passed": true
+  }
+]

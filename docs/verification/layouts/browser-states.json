@@ -1,0 +1,46 @@
+[
+  {
+    "name": "送出版本锁定，已确认版本可单独交接",
+    "passed": true
+  },
+  {
+    "name": "送出前再次呈现该版快照且声明不直接发布",
+    "passed": true
+  },
+  {
+    "name": "503 不伪报送出成功，保留已确认状态",
+    "passed": true
+  },
+  {
+    "name": "修改撤销该版确认，其他已送出版本仍锁定",
+    "passed": true
+  },
+  {
+    "name": "保存失败保留未保存编辑",
+    "passed": true
+  },
+  {
+    "name": "封面筛选仅允许匹配比例资产",
+    "passed": true
+  },
+  {
+    "name": "图集初始第一页，上一张不可用",
+    "passed": true
+  },
+  {
+    "name": "下一张切换与末页边界",
+    "passed": true
+  },
+  {
+    "name": "滑动切换图集",
+    "passed": true
+  },
+  {
+    "name": "读取失败保留当前稿件",
+    "passed": true
+  },
+  {
+    "name": "刷新移除测试数据，恢复真实空服务",
+    "passed": true
+  }
+]

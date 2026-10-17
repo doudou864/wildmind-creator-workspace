@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import {parse} from 'yaml';
+import {parseArticle,createLayout,editLayout,layoutPayload,layoutSaveSchema,layoutActionSchema,layoutUpdateSchema,layoutConfigSchema,layoutIssues,canSendLayout} from '../src/lib/layout-model.ts';
+let passed=0;
+function check(name,fn){fn();passed++;console.log(`PASS ${name}`);}
+const config=layoutConfigSchema.parse(parse(fs.readFileSync('config/layout-styles.yaml','utf8')));
+const source='# 测试文章\r\n\r\n第一段\r\n连续文本\r\n\r\n## 小标题\r\n> 引用\r\n- 第一项\r\n- 第二项\r\n\r\n最后一段 **重点**';
+const document=createLayout(source);
+check('结构识别保留标题、小标题、正文、引用和列表',()=>{const a=parseArticle(source);assert.equal(a.title,'测试文章');assert.deepEqual(a.blocks.map(b=>b.type),['paragraph','heading','quote','list','paragraph']);assert.equal(a.blocks[0].text,'第一段\n连续文本');assert.equal(a.blocks[3].text,'第一项\n第二项');});
+check('空行不生成空段，普通文本不猜测为小标题',()=>{assert.equal(parseArticle('标题\n\n普通短句\n\n').blocks[0].type,'paragraph');assert.equal(parseArticle('  ').blocks.length,0);});
+check('三版初始同源，抖音不伪造精简结果',()=>assert.deepEqual(document.variants.douyin.blocks,document.variants.wechat.blocks));
+check('X 去引用样式，但不丢弃文字',()=>{assert.equal(document.variants.x.blocks[2].type,'paragraph');assert.equal(document.variants.x.blocks[2].text,'引用');});
+check('三版对象互不共用，修改公众号不改变抖音与 X',()=>{assert.notEqual(document.variants.douyin.blocks[0],document.variants.wechat.blocks[0]);const next=editLayout(document,'wechat',{...document.variants.wechat,title:'独立标题'});assert.equal(next.variants.douyin.title,'测试文章');assert.equal(next.variants.x.title,'测试文章');});
+check('改稿撤销原确认并使旧确认不能送出',()=>{const confirmed={...document,variants:{...document.variants,wechat:{...document.variants.wechat,status:'confirmed',confirmedRevision:0}}};assert.equal(canSendLayout(confirmed.variants.wechat),true);const edited=editLayout(confirmed,'wechat',{...confirmed.variants.wechat,title:'变更'});assert.equal(edited.variants.wechat.confirmedRevision,null);assert.equal(canSendLayout(edited.variants.wechat),false);assert.equal(canSendLayout({...confirmed.variants.wechat,revision:1}),false);});
+check('已送出版本禁止直接修改',()=>assert.throws(()=>editLayout({...document,variants:{...document.variants,x:{...document.variants.x,status:'sent'}}},'x',document.variants.x),/退回/));
+check('无素材时公众号缺两种封面，抖音缺配图，X 可独立准备',()=>{assert.equal(layoutIssues(document.variants.wechat,'wechat',[],config).length,2);assert.deepEqual(layoutIssues(document.variants.douyin,'douyin',[],config),['请添加图文配图']);assert.deepEqual(layoutIssues(document.variants.x,'x',[],config),[]);});
+const assets=[{id:'wide',width:2350,height:1000},{id:'square',width:1000,height:1000},{id:'portrait',width:750,height:1000}];
+check('公众号不能用错误尺寸图冒充所需封面',()=>{assert.equal(layoutIssues({...document.variants.wechat,covers:{'2.35:1':'square','1:1':'square'}},'wechat',assets,config).length,1);assert.equal(layoutIssues({...document.variants.wechat,covers:{'2.35:1':'wide','1:1':'square'}},'wechat',assets,config).length,0);});
+const image=(id,assetId='portrait')=>({id,type:'image',text:'',assetId});
+check('抖音图数上限取配置，等于上限可用，超一张拒绝',()=>{const v={...document.variants.douyin,blocks:[...document.variants.douyin.blocks,...Array.from({length:config.douyinMaxImages},(_,i)=>image(`img-${i}`))]};assert.deepEqual(layoutIssues(v,'douyin',assets,config),[]);assert.match(layoutIssues({...v,blocks:[...v.blocks,image('extra')]},'douyin',assets,config).join(),/超过/);});
+check('抖音非竖版图片与失效资产会阻止确认',()=>{assert.match(layoutIssues({...document.variants.douyin,blocks:[...document.variants.douyin.blocks,image('wrong','wide')]},'douyin',assets,config).join(),/3:4/);assert.match(layoutIssues({...document.variants.x,blocks:[...document.variants.x.blocks,image('missing','removed')]},'x',assets,config).join(),/无法读取/);});
+check('客户端保存不能伪造确认、送出与修订状态',()=>{const payload=layoutPayload(document);assert.equal(layoutSaveSchema.safeParse(payload).success,true);assert.equal(layoutSaveSchema.safeParse({...payload,variants:{...payload.variants,x:{...payload.variants.x,status:'confirmed'}}}).success,false);});
+check('旧版更新必须携带修订号，拒绝缺失或负数',()=>{assert.equal(layoutUpdateSchema.safeParse(layoutPayload(document)).success,false);assert.equal(layoutUpdateSchema.safeParse({...layoutPayload(document),expectedRevision:-1}).success,false);});
+check('AI 空要求、非法动作、伪造确认字段被拒绝',()=>{assert.equal(layoutActionSchema.safeParse({platform:'x',action:'ai',expectedRevision:0,instruction:'  '}).success,false);assert.equal(layoutActionSchema.safeParse({platform:'x',action:'publish',expectedRevision:0}).success,false);assert.equal(layoutActionSchema.safeParse({platform:'x',action:'send',expectedRevision:0,confirmed:true}).success,false);});
+check('重复块 ID 被拒绝，避免编辑指向多段',()=>{const payload=layoutPayload(document);payload.variants.x.blocks=[image('same'),image('same')];assert.equal(layoutSaveSchema.safeParse(payload).success,false);});
+console.log(`${passed} layout checks passed`);
