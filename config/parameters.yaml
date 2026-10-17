@@ -19,3 +19,4 @@ topicFireMinimum: 20
 anomalyCheckpoints: [1, 3]
 reviewPlatforms: [douyin, wechat]
 conclusionMinimum: 30
+publishUploadExpiryHours: 2

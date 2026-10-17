@@ -16,7 +16,7 @@ const parametersSchema = z.object({
   hitThreshold: z.number().positive(), ratioPerCell: z.number().positive(), ratioCells: z.number().int().positive(),
   chartRows: z.number().int().positive().max(12), baselineSamples: z.number().int().positive(),
   baselineMinimum: z.number().int().positive(), anomalyHigh: z.number().positive(), anomalyLow: z.number().positive(),
-  syncWindow: z.string(), retryTimes: z.array(z.string()),
+  publishUploadExpiryHours: z.number().positive(), syncWindow: z.string(), retryTimes: z.array(z.string()),
   topicCandidateCount: z.number().int().positive(), topicExploreMin: z.number().int().nonnegative(),
   topicExploreMax: z.number().int().nonnegative(), topicFireMinimum: z.number().int().positive(),
 });

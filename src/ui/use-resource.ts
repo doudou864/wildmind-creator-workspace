@@ -1,10 +1,11 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, { cache: 'no-store', ...init });
+  let response:Response;
+  try { response = await fetch(url, { cache: 'no-store', ...init }); } catch { throw new Error('无法连接本机服务，请检查工作台是否正在运行，然后重试；填写内容已保留。'); }
   let body;
   try { body=await response.json(); } catch { throw new Error('服务响应无法读取，请稍后重试。'); }
-  if (!response.ok) throw new Error(body.error ?? '操作失败，请重试');
+  if (!response.ok) throw new Error(typeof body?.error==='string'&&/[\u4e00-\u9fff]/.test(body.error)?body.error:`请求失败（${response.status}），请稍后重试；填写内容已保留。`);
   return body as T;
 }
 export function useResource<T>(url: string, initial: T, fetchOnMount=false) {

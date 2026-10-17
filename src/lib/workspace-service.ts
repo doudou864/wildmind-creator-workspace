@@ -13,7 +13,7 @@ export async function readImages(): Promise<ImageData> { return {assets:[],draft
 
 export async function readLayouts(): Promise<LayoutData> { return {documents:[],contents:[],assets:[],storageReady:false,aiReady:false,handoffReady:false,message:'稿件保存、AI 修改与确认稿交接待接入；未保存编辑仅在当前窗口临时保留，关闭或刷新窗口将丢失。'}; }
 
-export async function readPublishing(): Promise<PublishingData> { return {contents:[],videos:[],assets:[],snapshots:[],batches:[],receipts:[],accounts:[],recommendations:[],storageReady:false,aiReady:false,publishReady:false,handoffReady:false,message:'发布存储、AI 配置与平台发布服务待接入；本页仅准备内容，不会上传或发布。'}; }
+export async function readPublishing(): Promise<PublishingData> { return {contents:[],videos:[],assets:[],snapshots:[],batches:[],receipts:[],accounts:[],recommendations:[],storageReady:false,aiReady:false,uploadReady:false,publishReady:false,handoffReady:false,message:'发布存储、AI 配置与平台发布服务待接入；本页仅准备内容，不会上传或发布。'}; }
 
 export async function readInbox(): Promise<InboxData> { return {items:[],themes:[],sources:[],recordsReady:false,topicSyncReady:false,message:'评论与私信读取、分类和选题同步服务待接入；当前没有可展示的业务记录。'}; }
 

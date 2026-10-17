@@ -6,12 +6,12 @@ imageTypes: [image/png, image/jpeg]
 xhsMaxImages: 9
 requiredVideoRatios: ['3:4', '4:3', '16:9']
 templates:
-  - { platformId: douyin, kinds: [video, layout], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
-  - { platformId: xiaohongshu, kinds: [video, xhs], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
-  - { platformId: bilibili, kinds: [video], videoCoverRatio: '4:3', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
-  - { platformId: channels, kinds: [video], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
-  - { platformId: youtube, kinds: [video], videoCoverRatio: '16:9', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
-  - { platformId: wechat, kinds: [layout], videoCoverRatio: null, titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
-  - { platformId: kuaishou, kinds: [video], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
-  - { platformId: tiktok, kinds: [video], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
-  - { platformId: x, kinds: [layout], videoCoverRatio: null, titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: douyin, kinds: [video, layout], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tagFormat: {prefix: '#', suffix: '', separator: ' '}, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: xiaohongshu, kinds: [video, xhs], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tagFormat: {prefix: '#', suffix: '', separator: ' '}, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: bilibili, kinds: [video], videoCoverRatio: '4:3', titleMax: null, descriptionMax: null, tagFormat: {prefix: '#', suffix: '', separator: ' '}, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: channels, kinds: [video], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tagFormat: {prefix: '#', suffix: '', separator: ' '}, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: youtube, kinds: [video], videoCoverRatio: '16:9', titleMax: null, descriptionMax: null, tagFormat: {prefix: '#', suffix: '', separator: ' '}, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: wechat, kinds: [layout], videoCoverRatio: null, titleMax: null, descriptionMax: null, tagFormat: {prefix: '#', suffix: '', separator: ' '}, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: kuaishou, kinds: [video], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tagFormat: {prefix: '#', suffix: '', separator: ' '}, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: tiktok, kinds: [video], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tagFormat: {prefix: '#', suffix: '', separator: ' '}, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: x, kinds: [layout], videoCoverRatio: null, titleMax: null, descriptionMax: null, tagFormat: {prefix: '#', suffix: '', separator: ' '}, tags: [], description: '', defaultTime: null, verified: false }

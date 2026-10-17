@@ -52,27 +52,43 @@ HitRatePeriod 由服务按平台、首发月份和 FIRE 分组聚合：抖音视
 
 当前所有写操作仍返回 503；不安装或替代数据库依赖，不使用 localStorage 冒充保存。预览展示平台结构，真实平台导出、渲染一致性和第 13 章第 9 步的完整持久化闭环留待服务接入验收。
 
-## 发布中心
+## 发布中心（PRD v1.8）
 
-`GET /api/publishing` → `PublishingData`（`src/lib/publishing-model.ts`），含作品、已保存成片、素材、不可变排版确认快照、批次、逐平台回执、账号可用性和月度观看时段推荐。所有记录来自真实服务；读取失败保留当前编辑。界面发现当前批次修订号或执行状态变化，立即阻止旧稿保存/提交，允许人工载入新版本。
+`GET /api/publishing` → `PublishingData`（`src/lib/publishing-model.ts`）。返回真实作品、成片、素材、排版确认快照、批次、逐平台回执、账号和本月时段推荐。增加独立能力 `uploadReady`；storageReady / aiReady / uploadReady / publishReady / handoffReady 当前全为 false。读取失败保留当前编辑，中文说明连接或响应错误。执行中前端轮询该读取接口；没有任务状态读回能力不得开启上传或发布。
 
-- `POST /api/publishing/drafts`：PublishDraft → PublishBatch。视频 / 排版 / 小红书来源不可混用；客户端不提交服务端状态、修订号或确认稿正文。
-- `PATCH /api/publishing/drafts/:id`：同上 + expectedRevision → PublishBatch。原子校验旧版本；已排队、执行中、已结束均不可再编辑或提交。服务检查关联作品和来源 ID，模板与账号状态以服务读取为准，旧版本409，不存在404。
-- `POST /api/publishing/media`：multipart `metadata={kind:'video'|'xhs',contentId}` 与 `files` → `{videoId,assetIds}`。本次仅做结构、声明类型和尺寸上限校验后返回503，未写文件。接入时检查真实文件字节、解码、尺寸/时长/数量、关联实体；路径由服务生成并写入受控 data/，不得信任浏览器 MIME/扩展名；小红书素材 source=upload。视频与图片不能混批，返回已持久化资产 ID 后才算上传成功。
-- `GET /api/publishing/media/:id/file`：由真实成片 ID 读取受控文件；后续需支持视频 Range。当前503，不泄露文件系统路径。
-- `POST /api/publishing/drafts/:id/actions`：严格区分三种操作，均携带 expectedRevision。
-  - `action:'ai', instruction`：只修改已保存批次的发布配置。排版确认稿的标题、正文、配图和封面不可改，视频/小红书可调整标题、文案、标签和时间。结果需 Zod 校验，再返回更新的 PublishBatch；异步实现必须补任务状态接口后才能启用。
-  - `action:'return', snapshotId`：原子检查确认稿属于本批次、尚未排队/执行/发布；与排版中心联动退回并使旧快照失效，从当前批次移除对应目标。执行中、结果未知或已发布不能退回。
-  - `action:'publish', requestId(UUID), confirmed:true`：用户核对本批次之后才发送。事务内校验 expectedRevision、draft 状态、关联来源、完整文件、确认稿仍有效、真实账号状态、模板已核验、标题/文案限制、时间仍在未来；服务重新执行内容检查，禁止客户端自报已检查。冻结所有平台文案/封面/时间及模板版本，记录确认与 requestId；重复相同 requestId 返回同一批次。页面只把成功响应视为“受理”，不能显示“全部已发布”。
-- `POST /api/publishing/receipts/:id/retry`：`{expectedRevision,requestId,confirmed:true}`。只有 failed 且服务已在真实平台核实未发布（safeToRetry=true）的单条回执可重试；queued / submitting / pending_review / published / unknown 一律禁止。原子更新只重试此平台，不能重发其他成功项。连接中断后先核对平台，不能盲重试。
+### 批次与自动平台版本
+- `PublishDraft.commonCopy={title,description,tags}` 是唯一通用文案来源，tags 存不带平台包裹符的词条。视频、小红书填一次；排版来源不显示通用编辑，标题/正文/封面保持确认快照只读，自动套话题和时间。
+- `PublishSetting.individuallyEdited:boolean` 必填；只打开卡片不算修改。用户修改任何平台字段后置 true，之后修改通用文案不覆盖整个该平台设置。恢复为通用文案调用同一生成规则、重置标志及默认时间。AI 更新通用文案后也按此规则同步，不覆盖单独修改项。
+- `config/publishing-templates.yaml` 增加 `tagFormat={prefix,suffix,separator}`，由确定性函数格式化话题，平台适配器消费格式化结果，不能对已经格式化的词重复加符号。当前格式是待核验的工作台默认值，verified=false 继续阻断，不能称为真实平台规则。标题/简介保留全文，用 Unicode 字符计数检查上限，超限提示且阻断上传，绝不自动硬截断。接入 AI 后可以改写，仍须检查上限。
+- 时间用有效本月推荐，其次模板默认，今天已过则明天同一时段；无数据为 null（最终确认后立即发布），不伪造推荐。时区统一 Asia/Shanghai。
+- `POST /api/publishing/drafts`：PublishDraft → PublishBatch。`PATCH /api/publishing/drafts/:id`：PublishDraft + expectedRevision → PublishBatch。来源不可混用；服务不接受客户端状态、修订号或确认稿正文。批次 draft/prepared 可以编辑，uploading/queued/running/finished 不可编辑；修改使有关平台旧截图失效。旧版本409，不存在404，不符合业务422。当前有效请求503，非法请求400。
+- PublishBatch.state 新增 uploading / prepared；有待审核、可重传或可安全重试目标时保持 prepared，仅所有平台已到稳定终态才 finished。批次返回更新修订号；不得用批次状态代替单个平台的回执证据。
 
-封面自动匹配同 contentId + purpose=video_cover + selected + 真实比例；同一比例存在多组已选封面时阻断，不能随机选第一张。三个比例均应齐备；每平台从模板映射比例，不让用户每次手选。确认稿只接收排版中心送入的不可变快照，同一作品同平台须唯一；快照引用明确资产版本，不能随素材库后来选版漂移。
+### 本机素材与平台上传是两项操作
+- `POST /api/publishing/media`：multipart `metadata={kind:'video'|'xhs',contentId}` + files → `{videoId,assetIds}`。这是素材存储，尚未接入，校验后503。真实接入再校验文件字节、解码、尺寸/时长/数量和关联实体，由服务生成受控路径，小红书图片必须 source=upload。
+- `GET /api/publishing/media/:id/file`：读取受控成片，接入时支持 Range；当前503。图片和后台截图统一用资产 ID 走 `/api/images/assets/:id/file`，不可接受任意文件路径。后台截图是独立且不可变的审核资产，不冒充用户封面。
+- 视频封面只取 Content.videoCovers 明确采用的资产 ID，核验同作品、video_cover 用途和真实尺寸；三比例完整，每个平台按模板映射。素材库 selected 不影响作品采用。确认稿同作品同平台须唯一、有效且图片存在，发布中心不改写正文。
 
-时间统一 Asia/Shanghai；推荐只用本月观看时段，过期记录标记为过期。选平台时套用有效推荐/明确模板默认时间，今天已过则下次为明天同一时段；没有数据时保持“确认后立即发布”并显示无推荐，用户可手工定时。当前配置的标题/文案上限及默认时间为 null、verified=false，不将未知限制当作无限制并放行；接入时须核验平台规则及真实后台。
+### 两阶段操作
+统一 `POST /api/publishing/drafts/:id/actions`，严格 discriminated union；新增 upload 与 publish-all，旧 publish 动作拒绝400。所有写操作当前合法请求503，不产生任务/回执、不操作平台。
 
-回执区分排队、发布中、平台审核中、已发布、失败、结果待核对。必须有真实平台证据才记录 published；审核中不冒充已发布。发布成功存平台作品 ID、实际时间、平台标题、链接并关联原作品，多个平台归同 contentId。默认时间与回执都不能填估计值。
+1. **上传到各平台**：`{action:'upload',expectedRevision,requestId:UUID,platformIds:string[],materials:string}` → PublishBatch（已受理而非已上传）。platformIds 非空无重复；必须属于此批次。第一次只提交无回执目标；再次只能提交 expired 或 failed 且 safeToRetry 的上传失败/材料失效/截图过期目标。不重复触发 uploading/queued/submitting/pending_review/published/unknown，也不重传已有效 ready 目标。前端对相同批次版本、材料与目标复用 requestId，网络错误不盲目换 ID。
+   - 服务事务内核对修订和真实来源、文件、模板、账号、字数、时间及 materials；幂等后冻结每平台实际材料，经 `src/browser/` 逐个平台填写。有草稿功能优先存草稿，否则停在最终发布按钮前。草稿能力和确切流程在第 13 章第 11 步用真实页面确认。此动作获准上传/保存草稿，绝不获准点击发布。
+   - 每平台回传独立状态与填好页面的真实截图资产 ID；失败记录原因，不影响其他目标继续上传。无法判定写入结果时 unknown，核实前不可重传。
+2. **全部发布**：`{action:'publish-all',expectedRevision,requestId:UUID,confirmed:true,materials:string,receipts:[{id,expectedRevision}]}` → PublishBatch。用户查看可读取的截图后确认一次，客户端只提交当前就绪平台；非空、ID 不重复。服务原子核对这些回执确属本批次、唯一对应平台、当前 ready、版本及截图、期限、材料仍一致，并重新核验账号/模板/文件/定时。事务受理前任何选中回执失效返回409，不能悄悄替换截图或增加新目标。
+   - 接受后只逐个执行这份冻结清单，每次点击前再检查期限/材料。某平台此时失效则单独失败或过期，其他平台继续。最终点击必须经 `src/browser/`，不用平台 API。重复 requestId 返回原任务；同一批次/平台执行锁阻止不同请求重复点击。
+3. `action:'ai',expectedRevision,instruction`：只生成视频/小红书通用文案，经 Zod 校验，沿用单独修改保护；排版内容不改写。返回更新批次，异步任务需另补状态读取协议。`action:'return',expectedRevision,snapshotId`：原子退回有效、尚未执行/发布的确认稿并移除对应目标、使截图失效；执行中/结果未知禁止退回。
 
-实际平台操作须经 `src/browser/`，只在明确人工确认发布后执行；不用平台 API。当前 capability 全为 false，写接口全部503，未实施任何真实上传或发布，也未完成第13章第10步的持久化交付闭环。
+### 回执、过期和失败重试
+- PublishReceipt.status：queued / uploading（上传中）/ ready（已就绪待发布）/ expired（已过期，需重新上传）/ submitting / pending_review / published / failed / unknown。
+- 新字段：`screenshotAssetId:string|null`、`uploadedAt:string|null`（ISO 带时区，上传完成时刻）、`materials:string|null`（该平台实际材料版本）、`failureStage:'upload'|'publish'|null`。保留 reason、safeToRetry、revision 及真实平台作品 ID/链接/发布时间。一个批次每个平台只返回一条当前回执，尝试历史由服务另行保留，不让旧 ready 参与发布。
+- `config/parameters.yaml:publishUploadExpiryHours=2`。ready 在上传完成满该时长时失效；非法/缺失/未来时间、缺截图或材料改变同样不准发布。前端30秒刷新时钟，操作瞬间再次检查；服务使用服务时间作权威判断。发布中/审核中/已发布不因原截图超过2小时退回可重传状态。
+- `platformMaterialKey` 包含本平台设置、作品/视频/封面版本、相关确认快照、模板和账号条件。通用来源文字及其他平台设置不纳入；单独修改的平台不因别的平台文案变化被覆盖或失效。整批 materials 仍在上传/全部发布时由服务重算比较。客户端指纹仅用于并发核对，绝不是授权凭据；服务必须重算且读取真实文件。
+- 截图读取失败禁止前端确认；截图资产ID不可覆写复用。只要材料改变，不能继续信任同一旧截图。
+- `POST /api/publishing/receipts/:id/retry`：`{expectedRevision,requestId,confirmed:true,materials}`。仅 failed、failureStage=publish、服务已核实未发布（safeToRetry）、原截图可读/未过期且材料一致允许重试发布。过期、材料改变或上传失败必须先单独重新上传。提交前核验选中平台内容/账号/模板/时间。其他平台成功、审核中、结果不明都不重发。
+- 未知结果必须先核对平台，不能因为客户端连接中断标为安全失败；记录真实结果后才开启重试。失败一个平台不阻断其他 ready 平台发布。published 必须有真实平台证据，记录平台作品 ID、实际时间、平台标题、链接并关联原 Content。
+
+当前只有前端、校验函数与接口契约，无真实平台上传/发布、AI 或数据库实现。第13章第1步将另行推进，不能把本次前端验收称为数据底座完成。
 
 ## 互动收件箱
 
@@ -123,7 +139,7 @@ HitRatePeriod 由服务按平台、首发月份和 FIRE 分组聚合：抖音视
 - 未保存编辑仅在当前浏览器文档内存中保留，供站内前进/后退后恢复，不写 localStorage、不表示保存到业务库。刷新/关闭窗口仍提醒；明确放弃或保存后清除相应临时会话。本地预览 File 和对象 URL 在未保存会话恢复时继续可用。
 - 生图保存只确认请求发出时的编辑版本。请求未结束时的新增编辑继续标记未保存；本地预览文件需独立上传，不能因为文字保存而取消提醒。
 - 发布核对时记录 materials（确定性序列化的草稿、作品修订、明确封面/配图版本、视频、确认快照、模板与账号条件）。条件变化后当前勾选失效，需要重新打开核对清单。
-- publish 动作新增必填 materials；后端事务内根据真实状态重算并比较，不能相信客户端任意传来的内容。不同则返回 409，禁止用最新封面替换用户核对过的封面。匹配成功才冻结执行快照。前端指纹不是服务端授权凭据。
+- v1.8 的 upload / publish-all 动作必填 materials；后端事务内根据真实状态重算并比较，不能相信客户端任意传来的内容。不同则返回 409，禁止用最新封面替换用户核对过的封面。匹配成功才冻结执行快照。前端指纹不是服务端授权凭据。
 
 ### 总控台完整待办
 - DashboardData 增加 questions / questionsReady（未同步的有价值问题）、plannedContents / plansReady（仍待发布的作品计划）、themes / themesReady / themeSyncReady、accountAlerts / accountAlertsReady。各来源未就绪时显示未知，不冒充零待办；仅所有来源完整且无记录时显示今天没有待办。
