@@ -1,0 +1,32 @@
+# 登录检测只读页面；标记来自 2026-10-17 实际后台。空数组不判断为已登录。
+platforms:
+  - id: douyin
+    url: https://creator.douyin.com/
+    domains: [douyin.com]
+    loggedIn: [抖音号, 粉丝指数]
+    loggedOut: [扫码登录, 手机号登录]
+    loggedInPath: /creator-micro/
+  - id: xiaohongshu
+    url: https://creator.xiaohongshu.com/
+    domains: [xiaohongshu.com]
+    loggedIn: [小红书账号, 粉丝数]
+    loggedOut: [短信登录, 手机号]
+    loggedInPath: /new/home
+  - id: bilibili
+    url: https://member.bilibili.com/platform/home
+    domains: [bilibili.com]
+    loggedIn: [成为UP主的第, 粉丝概览]
+    loggedOut: [扫码登录, 密码登录]
+    loggedInPath: /platform/home
+  - id: channels
+    url: https://channels.weixin.qq.com/
+    domains: [channels.weixin.qq.com]
+    loggedIn: []
+    loggedOut: [登录视频号助手]
+    loggedInPath: null
+  - id: youtube
+    url: https://studio.youtube.com/
+    domains: [youtube.com, google.com]
+    loggedIn: [我的频道, 频道分析, 当前订阅人数]
+    loggedOut: [登录, Sign in]
+    loggedInPath: /channel/

@@ -1,0 +1,37 @@
+[
+  {
+    "platformId": "douyin",
+    "state": "logged_in",
+    "reason": "已核实后台身份区域与后台地址",
+    "checkedAt": "2026-10-17T09:58:45.870Z",
+    "statePath": "data/browser/douyin.json"
+  },
+  {
+    "platformId": "xiaohongshu",
+    "state": "logged_in",
+    "reason": "已核实后台身份区域与后台地址",
+    "checkedAt": "2026-10-17T09:58:48.691Z",
+    "statePath": "data/browser/xiaohongshu.json"
+  },
+  {
+    "platformId": "bilibili",
+    "state": "logged_in",
+    "reason": "已核实后台身份区域与后台地址",
+    "checkedAt": "2026-10-17T09:58:50.217Z",
+    "statePath": "data/browser/bilibili.json"
+  },
+  {
+    "platformId": "channels",
+    "state": "logged_out",
+    "reason": "后台显示登录入口，请登录",
+    "checkedAt": "2026-10-17T09:59:01.121Z",
+    "statePath": null
+  },
+  {
+    "platformId": "youtube",
+    "state": "logged_in",
+    "reason": "已核实后台身份区域与后台地址",
+    "checkedAt": "2026-10-17T09:59:04.240Z",
+    "statePath": "data/browser/youtube.json"
+  }
+]

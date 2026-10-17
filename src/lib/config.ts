@@ -13,12 +13,28 @@ const platformSchema = z.object({
   forms: z.array(z.string()).min(1),
   metrics: z.array(z.string()).min(1),
 });
-const metricSchema = z.object({
-  id: z.string(),
-  name: z.string(),
+const metricLevel = z.enum(['core', 'secondary', 'input', 'on_demand', 'dropped', 'pending']);
+export const metricSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
   unit: z.string(),
-  level: z.enum(['core', 'secondary']),
-  scope: z.literal('account'),
+  level: metricLevel,
+  scope: z.enum(['account', 'post']),
+  kind: z.enum(['number', 'text', 'distribution']),
+  bindings: z
+    .array(
+      z.object({
+        platformId: z.string().min(1),
+        form: z.enum(['视频', '图文', 'all']),
+        level: metricLevel,
+        page: z.string().min(1).nullable(),
+        method: z.enum(['screenshot', 'export', 'derived', 'none']),
+        frequency: z.enum(['daily', 'checkpoints', 'monthly', 'on_demand', 'never']),
+        status: z.enum(['confirmed', 'pending']),
+        prd: z.string().min(1),
+      }),
+    )
+    .min(1),
 });
 const parametersSchema = z.object({
   anomalyCheckpoints: z.array(z.number().int().positive()),
@@ -49,8 +65,8 @@ export type Metric = z.infer<typeof metricSchema>;
 export type Parameters = z.infer<typeof parametersSchema>;
 export type WorkspaceConfig = { platforms: Platform[]; metrics: Metric[]; parameters: Parameters };
 
-export async function loadConfig(): Promise<WorkspaceConfig> {
-  const read = async (name: string) => parse(await readFile(path.join(process.cwd(), 'config', name), 'utf8'));
+export async function loadConfig(configDirectory = path.join(process.cwd(), 'config')): Promise<WorkspaceConfig> {
+  const read = async (name: string) => parse(await readFile(path.join(configDirectory, name), 'utf8'));
   const [platformFile, metricFile, parameterFile] = await Promise.all([
     read('platforms.yaml'),
     read('metrics.yaml'),
@@ -72,6 +88,15 @@ export async function loadConfig(): Promise<WorkspaceConfig> {
   for (const platform of platforms) {
     if (platform.metrics.some((id) => !metrics.some((metric) => metric.id === id)))
       throw new Error(`${platform.name} 引用了不存在的指标`);
+  }
+  for (const metric of metrics) {
+    for (const binding of metric.bindings) {
+      const platform = platforms.find((p) => p.id === binding.platformId);
+      if (!platform || (binding.form !== 'all' && !platform.forms.includes(binding.form)))
+        throw new Error(`指标 ${metric.id} 的平台或内容形式无效`);
+      if (['core', 'secondary', 'input'].includes(binding.level) && binding.status === 'confirmed' && !binding.page)
+        throw new Error(`指标 ${metric.id} 缺少采集页面`);
+    }
   }
   return { platforms, metrics, parameters };
 }
