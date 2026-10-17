@@ -1,3 +1,4 @@
+import type { DealData } from './deal-model';
 import type { InboxData } from './inbox-model';
 import type { PublishingData } from './publishing-model';
 import type { LayoutData } from './layout-model';
@@ -14,3 +15,5 @@ export async function readLayouts(): Promise<LayoutData> { return {documents:[],
 export async function readPublishing(): Promise<PublishingData> { return {contents:[],videos:[],assets:[],snapshots:[],batches:[],receipts:[],accounts:[],recommendations:[],storageReady:false,aiReady:false,publishReady:false,handoffReady:false,message:'发布存储、AI 配置与平台发布服务待接入；本页仅准备内容，不会上传或发布。'}; }
 
 export async function readInbox(): Promise<InboxData> { return {items:[],themes:[],sources:[],recordsReady:false,topicSyncReady:false,message:'评论与私信读取、分类和选题同步服务待接入；当前没有可展示的业务记录。'}; }
+
+export async function readDeals(): Promise<DealData> { return {items:[],messages:[],recordsReady:false,writeReady:false,suggestionReady:false,message:'商单存储与状态建议服务待接入；暂无可展示的商单记录。'}; }

@@ -30,5 +30,5 @@ export function Dialog({ title, children, onClose }: { title: string; children: 
     dialog?.showModal();
     return () => { dialog?.close(); opener?.focus(); };
   }, []);
-  return <dialog ref={ref} onCancel={onClose} onClick={event => { if (event.target === event.currentTarget) onClose(); }} aria-labelledby="dialog-title"><div className="dialog-content"><header><h2 id="dialog-title">{title}</h2><Button onClick={onClose} aria-label="关闭详情">关闭 ×</Button></header>{children}</div></dialog>;
+  return <dialog ref={ref} onCancel={event => { event.preventDefault(); onClose(); }} onClick={event => { if (event.target === event.currentTarget) onClose(); }} aria-labelledby="dialog-title"><div className="dialog-content"><header><h2 id="dialog-title">{title}</h2><Button onClick={onClose} aria-label="关闭详情">关闭 ×</Button></header>{children}</div></dialog>;
 }

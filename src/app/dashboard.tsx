@@ -1,5 +1,8 @@
 'use client';
 
+import Link from 'next/link';
+import { dealActions,dealCounts,dealSource,waitingDuration,type DealConfig,type DealData } from '@/lib/deal-model';
+import { assessReplies,type InboxConfig } from '@/lib/inbox-model';
 import { useMemo, useState, type ReactNode } from 'react';
 import type { WorkspaceConfig, Platform } from '@/lib/config';
 import { checkpointNote, findAnomalies, type DashboardData, type Work } from '@/lib/workspace-model';
@@ -10,10 +13,13 @@ import { Button, Card, Dialog, Empty, Ratio, Segmented } from '@/ui/components';
 import { Chart } from '@/ui/charts';
 
 import { WorkspaceHeader } from '@/ui/workspace-header';
-type Modal = { type: 'source'; platform: Platform } | { type: 'work'; work: Work } | { type: 'deals' } | null;
+type Modal = { type: 'source'; platform: Platform } | { type: 'work'; work: Work } | null;
 
-export default function Dashboard({ config, today, initialData }: { config: WorkspaceConfig; today: string; initialData: DashboardData }) {
+export default function Dashboard({ config, today, initialData,dealConfig,dealChannels,initialDeals }: { dealConfig:DealConfig;dealChannels:InboxConfig['channels'];initialDeals:DealData;config: WorkspaceConfig; today: string; initialData: DashboardData }) {
   const { data: workspace, error, refresh } = useResource('/api/dashboard', initialData);
+  const {data:deals,error:dealError,refresh:refreshDeals}=useResource('/api/deals',initialDeals);
+  const counts=dealCounts(deals.items),replies=assessReplies(deals.messages);
+  const actions=dealActions(deals.items,deals.messages,replies);
   const { platforms, metrics, parameters } = config;
   const [platformId, setPlatformId] = useState(platforms[0].id);
   const [range, setRange] = useState(parameters.defaultRange);
@@ -67,13 +73,10 @@ export default function Dashboard({ config, today, initialData }: { config: Work
     dialogTitle = work.title;
     dialogContent = <><p className="dialog-intro">{platform.name} · {work.form} · {work.published} 发布</p><dl className="detail-list"><div><dt>当前走势</dt><dd>{work.state}</dd></div><div><dt>复盘主指标</dt><dd>{platform.reviewMetric}</dd></div></dl><div className="checkpoint-details">{[...new Set([...parameters.anomalyCheckpoints, ...parameters.checkpoints])].sort((a,b)=>a-b).map(day => { const point=work.checkpoints[String(day)]; return <section key={day}><h3>D{day} <span className="small">{checkpointNote(point)}</span></h3><Ratio value={point?.status === 'ready' ? point.ratio : null} parameters={parameters} /><dl className="detail-list"><div><dt>当时同龄基线</dt><dd>{number(point?.baseline)}</dd></div><div><dt>有效样本数</dt><dd>{number(point?.samples)}</dd></div><div><dt>实际采集时间</dt><dd>{point?.capturedAt ?? '--'}</dd></div></dl></section>; })}</div><p className="muted">各检查点分别计算并定格；D1 只用于异常提醒，不参与走势分类。</p></>;
 
-  } else if (modal?.type === 'deals') {
-    dialogTitle = '商单概况';
-    dialogContent = <><Empty>暂无商单线索</Empty><p className="muted">互动收件箱尚未接入。接入后按待处理、跟进中、已完成三种状态汇总。</p></>;
   }
   return <main className="workspace"><h1 className="sr-only">野生脑洞总控台</h1>
     <WorkspaceHeader current="/" date={displayDate} syncWindow={parameters.syncWindow} />
-    <div className="modebar"><p><span className="mode-label mono">LOCAL</span>{workspace.collectionReady ? '本机业务数据 · 每日更新' : '采集服务待接入 · 尚无平台数据'}</p><Button className="text-button" onClick={()=>void refresh()}>刷新数据 ↻</Button></div>{error&&<p role="alert" className="topic-feedback">{error}</p>}
+    <div className="modebar"><p><span className="mode-label mono">LOCAL</span>{workspace.collectionReady ? '本机业务数据 · 每日更新' : '采集服务待接入 · 尚无平台数据'}</p><Button className="text-button" onClick={()=>{void refresh();void refreshDeals();}}>刷新数据 ↻</Button></div>{(error||dealError)&&<p role="alert" className="topic-feedback">{error||dealError}</p>}
     <section className="card health" aria-label="数据健康"><div className="health-heading"><h2 className="eyebrow">00 · SOURCE</h2><span className="eyebrow">最近一次成功更新 · 点击查看日志</span></div><div className="health-grid">{healthPlatforms.map(item => {
       const source = workspace.platforms[item.id];
       const status = source?.status ?? 'pending';
@@ -81,8 +84,8 @@ export default function Dashboard({ config, today, initialData }: { config: Work
     })}</div>{failedPlatforms.length > 0 && <div className="health-error"><span className="error-label">采集失败</span>{failedPlatforms.map(item => `${item.name}：${workspace.platforms[item.id].error}`).join('；')}</div>}</section>
     <div className="dashboard-grid">
       <div className="left-column">
-        <Card index="01" title="今日行动" meta={<span className="eyebrow">{failedPlatforms.length} ITEMS</span>} className="actions-card">{failedPlatforms.length ? failedPlatforms.map((item, index) => <button className="action-row" key={item.id} onClick={() => setModal({ type: 'source', platform: item })}><span className="letter mono">{String.fromCharCode(65 + index)}</span><span><small>需手动处理</small><strong>{item.name}：{workspace.platforms[item.id].error ?? '需要手动检查'}</strong></span><span className="row-arrow" aria-hidden="true">↗</span></button>) : <Empty>今天没有待办</Empty>}</Card>
-        <Card index="05" title="商单" meta={<Button className="text-button eyebrow" onClick={() => setModal({ type: 'deals' })}>LIST →</Button>}><div className="deal-counts">{['待处理', '跟进中', '已完成'].map(state => <button key={state} onClick={() => setModal({ type: 'deals' })}><strong className="mono">00</strong><span>{state}</span></button>)}</div></Card>
+        <Card index="01" title="今日行动" meta={<span className="eyebrow">{workspace.collectionReady&&deals.recordsReady?failedPlatforms.length+actions.length:'--'} ITEMS</span>} className="actions-card">{actions.map((deal,index)=>{const source=dealSource(deal,deals.messages)!;const evidence=replies.get(source.id)?.observed;return <Link className="action-row deal-dashboard-action" key={deal.id} href={`/deals?deal=${encodeURIComponent(deal.id)}`}><span className="letter mono">{String.fromCharCode(65+index)}</span><span><small>商单线索待回复 · {platforms.find(p=>p.id===deal.source.platformId)?.name??deal.source.platformId} {dealChannels.find(c=>c.id===deal.source.channel)?.name}</small><strong>{deal.brand||'品牌待核实'} · {source.author||'发送者待核实'}</strong></span><span className="row-arrow mono">读取时已等 {evidence?waitingDuration(evidence):'--'}</span></Link>;})}{failedPlatforms.map((item,index)=><button className="action-row" key={item.id} onClick={()=>setModal({type:'source',platform:item})}><span className="letter mono">{String.fromCharCode(65+actions.length+index)}</span><span><small>需手动处理</small><strong>{item.name}：{workspace.platforms[item.id].error??'需要手动检查'}</strong></span><span className="row-arrow" aria-hidden="true">↗</span></button>)}{!actions.length&&!failedPlatforms.length&&<Empty>{workspace.collectionReady&&deals.recordsReady?'今天没有待办':'服务待接入，暂无可展示的待办记录'}</Empty>}</Card>
+        <Card index="05" title="商单" meta={<Link className="text-button eyebrow" href="/deals">LIST →</Link>}><div className="deal-counts deal-dashboard-counts">{dealConfig.statuses.map(state=><Link key={state.id} href={`/deals?status=${state.id}`}><strong className={`mono ${state.id==='pending'&&deals.recordsReady&&counts.pending>0?'deal-attention':''}`}>{deals.recordsReady?number(counts[state.id]):'--'}</strong><span>{state.name}</span></Link>)}</div></Card>
         <Card index="06" title="洞察与异常" className="insights-card"><p className="section-label">需求主题</p><Empty>暂无需求主题</Empty><p className="section-label anomaly-heading">作品异常 · {platform.name}</p>{anomalies.length ? anomalies.map(({work, day, ratio}) => <button key={`${work.id}-${day}`} className="insight-row" onClick={() => setModal({ type: 'work', work })}><span className="tag">{ratio > parameters.anomalyHigh ? 'HOT' : 'DROP'}</span><span>{work.title}<small>D{day} 达基线 {number(ratio, 1)}× · 查看详情 →</small></span></button>) : <Empty>暂无作品异常</Empty>}<div className="insight-footnote small">仅在 D1 / D3 检查点识别异常；<br/>样本不足或指标缺失时不做判断。</div></Card>
       </div>
       <div className="center-column">

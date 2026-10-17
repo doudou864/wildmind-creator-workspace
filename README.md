@@ -1,6 +1,6 @@
 # WILDMIND · 野生脑洞工作台
 
-依据 `docs/wildmind-creator-workspace-PRD-v1.7.md` 与 `docs/design.md` 开发的本机业务前端。目前包含总控台、选题中心、生图中心、排版中心、发布中心、互动收件箱。正常页面不加载演示数据。
+依据 `docs/wildmind-creator-workspace-PRD-v1.7.md` 与 `docs/design.md` 开发的本机业务前端。目前包含总控台、选题中心、生图中心、排版中心、发布中心、互动收件箱、商单列表。正常页面不加载演示数据。
 
 ## 运行与检查
 
@@ -12,6 +12,7 @@ Node.js 22 LTS、npm。`npm ci` 后执行 `npm run dev`，打开 http://127.0.0.
 - `node --experimental-strip-types scripts/check-layouts.mjs`：排版独立编辑、确认与配图边界断言。
 - `node --experimental-strip-types scripts/check-publishing.mjs`：发布来源、封面映射、确认稿只读、定时与重试边界。
 - `node --experimental-strip-types scripts/check-inbox.mjs`：回复证据、会话去重、三分类、主题来源、选题同步边界。
+- `node --experimental-strip-types scripts/check-deals.mjs`：商单三状态、来源保护、修订冲突、建议确认和今日行动口径。
 - `npm start`：启动生产服务（先停止开发服务）。
 
 ## 已实现的前端
@@ -26,6 +27,8 @@ Node.js 22 LTS、npm。`npm ci` 后执行 `npm run dev`，打开 http://127.0.0.
 
 - `/inbox` 互动收件箱：评论/私信、平台/分类/回复状态筛选、搜索、分页、原文与上下文、读取与分类证据、需求主题来源、商单自动流转状态和选题同步入口。平台全程只读；私信按会话去重计待回复，不提供手工状态标记。
 
+- `/deals` 商单列表：三状态概况、平台/来源/状态筛选、搜索分页、品牌与需求详情、原消息定位、编辑保护、带证据的状态建议确认。与收件箱互相定位，总控台计数与商单待回复行动共用商单读取服务。
+
 ## 当前服务状态
 
 按用户本轮决定，**不安装新依赖，不实现数据库、上传存储或 AI 服务**。`src/lib/workspace-service.ts` 是正式服务接入边界：返回空业务记录和不可用能力标记，不返回假数据。写入与生成接口返回 HTTP 503，页面禁用对应操作并显示原因。
@@ -39,6 +42,7 @@ Node.js 22 LTS、npm。`npm ci` 后执行 `npm run dev`，打开 http://127.0.0.
 - `config/platforms.yaml`、`config/metrics.yaml`：平台与当前前端使用的指标子集。
 - `config/parameters.yaml`：检查点、异常阈值、复盘平台、样本门槛与候选数量。
 - `config/选题输入渠道.md`：内置及外部来源，停用仅影响后续生成。
+- `config/deals.yaml`：商单三状态名称与说明、分页大小、品牌与需求字段长度。
 - `config/inbox.yaml`：三种业务分类、评论/私信类型与列表分页大小。
 - `config/publishing-templates.yaml`：发布来源、平台封面映射、模板、文件限制和图数上限；未知的平台限制与观看时段保持空值，未核验模板阻止实际发布。
 - `config/layout-styles.yaml`：固定正文风格、排版平台、公众号封面比例、抖音配图比例与工作台图数上限。

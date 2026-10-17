@@ -1,0 +1,7 @@
+pageSize: 20
+brandMaxLength: 200
+requirementMaxLength: 4000
+statuses:
+  - { id: pending, name: 待处理, description: 新进入的合作线索，等待人工查看。 }
+  - { id: following, name: 跟进中, description: 已开始沟通，继续推进合作。 }
+  - { id: completed, name: 已完成, description: 本次合作跟进已结束，记录继续保留。 }
