@@ -1,38 +1,222 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {parse} from 'yaml';
-import {dealConfigSchema,dealStatusSchema,dealEditSchema,dealSuggestionInputSchema,dealCounts,filterDeals,dealSource,dealActions,applyDealEdit,suggestionIssue,acceptDealSuggestion,confirmedDeal,waitingDuration} from '../src/lib/deal-model.ts';
-import {assessReplies,inboxPage} from '../src/lib/inbox-model.ts';
-const config=dealConfigSchema.parse(parse(fs.readFileSync('config/deals.yaml','utf8')));
-const message={id:'m1',revision:2,platformId:'douyin',channel:'dm',author:'合作方',body:'沟通合作需求',sentAt:'2026-10-17T01:00:00Z',capturedAt:'2026-10-17T03:00:00Z',reply:{kind:'dm',conversationId:'conversation1',latestConfirmed:true,lastSender:'other',lastMessageAt:'2026-10-17T01:00:00Z'}};
-const deal={id:'d1',revision:3,brand:'品牌甲',requirement:'合作需求',status:'pending',source:{platformId:'douyin',channel:'dm',messageId:'m1'},createdAt:'2026-10-16T00:00:00Z',updatedAt:'2026-10-17T03:00:00Z',suggestion:null};
-const input={brand:'品牌甲',requirement:'合作需求',status:'following',expectedRevision:3};
-const now='2026-10-17T04:00:00Z';
-const filters={status:'all',platform:'all',channel:'all',query:'',linkedId:null};
-const suggestion={id:'s1',expectedRevision:3,status:'following',reason:'私信出现新的合作细节。',evidenceMessageId:'m1',evidenceRevision:2};
-let passed=0;function check(name,fn){fn();passed++;console.log(`PASS ${name}`);}
-check('商单严格只有三档，拒绝额外成交或拒绝状态',()=>{assert.equal(config.statuses.length,3);for(const value of ['won','lost','archived','rejected'])assert(!dealStatusSchema.safeParse(value).success);});
-check('计数逐商单归类，不混入回复状态',()=>assert.deepEqual(dealCounts([deal,{...deal,id:'d2',status:'following'},{...deal,id:'d3',status:'completed'}]),{pending:1,following:1,completed:1}));
-check('来源必须同时匹配消息、平台和类型',()=>{assert.equal(dealSource(deal,[message]),message);for(const patch of [{platformId:'xiaohongshu'},{channel:'comment'},{id:'other'}])assert.equal(dealSource(deal,[{...message,...patch}]),undefined);});
-check('停用或移除平台的历史商单不隐藏',()=>{const history={...deal,source:{...deal.source,platformId:'historical'}};assert.equal(filterDeals([history],[],filters).length,1);assert.equal(filterDeals([history],[],{...filters,platform:'historical'}).length,1);});
-check('可按品牌、需求、发送者搜索且支持组合筛选',()=>{for(const query of ['品牌甲','合作需求','合作方'])assert.equal(filterDeals([deal],[message],{...filters,query}).length,1);assert.equal(filterDeals([deal],[message],{...filters,status:'completed'}).length,0);});
-check('深链接只展示指定商单，失效链接不替换成其他记录',()=>{assert.equal(filterDeals([deal],[message],{...filters,linkedId:'missing'}).length,0);assert.equal(filterDeals([deal],[message],{...filters,linkedId:'d1'}).length,1);});
-check('未知品牌和需求可以保留空值，不强迫填猜测',()=>{assert(dealEditSchema(config).safeParse({...input,brand:null,requirement:null}).success);assert(!dealEditSchema(config).safeParse({...input,brand:'  '}).success);});
-check('字段长度遵守配置，上限可用，超过被拒绝',()=>{assert(dealEditSchema(config).safeParse({...input,brand:'甲'.repeat(config.brandMaxLength)}).success);assert(!dealEditSchema(config).safeParse({...input,brand:'甲'.repeat(config.brandMaxLength+1)}).success);assert(!dealEditSchema(config).safeParse({...input,requirement:'甲'.repeat(config.requirementMaxLength+1)}).success);});
-check('客户端不能改来源、时间、ID或回复状态',()=>{for(const patch of [{source:{messageId:'other'}},{createdAt:now},{updatedAt:now},{id:'other'},{replied:true},{suggestion}])assert(!dealEditSchema(config).safeParse({...input,...patch}).success);});
-check('过期版本不能覆盖其他页面的修改',()=>assert.throws(()=>applyDealEdit({...deal,revision:4},input,config,now),/已更新/));
-check('修改只影响指定商单，来源创建时间保持不变',()=>{const before=structuredClone(deal);const updated=applyDealEdit(deal,input,config,now);assert.equal(updated.status,'following');assert.equal(updated.revision,4);assert.equal(updated.updatedAt,now);assert.equal(updated.createdAt,deal.createdAt);assert.deepEqual(updated.source,deal.source);assert.deepEqual(deal,before);assert.equal(message.reply.lastSender,'other');});
-check('无变化保存不制造更新，修改会清除旧建议',()=>{assert.equal(applyDealEdit(deal,{...input,status:'pending'},config,now),deal);assert.equal(applyDealEdit({...deal,suggestion},input,config,now).suggestion,null);});
-check('时间倒退不能覆盖最近更新',()=>assert.throws(()=>applyDealEdit(deal,input,config,'2026-10-16T00:00:00Z'),/早于/));
-check('三档可由用户纠正，无额外不可逆终态',()=>{for(const status of ['pending','following','completed'])assert.equal(applyDealEdit({...deal,status:'completed'},{...input,status},config,now).status,status);});
-check('状态建议不自动改变商单，人工确认才应用',()=>{const current={...deal,suggestion};assert.equal(suggestionIssue(current,[message]),null);assert.equal(current.status,'pending');const result=acceptDealSuggestion(current,{suggestionId:'s1',expectedRevision:3},[message],config,now);assert.equal(result.status,'following');assert.equal(result.suggestion,null);assert.equal(current.status,'pending');});
-check('建议版本、证据修订号和来源会话任一不符都阻断',()=>{assert(suggestionIssue({...deal,suggestion:{...suggestion,expectedRevision:2}},[message]));assert(suggestionIssue({...deal,suggestion},[{...message,revision:3}]));assert(suggestionIssue({...deal,suggestion},[]));assert(suggestionIssue({...deal,suggestion},[{...message,body:'  '}]));const foreign={...message,id:'foreign',reply:{...message.reply,conversationId:'other'}};assert(suggestionIssue({...deal,suggestion:{...suggestion,evidenceMessageId:'foreign'}},[message,foreign]));});
-check('新会话读取会使旧证据建议失效',()=>{assert(suggestionIssue({...deal,suggestion},[message,{...message,id:'m2',capturedAt:now}]));});
-check('已是目标状态或重复建议不能再次提交',()=>{assert(suggestionIssue({...deal,status:'following',suggestion},[message]));assert.throws(()=>acceptDealSuggestion({...deal,suggestion}, {suggestionId:'stale',expectedRevision:3},[message],config,now),/已更新/);});
-check('建议确认只收建议 ID 与版本，不能夹带自选目标状态',()=>{assert(dealSuggestionInputSchema.safeParse({suggestionId:'s1',expectedRevision:3}).success);assert(!dealSuggestionInputSchema.safeParse({suggestionId:'s1',expectedRevision:3,status:'completed'}).success);});
-check('今日行动按实际回复证据，商单状态不冒充已回复',()=>{for(const status of ['pending','following','completed'])assert.equal(dealActions([{...deal,status}],[message],assessReplies([message])).length,1);const replied={...message,reply:{...message.reply,lastSender:'self'}};assert.equal(dealActions([deal],[replied],assessReplies([replied])).length,0);assert.equal(dealActions([deal],[],new Map()).length,0);});
-check('新会话读取覆盖旧消息，行动同步移除',()=>{const newer={...message,id:'m2',capturedAt:now,reply:{...message.reply,lastSender:'self',lastMessageAt:now}};assert.equal(dealActions([deal],[message,newer],assessReplies([message,newer])).length,0);});
-check('等待时长以读取时为准，未知时间不伪造',()=>{assert.equal(waitingDuration(message),'2小时 0分钟');assert.equal(waitingDuration({...message,capturedAt:null}),'--');assert.equal(waitingDuration({...message,capturedAt:'2026-10-16T00:00:00Z'}),'--');});
-check('筛选后页码不能越界',()=>{assert.equal(inboxPage([deal],8,config.pageSize).page,1);assert.equal(inboxPage([],2,config.pageSize).page,1);});
-check('成功回执必须为同条记录、正确字段、更新版本和不变来源',()=>{const saved=applyDealEdit(deal,input,config,now);assert.equal(confirmedDeal(deal,input,{...saved,source:{messageId:'m1',channel:'dm',platformId:'douyin'}}).revision,4);for(const patch of [{id:'other'},{status:'completed'},{revision:3},{source:{...deal.source,messageId:'other'}},{createdAt:now}])assert.throws(()=>confirmedDeal(deal,input,{...saved,...patch}));});
+import { parse } from 'yaml';
+import {
+  dealConfigSchema,
+  dealStatusSchema,
+  dealEditSchema,
+  dealSuggestionInputSchema,
+  dealCounts,
+  filterDeals,
+  dealSource,
+  dealActions,
+  applyDealEdit,
+  suggestionIssue,
+  acceptDealSuggestion,
+  confirmedDeal,
+  waitingDuration,
+} from '../src/lib/deal-model.ts';
+import { assessReplies, inboxPage } from '../src/lib/inbox-model.ts';
+const config = dealConfigSchema.parse(parse(fs.readFileSync('config/deals.yaml', 'utf8')));
+const message = {
+  id: 'm1',
+  revision: 2,
+  platformId: 'douyin',
+  channel: 'dm',
+  author: '合作方',
+  body: '沟通合作需求',
+  sentAt: '2026-10-17T01:00:00Z',
+  capturedAt: '2026-10-17T03:00:00Z',
+  reply: {
+    kind: 'dm',
+    conversationId: 'conversation1',
+    latestConfirmed: true,
+    lastSender: 'other',
+    lastMessageAt: '2026-10-17T01:00:00Z',
+  },
+};
+const deal = {
+  id: 'd1',
+  revision: 3,
+  brand: '品牌甲',
+  requirement: '合作需求',
+  status: 'pending',
+  source: { platformId: 'douyin', channel: 'dm', messageId: 'm1' },
+  createdAt: '2026-10-16T00:00:00Z',
+  updatedAt: '2026-10-17T03:00:00Z',
+  suggestion: null,
+};
+const input = { brand: '品牌甲', requirement: '合作需求', status: 'following', expectedRevision: 3 };
+const now = '2026-10-17T04:00:00Z';
+const filters = { status: 'all', platform: 'all', channel: 'all', query: '', linkedId: null };
+const suggestion = {
+  id: 's1',
+  expectedRevision: 3,
+  status: 'following',
+  reason: '私信出现新的合作细节。',
+  evidenceMessageId: 'm1',
+  evidenceRevision: 2,
+};
+let passed = 0;
+function check(name, fn) {
+  fn();
+  passed++;
+  console.log(`PASS ${name}`);
+}
+check('商单严格只有三档，拒绝额外成交或拒绝状态', () => {
+  assert.equal(config.statuses.length, 3);
+  for (const value of ['won', 'lost', 'archived', 'rejected']) assert(!dealStatusSchema.safeParse(value).success);
+});
+check('计数逐商单归类，不混入回复状态', () =>
+  assert.deepEqual(
+    dealCounts([deal, { ...deal, id: 'd2', status: 'following' }, { ...deal, id: 'd3', status: 'completed' }]),
+    { pending: 1, following: 1, completed: 1 },
+  ),
+);
+check('来源必须同时匹配消息、平台和类型', () => {
+  assert.equal(dealSource(deal, [message]), message);
+  for (const patch of [{ platformId: 'xiaohongshu' }, { channel: 'comment' }, { id: 'other' }])
+    assert.equal(dealSource(deal, [{ ...message, ...patch }]), undefined);
+});
+check('停用或移除平台的历史商单不隐藏', () => {
+  const history = { ...deal, source: { ...deal.source, platformId: 'historical' } };
+  assert.equal(filterDeals([history], [], filters).length, 1);
+  assert.equal(filterDeals([history], [], { ...filters, platform: 'historical' }).length, 1);
+});
+check('可按品牌、需求、发送者搜索且支持组合筛选', () => {
+  for (const query of ['品牌甲', '合作需求', '合作方'])
+    assert.equal(filterDeals([deal], [message], { ...filters, query }).length, 1);
+  assert.equal(filterDeals([deal], [message], { ...filters, status: 'completed' }).length, 0);
+});
+check('深链接只展示指定商单，失效链接不替换成其他记录', () => {
+  assert.equal(filterDeals([deal], [message], { ...filters, linkedId: 'missing' }).length, 0);
+  assert.equal(filterDeals([deal], [message], { ...filters, linkedId: 'd1' }).length, 1);
+});
+check('未知品牌和需求可以保留空值，不强迫填猜测', () => {
+  assert(dealEditSchema(config).safeParse({ ...input, brand: null, requirement: null }).success);
+  assert(!dealEditSchema(config).safeParse({ ...input, brand: '  ' }).success);
+});
+check('字段长度遵守配置，上限可用，超过被拒绝', () => {
+  assert(dealEditSchema(config).safeParse({ ...input, brand: '甲'.repeat(config.brandMaxLength) }).success);
+  assert(!dealEditSchema(config).safeParse({ ...input, brand: '甲'.repeat(config.brandMaxLength + 1) }).success);
+  assert(
+    !dealEditSchema(config).safeParse({ ...input, requirement: '甲'.repeat(config.requirementMaxLength + 1) }).success,
+  );
+});
+check('客户端不能改来源、时间、ID或回复状态', () => {
+  for (const patch of [
+    { source: { messageId: 'other' } },
+    { createdAt: now },
+    { updatedAt: now },
+    { id: 'other' },
+    { replied: true },
+    { suggestion },
+  ])
+    assert(!dealEditSchema(config).safeParse({ ...input, ...patch }).success);
+});
+check('过期版本不能覆盖其他页面的修改', () =>
+  assert.throws(() => applyDealEdit({ ...deal, revision: 4 }, input, config, now), /已更新/),
+);
+check('修改只影响指定商单，来源创建时间保持不变', () => {
+  const before = structuredClone(deal);
+  const updated = applyDealEdit(deal, input, config, now);
+  assert.equal(updated.status, 'following');
+  assert.equal(updated.revision, 4);
+  assert.equal(updated.updatedAt, now);
+  assert.equal(updated.createdAt, deal.createdAt);
+  assert.deepEqual(updated.source, deal.source);
+  assert.deepEqual(deal, before);
+  assert.equal(message.reply.lastSender, 'other');
+});
+check('无变化保存不制造更新，修改会清除旧建议', () => {
+  assert.equal(applyDealEdit(deal, { ...input, status: 'pending' }, config, now), deal);
+  assert.equal(applyDealEdit({ ...deal, suggestion }, input, config, now).suggestion, null);
+});
+check('时间倒退不能覆盖最近更新', () =>
+  assert.throws(() => applyDealEdit(deal, input, config, '2026-10-16T00:00:00Z'), /早于/),
+);
+check('三档可由用户纠正，无额外不可逆终态', () => {
+  for (const status of ['pending', 'following', 'completed'])
+    assert.equal(applyDealEdit({ ...deal, status: 'completed' }, { ...input, status }, config, now).status, status);
+});
+check('状态建议不自动改变商单，人工确认才应用', () => {
+  const current = { ...deal, suggestion };
+  assert.equal(suggestionIssue(current, [message]), null);
+  assert.equal(current.status, 'pending');
+  const result = acceptDealSuggestion(current, { suggestionId: 's1', expectedRevision: 3 }, [message], config, now);
+  assert.equal(result.status, 'following');
+  assert.equal(result.suggestion, null);
+  assert.equal(current.status, 'pending');
+});
+check('建议版本、证据修订号和来源会话任一不符都阻断', () => {
+  assert(suggestionIssue({ ...deal, suggestion: { ...suggestion, expectedRevision: 2 } }, [message]));
+  assert(suggestionIssue({ ...deal, suggestion }, [{ ...message, revision: 3 }]));
+  assert(suggestionIssue({ ...deal, suggestion }, []));
+  assert(suggestionIssue({ ...deal, suggestion }, [{ ...message, body: '  ' }]));
+  const foreign = { ...message, id: 'foreign', reply: { ...message.reply, conversationId: 'other' } };
+  assert(suggestionIssue({ ...deal, suggestion: { ...suggestion, evidenceMessageId: 'foreign' } }, [message, foreign]));
+});
+check('新会话读取会使旧证据建议失效', () => {
+  assert(suggestionIssue({ ...deal, suggestion }, [message, { ...message, id: 'm2', capturedAt: now }]));
+});
+check('已是目标状态或重复建议不能再次提交', () => {
+  assert(suggestionIssue({ ...deal, status: 'following', suggestion }, [message]));
+  assert.throws(
+    () =>
+      acceptDealSuggestion(
+        { ...deal, suggestion },
+        { suggestionId: 'stale', expectedRevision: 3 },
+        [message],
+        config,
+        now,
+      ),
+    /已更新/,
+  );
+});
+check('建议确认只收建议 ID 与版本，不能夹带自选目标状态', () => {
+  assert(dealSuggestionInputSchema.safeParse({ suggestionId: 's1', expectedRevision: 3 }).success);
+  assert(
+    !dealSuggestionInputSchema.safeParse({ suggestionId: 's1', expectedRevision: 3, status: 'completed' }).success,
+  );
+});
+check('今日行动按实际回复证据，商单状态不冒充已回复', () => {
+  for (const status of ['pending', 'following', 'completed'])
+    assert.equal(dealActions([{ ...deal, status }], [message], assessReplies([message])).length, 1);
+  const replied = { ...message, reply: { ...message.reply, lastSender: 'self' } };
+  assert.equal(dealActions([deal], [replied], assessReplies([replied])).length, 0);
+  assert.equal(dealActions([deal], [], new Map()).length, 0);
+});
+check('新会话读取覆盖旧消息，行动同步移除', () => {
+  const newer = {
+    ...message,
+    id: 'm2',
+    capturedAt: now,
+    reply: { ...message.reply, lastSender: 'self', lastMessageAt: now },
+  };
+  assert.equal(dealActions([deal], [message, newer], assessReplies([message, newer])).length, 0);
+});
+check('等待时长以读取时为准，未知时间不伪造', () => {
+  assert.equal(waitingDuration(message), '2小时 0分钟');
+  assert.equal(waitingDuration({ ...message, capturedAt: null }), '--');
+  assert.equal(waitingDuration({ ...message, capturedAt: '2026-10-16T00:00:00Z' }), '--');
+});
+check('筛选后页码不能越界', () => {
+  assert.equal(inboxPage([deal], 8, config.pageSize).page, 1);
+  assert.equal(inboxPage([], 2, config.pageSize).page, 1);
+});
+check('成功回执必须为同条记录、正确字段、更新版本和不变来源', () => {
+  const saved = applyDealEdit(deal, input, config, now);
+  assert.equal(
+    confirmedDeal(deal, input, { ...saved, source: { messageId: 'm1', channel: 'dm', platformId: 'douyin' } }).revision,
+    4,
+  );
+  for (const patch of [
+    { id: 'other' },
+    { status: 'completed' },
+    { revision: 3 },
+    { source: { ...deal.source, messageId: 'other' } },
+    { createdAt: now },
+  ])
+    assert.throws(() => confirmedDeal(deal, input, { ...saved, ...patch }));
+});
 console.log(`${passed} deals checks passed`);

@@ -1,33 +1,187 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {parse} from 'yaml';
-import {replyState,assessReplies,waitingCount,filterInbox,inboxPage,canSyncTopic,assertTopicSync,inboxTopicInputSchema,inboxClassificationSchema,inboxConfigSchema,themeMessages,inboxTime} from '../src/lib/inbox-model.ts';
-const config=inboxConfigSchema.parse(parse(fs.readFileSync('config/inbox.yaml','utf8')));
-const message=(id,patch={})=>({id,revision:0,platformId:'douyin',channel:'dm',author:'验收用户',body:'可以讲一下本地模型的配置吗？',sentAt:'2026-10-17T09:00:00+08:00',capturedAt:'2026-10-17T10:00:00+08:00',sourceUrl:null,contentId:'work1',contentTitle:'本地模型入门',classification:{status:'ready',result:{category:'idea',reason:'提出了具体的使用问题。'}},reply:{kind:'dm',conversationId:'conversation1',latestConfirmed:true,lastSender:'other',lastMessageAt:'2026-10-17T09:00:00+08:00'},context:[],contextComplete:false,dealId:null,dealSync:'pending',dealSyncReason:null,topicSignalId:null,topicSyncedAt:null,...patch});
-const base=message('m1');const evidence=patch=>({...base.reply,...patch});
-const filters={platform:'all',channel:'all',category:'all',reply:'all',classification:'all',query:'',themeId:null};
-let passed=0;function check(name,fn){fn();passed++;console.log(`PASS ${name}`);}
-check('业务分类严格只有三类，未识别不是其他',()=>{assert.equal(config.categories.length,3);assert(!inboxClassificationSchema.safeParse({category:'unknown',reason:'未知'}).success);assert(!inboxClassificationSchema.safeParse({category:'idea',reason:'',action:'reply'}).success);});
-check('私信以会话最后发言者判定待回复',()=>{assert.equal(replyState(base),'waiting');assert.equal(replyState(message('m1',{reply:evidence({lastSender:'self'})})),'replied');});
-check('私信证据未确认或缺失时不能猜测',()=>{for(const patch of [{latestConfirmed:false},{lastSender:'unknown'},{conversationId:''},{lastMessageAt:null}])assert.equal(replyState(message('m1',{reply:evidence(patch)})),'unknown');});
-check('会话末条时间早于本消息或晚于读取时都待核对',()=>{for(const lastMessageAt of ['2026-10-17T08:00:00+08:00','2026-10-17T11:00:00+08:00','invalid'])assert.equal(replyState(message('m1',{reply:evidence({lastMessageAt})})),'unknown');});
-check('评论只有完整读取且未找到我方回复才待回复',()=>{assert.equal(replyState(message('c',{channel:'comment',reply:{kind:'comment',ownReplyFound:false,repliesComplete:true}})),'waiting');assert.equal(replyState(message('c',{channel:'comment',reply:{kind:'comment',ownReplyFound:false,repliesComplete:false}})),'unknown');});
-check('识别到我方回复足以确认已回复',()=>assert.equal(replyState(message('c',{channel:'comment',reply:{kind:'comment',ownReplyFound:true,repliesComplete:false}})),'replied'));
-check('类型与证据不匹配不能误判',()=>assert.equal(replyState(message('c',{channel:'comment'})),'unknown'));
-check('私信多个消息只计一个待回复会话',()=>assert.equal(waitingCount([base,message('m2')]),1));
-check('不同平台相同会话 ID 不合并',()=>assert.equal(waitingCount([base,message('m2',{platformId:'xiaohongshu'})]),2));
-const recent=message('m2',{capturedAt:'2026-10-17T12:00:00+08:00',reply:evidence({lastSender:'self',lastMessageAt:'2026-10-17T11:00:00+08:00'})});
-check('平台新回复覆盖会话旧消息状态并移出待回复',()=>{assert.equal(assessReplies([base,recent]).get('m1').state,'replied');assert.equal(waitingCount([base],[base,recent]),0);assert.equal(filterInbox([base,recent],[],{...filters,reply:'waiting'}).length,0);});
-check('同一时间不同格式的冲突证据不会任取一条',()=>{const other=message('m2',{capturedAt:'2026-10-17T02:00:00Z',reply:evidence({lastSender:'self'})});assert.equal(assessReplies([base,other]).get('m1').state,'unknown');});
-check('最新读取不完整时保留待核对，不能退用旧结论',()=>{assert.equal(assessReplies([base,{...recent,reply:evidence({latestConfirmed:false})}]).get('m1').state,'unknown');});
-const failed=message('failed',{classification:{status:'failed',reason:'原文读取失败'}});
-check('失败消息可见且不混进其他类别',()=>{assert.equal(filterInbox([failed],[],filters).length,1);assert.equal(filterInbox([failed],[],{...filters,category:'other'}).length,0);assert.equal(filterInbox([failed],[],{...filters,classification:'failed'}).length,1);});
-check('历史平台和已回复的问题仍可搜索并贡献选题',()=>{const historical={...recent,platformId:'retired',author:'History'};assert.equal(filterInbox([historical],[],{...filters,platform:'retired',query:'history'}).length,1);assert(canSyncTopic(historical));});
-check('需求主题只展示可追溯来源，不补造缺失消息',()=>{const theme={id:'t1',messageIds:['m1','missing','m1']};assert.equal(themeMessages(theme,[base,recent]).length,1);assert.deepEqual(filterInbox([base,recent],[theme],{...filters,themeId:'t1'}).map(m=>m.id),['m1']);assert.equal(filterInbox([base],[],{...filters,themeId:'missing'}).length,0);});
-check('筛选缩小后页码回到有效范围',()=>{assert.deepEqual(inboxPage([base],8,config.pageSize),{page:1,pages:1,items:[base]});assert.equal(inboxPage([],1,config.pageSize).pages,1);});
-check('只有问题观点能创建选题输入，未识别和商单都不能',()=>{assert(canSyncTopic(base));assert(!canSyncTopic(failed));assert(!canSyncTopic(message('deal',{classification:{status:'ready',result:{category:'deal',reason:'合作'}}})));});
-check('同步需校验版本，重复请求返回原有来源记录',()=>{assert.throws(()=>assertTopicSync(base,1),/已更新/);assert.deepEqual(assertTopicSync({...base,topicSignalId:'s1'},0),{existingSignalId:'s1'});assert.throws(()=>assertTopicSync(failed,0),/只有/);});
-check('选题同步不修改回复证据',()=>{const before=structuredClone(base);assertTopicSync(base,0);assert.deepEqual(base,before);assert.equal(replyState(base),'waiting');});
-check('客户端不能夹带手工回复状态或分类覆盖',()=>{assert(inboxTopicInputSchema.safeParse({expectedRevision:0}).success);for(const patch of [{replied:true},{classification:'idea'},{expectedRevision:-1}])assert(!inboxTopicInputSchema.safeParse({expectedRevision:0,...patch}).success);});
-check('缺失时间不显示假日期，时间按北京时间展示',()=>{assert.equal(inboxTime(null),'--');assert.equal(inboxTime('invalid'),'--');assert.equal(inboxTime('2026-10-17T01:00:00Z'),'10-17 09:00');});
+import { parse } from 'yaml';
+import {
+  replyState,
+  assessReplies,
+  waitingCount,
+  filterInbox,
+  inboxPage,
+  canSyncTopic,
+  assertTopicSync,
+  inboxTopicInputSchema,
+  inboxClassificationSchema,
+  inboxConfigSchema,
+  themeMessages,
+  inboxTime,
+} from '../src/lib/inbox-model.ts';
+const config = inboxConfigSchema.parse(parse(fs.readFileSync('config/inbox.yaml', 'utf8')));
+const message = (id, patch = {}) => ({
+  id,
+  revision: 0,
+  platformId: 'douyin',
+  channel: 'dm',
+  author: '验收用户',
+  body: '可以讲一下本地模型的配置吗？',
+  sentAt: '2026-10-17T09:00:00+08:00',
+  capturedAt: '2026-10-17T10:00:00+08:00',
+  sourceUrl: null,
+  contentId: 'work1',
+  contentTitle: '本地模型入门',
+  classification: { status: 'ready', result: { category: 'idea', reason: '提出了具体的使用问题。' } },
+  reply: {
+    kind: 'dm',
+    conversationId: 'conversation1',
+    latestConfirmed: true,
+    lastSender: 'other',
+    lastMessageAt: '2026-10-17T09:00:00+08:00',
+  },
+  context: [],
+  contextComplete: false,
+  dealId: null,
+  dealSync: 'pending',
+  dealSyncReason: null,
+  topicSignalId: null,
+  topicSyncedAt: null,
+  ...patch,
+});
+const base = message('m1');
+const evidence = (patch) => ({ ...base.reply, ...patch });
+const filters = {
+  platform: 'all',
+  channel: 'all',
+  category: 'all',
+  reply: 'all',
+  classification: 'all',
+  query: '',
+  themeId: null,
+};
+let passed = 0;
+function check(name, fn) {
+  fn();
+  passed++;
+  console.log(`PASS ${name}`);
+}
+check('业务分类严格只有三类，未识别不是其他', () => {
+  assert.equal(config.categories.length, 3);
+  assert(!inboxClassificationSchema.safeParse({ category: 'unknown', reason: '未知' }).success);
+  assert(!inboxClassificationSchema.safeParse({ category: 'idea', reason: '', action: 'reply' }).success);
+});
+check('私信以会话最后发言者判定待回复', () => {
+  assert.equal(replyState(base), 'waiting');
+  assert.equal(replyState(message('m1', { reply: evidence({ lastSender: 'self' }) })), 'replied');
+});
+check('私信证据未确认或缺失时不能猜测', () => {
+  for (const patch of [
+    { latestConfirmed: false },
+    { lastSender: 'unknown' },
+    { conversationId: '' },
+    { lastMessageAt: null },
+  ])
+    assert.equal(replyState(message('m1', { reply: evidence(patch) })), 'unknown');
+});
+check('会话末条时间早于本消息或晚于读取时都待核对', () => {
+  for (const lastMessageAt of ['2026-10-17T08:00:00+08:00', '2026-10-17T11:00:00+08:00', 'invalid'])
+    assert.equal(replyState(message('m1', { reply: evidence({ lastMessageAt }) })), 'unknown');
+});
+check('评论只有完整读取且未找到我方回复才待回复', () => {
+  assert.equal(
+    replyState(
+      message('c', { channel: 'comment', reply: { kind: 'comment', ownReplyFound: false, repliesComplete: true } }),
+    ),
+    'waiting',
+  );
+  assert.equal(
+    replyState(
+      message('c', { channel: 'comment', reply: { kind: 'comment', ownReplyFound: false, repliesComplete: false } }),
+    ),
+    'unknown',
+  );
+});
+check('识别到我方回复足以确认已回复', () =>
+  assert.equal(
+    replyState(
+      message('c', { channel: 'comment', reply: { kind: 'comment', ownReplyFound: true, repliesComplete: false } }),
+    ),
+    'replied',
+  ),
+);
+check('类型与证据不匹配不能误判', () => assert.equal(replyState(message('c', { channel: 'comment' })), 'unknown'));
+check('私信多个消息只计一个待回复会话', () => assert.equal(waitingCount([base, message('m2')]), 1));
+check('不同平台相同会话 ID 不合并', () =>
+  assert.equal(waitingCount([base, message('m2', { platformId: 'xiaohongshu' })]), 2),
+);
+const recent = message('m2', {
+  capturedAt: '2026-10-17T12:00:00+08:00',
+  reply: evidence({ lastSender: 'self', lastMessageAt: '2026-10-17T11:00:00+08:00' }),
+});
+check('平台新回复覆盖会话旧消息状态并移出待回复', () => {
+  assert.equal(assessReplies([base, recent]).get('m1').state, 'replied');
+  assert.equal(waitingCount([base], [base, recent]), 0);
+  assert.equal(filterInbox([base, recent], [], { ...filters, reply: 'waiting' }).length, 0);
+});
+check('同一时间不同格式的冲突证据不会任取一条', () => {
+  const other = message('m2', { capturedAt: '2026-10-17T02:00:00Z', reply: evidence({ lastSender: 'self' }) });
+  assert.equal(assessReplies([base, other]).get('m1').state, 'unknown');
+});
+check('最新读取不完整时保留待核对，不能退用旧结论', () => {
+  assert.equal(
+    assessReplies([base, { ...recent, reply: evidence({ latestConfirmed: false }) }]).get('m1').state,
+    'unknown',
+  );
+});
+const failed = message('failed', { classification: { status: 'failed', reason: '原文读取失败' } });
+check('失败消息可见且不混进其他类别', () => {
+  assert.equal(filterInbox([failed], [], filters).length, 1);
+  assert.equal(filterInbox([failed], [], { ...filters, category: 'other' }).length, 0);
+  assert.equal(filterInbox([failed], [], { ...filters, classification: 'failed' }).length, 1);
+});
+check('历史平台和已回复的问题仍可搜索并贡献选题', () => {
+  const historical = { ...recent, platformId: 'retired', author: 'History' };
+  assert.equal(filterInbox([historical], [], { ...filters, platform: 'retired', query: 'history' }).length, 1);
+  assert(canSyncTopic(historical));
+});
+check('需求主题只展示可追溯来源，不补造缺失消息', () => {
+  const theme = { id: 't1', messageIds: ['m1', 'missing', 'm1'] };
+  assert.equal(themeMessages(theme, [base, recent]).length, 1);
+  assert.deepEqual(
+    filterInbox([base, recent], [theme], { ...filters, themeId: 't1' }).map((m) => m.id),
+    ['m1'],
+  );
+  assert.equal(filterInbox([base], [], { ...filters, themeId: 'missing' }).length, 0);
+});
+check('筛选缩小后页码回到有效范围', () => {
+  assert.deepEqual(inboxPage([base], 8, config.pageSize), { page: 1, pages: 1, items: [base] });
+  assert.equal(inboxPage([], 1, config.pageSize).pages, 1);
+});
+check('只有问题观点能创建选题输入，未识别和商单都不能', () => {
+  assert(canSyncTopic(base));
+  assert(!canSyncTopic(failed));
+  assert(
+    !canSyncTopic(
+      message('deal', { classification: { status: 'ready', result: { category: 'deal', reason: '合作' } } }),
+    ),
+  );
+});
+check('同步需校验版本，重复请求返回原有来源记录', () => {
+  assert.throws(() => assertTopicSync(base, 1), /已更新/);
+  assert.deepEqual(assertTopicSync({ ...base, topicSignalId: 's1' }, 0), { existingSignalId: 's1' });
+  assert.throws(() => assertTopicSync(failed, 0), /只有/);
+});
+check('选题同步不修改回复证据', () => {
+  const before = structuredClone(base);
+  assertTopicSync(base, 0);
+  assert.deepEqual(base, before);
+  assert.equal(replyState(base), 'waiting');
+});
+check('客户端不能夹带手工回复状态或分类覆盖', () => {
+  assert(inboxTopicInputSchema.safeParse({ expectedRevision: 0 }).success);
+  for (const patch of [{ replied: true }, { classification: 'idea' }, { expectedRevision: -1 }])
+    assert(!inboxTopicInputSchema.safeParse({ expectedRevision: 0, ...patch }).success);
+});
+check('缺失时间不显示假日期，时间按北京时间展示', () => {
+  assert.equal(inboxTime(null), '--');
+  assert.equal(inboxTime('invalid'), '--');
+  assert.equal(inboxTime('2026-10-17T01:00:00Z'), '10-17 09:00');
+});
 console.log(`${passed} inbox checks passed`);
