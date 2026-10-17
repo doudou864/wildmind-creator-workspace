@@ -1,7 +1,9 @@
+import { loadConfig } from './config.ts';
+import { dashboardData } from './dashboard-store.ts';
 import { readImageTasks } from '../jobs/image-tasks.ts';
 import { publishingData } from './publishing-store.ts';
 import { usingDatabase, usedImages } from './media-store.ts';
-import { assets, contents, topics, imageDrafts, imageGenerations, layouts } from '../db/schema.ts';
+import { assets, contents, topics, imageDrafts, imageGenerations, layouts, deals, messages } from '../db/schema.ts';
 import { loadGenerationConfig } from '../ai/image-generation.ts';
 import { shanghaiDate } from '../browser/policy.ts';
 import { desc } from 'drizzle-orm';
@@ -15,21 +17,8 @@ import type { TopicData } from './topic-model';
 import type { ImageData } from './image-model';
 // 服务接入边界：只返回业务记录。接入采集、复盘、数据库后替换这些读取器，不在页面填充示例。
 export async function readDashboard(): Promise<DashboardData> {
-  return {
-    platforms: {},
-    hitRates: [],
-    questions: [],
-    questionsReady: false,
-    plannedContents: [],
-    plansReady: false,
-    themes: [],
-    themesReady: false,
-    themeSyncReady: false,
-    accountAlerts: [],
-    accountAlertsReady: false,
-    collectionReady: false,
-    reviewReady: false,
-  };
+  const config = await loadConfig();
+  return usingDatabase((db) => dashboardData(db, config));
 }
 export async function readTopics(): Promise<TopicData> {
   return {
@@ -88,14 +77,18 @@ export async function readInbox(): Promise<InboxData> {
 }
 
 export async function readDeals(): Promise<DealData> {
-  return {
-    items: [],
-    messages: [],
-    recordsReady: false,
+  return usingDatabase((db) => ({
+    items: db.db
+      .select()
+      .from(deals)
+      .all()
+      .map(({ platformId, channel, messageId, ...row }) => ({ ...row, source: { platformId, channel, messageId } })),
+    messages: db.db.select().from(messages).all(),
+    recordsReady: true,
     writeReady: false,
     suggestionReady: false,
-    message: '商单存储与状态建议服务待接入；暂无可展示的商单记录。',
-  };
+    message: '商单列表已接本地记录；分类采集和编辑在第6步接入。',
+  }));
 }
 
 export async function readContents(): Promise<ContentData> {

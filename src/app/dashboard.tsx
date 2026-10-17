@@ -100,10 +100,18 @@ export default function Dashboard({
       ? previous.values[metricId]
       : null;
   const difference =
-    currentValue != null && previousValue != null && previousValue !== 0
+    currentValue != null &&
+    previousValue != null &&
+    previousValue !== 0 &&
+    (latest?.precision?.[metricId] === undefined || latest.precision[metricId] === 'exact') &&
+    (previous?.precision?.[metricId] === undefined || previous.precision[metricId] === 'exact')
       ? ((currentValue - previousValue) / Math.abs(previousValue)) * 100
       : null;
-  const netValues = days.map((day) => day.values.net_followers);
+  const netValues = days.map((day) =>
+    day.precision?.net_followers === 'display' || day.precision?.net_followers === 'unknown'
+      ? null
+      : day.values.net_followers,
+  );
   const periodNet =
     days.length === range && netValues.every((value) => value != null)
       ? netValues.reduce<number>((sum, value) => sum + (value ?? 0), 0)
@@ -319,6 +327,14 @@ export default function Dashboard({
             }
             className="actions-card"
           >
+            {workspace.attention?.map((item) => (
+              <div className="action-row" key={item.id}>
+                <span>
+                  <small>需要你处理 · {platforms.find((p) => p.id === item.platformId)?.name ?? item.platformId}</small>
+                  <strong>{item.reason}</strong>
+                </span>
+              </div>
+            ))}
             {actions.map((group, index) => {
               const source = group.message;
               const evidence = replies.get(source.id)?.observed;
@@ -537,6 +553,7 @@ export default function Dashboard({
             <div className="trend-summary">
               <div className="hero-stat">
                 <strong className={`mono ${metricId === 'net_followers' && (currentValue ?? 0) < 0 ? 'negative' : ''}`}>
+                  {latest?.precision?.[metricId] === 'display' ? '约 ' : ''}
                   {number(currentValue)}
                 </strong>
                 <span>
@@ -675,7 +692,10 @@ export default function Dashboard({
           className="followers-card"
         >
           <div className="followers-total">
-            <strong className="mono">{number(latest?.values.followers)}</strong>
+            <strong className="mono">
+              {latest?.precision?.followers === 'display' ? '约 ' : ''}
+              {number(latest?.values.followers)}
+            </strong>
             <span className={`mono ${(latest?.values.net_followers ?? 0) < 0 ? 'negative' : ''}`}>
               {signed(latest?.values.net_followers)}
             </span>

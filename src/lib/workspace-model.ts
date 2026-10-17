@@ -1,6 +1,10 @@
 import type { Content } from './content-model';
 import { z } from 'zod';
-export type Day = { date: string; values: Record<string, number | null> };
+export type Day = {
+  date: string;
+  precision?: Record<string, 'exact' | 'display' | 'unknown'>;
+  values: Record<string, number | null>;
+};
 export type Checkpoint = {
   ratio: number | null;
   baseline: number | null;
@@ -40,6 +44,7 @@ export type HitRatePeriod = {
   conclusionAllowed: boolean;
 };
 export type DashboardData = {
+  attention?: { id: string; platformId: string; reason: string }[];
   platforms: Record<string, PlatformData>;
   hitRates: HitRatePeriod[];
   collectionReady: boolean;

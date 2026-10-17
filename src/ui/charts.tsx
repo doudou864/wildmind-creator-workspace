@@ -47,7 +47,13 @@ export function Chart({ days, metric, label, kind, rows = 12, referenceDate }: P
           interval: (index: number) => [0, Math.floor((days.length - 1) / 2), days.length - 1].includes(index),
         },
       };
+      const display = (index: number, key = metric) =>
+        `${days[index].precision?.[key] === 'display' ? '约 ' : ''}${days[index].values[key]?.toLocaleString('en-US') ?? '--'}`;
       const tooltip = {
+        formatter: (params: { dataIndex: number }[]) => {
+          const index = params[0]?.dataIndex ?? 0;
+          return `${days[index].date}<br/>${label}：${display(index)}`;
+        },
         trigger: 'axis',
         confine: true,
         backgroundColor: theme.card,
@@ -109,7 +115,7 @@ export function Chart({ days, metric, label, kind, rows = 12, referenceDate }: P
           ...tooltip,
           formatter: (params: { dataIndex: number }[]) => {
             const index = params[0]?.dataIndex ?? 0;
-            return `${days[index].date}<br/>${label}：${values[index]?.toLocaleString('en-US') ?? '--'}`;
+            return `${days[index].date}<br/>${label}：${display(index)}`;
           },
         };
       } else {
@@ -170,7 +176,7 @@ export function Chart({ days, metric, label, kind, rows = 12, referenceDate }: P
       <div
         ref={ref}
         role="img"
-        aria-label={`${label}，${days.length} 天趋势，可悬停查看准确数值`}
+        aria-label={`${label}，${days.length} 天趋势，可悬停查看数值与精度`}
         className="chart-canvas"
       />
       {failure && <p className="empty">图表加载失败，请刷新页面</p>}
