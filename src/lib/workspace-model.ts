@@ -1,3 +1,5 @@
+import type { Content } from './content-model';
+import {z} from 'zod';
 export type Day = { date: string; values: Record<string, number | null> };
 export type Checkpoint = {
   ratio: number | null;
@@ -27,6 +29,10 @@ export type DashboardData = {
   platforms: Record<string, PlatformData>;
   hitRates: HitRatePeriod[];
   collectionReady: boolean; reviewReady: boolean;
+  questions:{id:string;title:string;platformId:string}[];questionsReady:boolean;
+  plannedContents:Content[];plansReady:boolean;
+  themes:{id:string;revision:number;title:string;count:number;signalId:string|null}[];themesReady:boolean;themeSyncReady:boolean;
+  accountAlerts:{id:string;platformId:string;kind:'violation'|'restriction'|'follower_drop';title:string;reason:string;capturedAt:string;sourceUrl:string|null}[];accountAlertsReady:boolean;
 };
 export const checkpointLabels: Record<Checkpoint['status'], string> = {
   pending: '未到检查点', missing: '采集缺失', insufficient: '样本不足', ready: '已记录',
@@ -42,3 +48,5 @@ export function findAnomalies(works: Work[], parameters: {anomalyCheckpoints: nu
     return point.ratio>parameters.anomalyHigh || point.ratio<parameters.anomalyLow ? [{work,day,ratio:point.ratio}] : [];
   }));
 }
+
+export const themeSyncSchema=z.object({expectedRevision:z.number().int().nonnegative()}).strict();

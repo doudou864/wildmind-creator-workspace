@@ -1,3 +1,4 @@
+import type { Content } from './content-model';
 import { z } from 'zod';
 import type { Asset } from './image-model';
 import type { Platform } from './config';
@@ -19,10 +20,10 @@ export type PublishBatch={id:string;revision:number;state:'draft'|'queued'|'runn
 export type PublishReceipt={id:string;batchId:string;platformId:string;status:'queued'|'submitting'|'pending_review'|'published'|'failed'|'unknown';title:string;platformPostId:string|null;url:string|null;publishedAt:string|null;reason:string|null;safeToRetry:boolean;revision:number};
 export type PublishSnapshot={id:string;layoutId:string;layoutRevision:number;contentId:string;platform:LayoutPlatform;content:LayoutContent;confirmedAt:string;state:'ready'|'queued'|'published'|'returned'};
 export type PublishVideo={id:string;contentId:string;name:string;bytes:number;duration:number;width:number;height:number};
-export type PublishingData={contents:{id:string;title:string}[];videos:PublishVideo[];assets:Asset[];snapshots:PublishSnapshot[];batches:PublishBatch[];receipts:PublishReceipt[];accounts:{platformId:string;ready:boolean;reason:string}[];recommendations:{platformId:string;month:string;time:string;basis:string}[];storageReady:boolean;aiReady:boolean;publishReady:boolean;handoffReady:boolean;message:string};
+export type PublishingData={contents:Content[];videos:PublishVideo[];assets:Asset[];snapshots:PublishSnapshot[];batches:PublishBatch[];receipts:PublishReceipt[];accounts:{platformId:string;ready:boolean;reason:string}[];recommendations:{platformId:string;month:string;time:string;basis:string}[];storageReady:boolean;aiReady:boolean;publishReady:boolean;handoffReady:boolean;message:string};
 export const publishUpdateSchema=publishDraftSchema.safeExtend({expectedRevision:z.number().int().nonnegative()});
 export const publishActionSchema=z.discriminatedUnion('action',[
-  z.object({action:z.literal('publish'),expectedRevision:z.number().int().nonnegative(),requestId:z.string().uuid(),confirmed:z.literal(true)}).strict(),
+  z.object({action:z.literal('publish'),expectedRevision:z.number().int().nonnegative(),requestId:z.string().uuid(),confirmed:z.literal(true),materials:z.string().min(1).max(2000000)}).strict(),
   z.object({action:z.literal('ai'),expectedRevision:z.number().int().nonnegative(),instruction:z.string().trim().min(1).max(10000)}).strict(),
   z.object({action:z.literal('return'),expectedRevision:z.number().int().nonnegative(),snapshotId:z.string().min(1)}).strict(),
 ]);
@@ -33,11 +34,12 @@ export function makePublishSetting(platformId:string,title:string,config:Publish
   const template=config.templates.find(t=>t.platformId===platformId);
   return {platformId,title,description:template?.description??'',tags:[...(template?.tags??[])],scheduleAt:null};
 }
-export function autoVideoCovers(contentId:string|null,assets:Asset[],config:PublishingConfig){
+export function autoVideoCovers(contentId:string|null,assets:Asset[],config:PublishingConfig,choices:Record<string,string>={}){
   return config.requiredVideoRatios.map(ratio=>{
     const [w,h]=ratio.split(':').map(Number);
-    const candidates=contentId?assets.filter(a=>a.contentId===contentId&&a.purposeId==='video_cover'&&a.selected&&a.width>0&&a.height>0&&Math.abs(a.width*h-a.height*w)<0.01):[];
-    return {ratio,asset:candidates.length===1?candidates[0]:null,reason:candidates.length>1?'存在多组已选封面，请在生图中心整理':candidates.length===0?'缺少已选封面':''};
+    const id=choices[ratio];
+    const asset=id?assets.find(a=>a.id===id&&a.contentId===contentId&&a.purposeId==='video_cover'&&a.width>0&&a.height>0&&Math.abs(a.width*h-a.height*w)<0.01):null;
+    return {ratio,asset:asset??null,reason:asset?'':id?'采用的封面已失效，请重新选择':'尚未指定作品采用的封面'};
   });
 }
 export function scheduleTime(value:string):number {
@@ -58,10 +60,11 @@ export function canRetryReceipt(receipt:PublishReceipt){return receipt.status===
 export function publishIssues(draft:PublishDraft,data:PublishingData,config:PublishingConfig,platforms:Platform[],now:number):string[]{
   const issues:string[]=[];
   if(!draft.contentId||!data.contents.some(c=>c.id===draft.contentId))issues.push('请关联有效作品');
+  const content=data.contents.find(c=>c.id===draft.contentId);if(content&&content.form!==(draft.kind==='video'?'视频':'图文'))issues.push('作品内容形式与发布来源不一致');
   if(!draft.settings.length)issues.push('请选择发布平台');
   if(draft.kind==='video'){
     if(!data.videos.some(v=>v.id===draft.videoId&&v.contentId===draft.contentId))issues.push('请上传并保存这条作品的成片');
-    for(const cover of autoVideoCovers(draft.contentId,data.assets,config))if(!cover.asset)issues.push(`${cover.ratio}：${cover.reason}`);
+    for(const cover of autoVideoCovers(draft.contentId,data.assets,config,content?.videoCovers))if(!cover.asset)issues.push(`${cover.ratio}：${cover.reason}`);
   }
   if(draft.kind==='xhs'){
     if(!draft.imageIds.length)issues.push('请添加自己制作的图文图片');
@@ -86,4 +89,12 @@ export function publishIssues(draft:PublishDraft,data:PublishingData,config:Publ
   }
   if(draft.kind==='layout'&&draft.snapshotIds.some(id=>!data.snapshots.some(s=>s.id===id&&s.contentId===draft.contentId&&draft.settings.some(p=>p.platformId===s.platform))))issues.push('确认稿必须属于本作品及所选平台');
   return issues;
+}
+
+export function publishMaterialKey(draft:PublishDraft,data:PublishingData,config:PublishingConfig):string {
+  const content=data.contents.find(c=>c.id===draft.contentId);
+  const covers=draft.kind==='video'?autoVideoCovers(draft.contentId,data.assets,config,content?.videoCovers):[];
+  const snapshots=data.snapshots.filter(s=>draft.snapshotIds.includes(s.id)).sort((a,b)=>a.id.localeCompare(b.id));
+  const ids=new Set([...draft.imageIds,...covers.flatMap(c=>c.asset?[c.asset.id]:[]),...snapshots.flatMap(s=>[...s.content.blocks.flatMap(b=>b.assetId?[b.assetId]:[]),...Object.values(s.content.covers)])]);
+  return JSON.stringify({draft,content,video:data.videos.find(v=>v.id===draft.videoId),snapshots,assets:data.assets.filter(a=>ids.has(a.id)).sort((a,b)=>a.id.localeCompare(b.id)).map(a=>({id:a.id,version:a.version,width:a.width,height:a.height,purposeId:a.purposeId,contentId:a.contentId})),templates:config.templates.filter(t=>draft.settings.some(s=>s.platformId===t.platformId)),accounts:data.accounts.filter(a=>draft.settings.some(s=>s.platformId===a.platformId))});
 }

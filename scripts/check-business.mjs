@@ -33,5 +33,5 @@ check('文章按空行分段，不为连续换行生成空图',()=>assert.equal(
 check('抖音图文使用正文并保持配置竖版比例',()=>assert.deepEqual(imageSlots({...draft,purposeId:'douyin_images',content:'同一份正文'},config).map(s=>s.ratio),['3:4']));
 check('自由生图仅输出所选比例',()=>assert.deepEqual(imageSlots({...draft,purposeId:'free',ratio:'16:9'},config).map(s=>s.ratio),['16:9']));
 check('修改单图不会误生成整组三比例',()=>assert.deepEqual(imageSlots({...draft,parentAssetId:'a1',editInstruction:'修改文字'},config).map(s=>s.ratio),['3:4']));
-check('固定比例不能用错误比例素材冒充',()=>{assert.equal(canReuseAsset({width:1600,height:900},{key:'3:4',ratio:'3:4'}),false);assert.equal(canReuseAsset({width:750,height:1000},{key:'3:4',ratio:'3:4'}),true);assert.equal(canReuseAsset({width:1600,height:900},{key:'paragraph-0',ratio:'4:3'}),true);});
+check('固定比例不能用错误比例素材冒充',()=>{assert.equal(canReuseAsset({width:1600,height:900},{key:'3:4',ratio:'3:4'}),false);assert.equal(canReuseAsset({width:750,height:1000},{key:'3:4',ratio:'3:4'}),true);assert.equal(canReuseAsset({width:1600,height:900},{key:'paragraph-0',ratio:'4:3',allowAnyRatio:true}),true);});
 console.log(`${passed} business checks passed`);

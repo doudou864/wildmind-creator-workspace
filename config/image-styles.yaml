@@ -19,6 +19,7 @@ purposes:
     contentMode: theme
     references: []
   - id: illustration
+    reuseAnyRatio: true
     name: 文章插图
     description: 按空行分段，优先复用已有图片，为尚未配图的段落生成。
     ratios: ['4:3']
@@ -31,6 +32,7 @@ purposes:
     contentMode: paragraphs
     references: []
   - id: free
+    reuseAnyRatio: true
     name: 自由生图
     description: 输入需求，自由选择比例。
     ratios: ['1:1', '3:4', '4:3', '16:9']

@@ -9,9 +9,9 @@ import { request,useResource } from '@/ui/use-resource';
 const blankFilters:InboxFilters={platform:'all',channel:'all',category:'all',reply:'all',classification:'all',query:'',themeId:null};
 const replyLabels={waiting:'待回复',replied:'已回复',unknown:'待核对'};
 const sourceLabels={ready:'读取完成',pending:'等待读取',failed:'读取失败',unavailable:'未接入'};
-export default function InboxPage({config,platforms,initialData,initialMessageId,today,syncWindow}:{initialMessageId:string|null;config:InboxConfig;platforms:Platform[];initialData:InboxData;today:string;syncWindow:string}){
+export default function InboxPage({config,platforms,initialData,initialMessageId,initialThemeId=null,today,syncWindow}:{initialThemeId?:string|null;initialMessageId:string|null;config:InboxConfig;platforms:Platform[];initialData:InboxData;today:string;syncWindow:string}){
   const {data,error,refresh}=useResource('/api/inbox',initialData);
-  const [filters,setFilters]=useState<InboxFilters>(blankFilters);
+  const [filters,setFilters]=useState<InboxFilters>({...blankFilters,themeId:initialThemeId});
   const [linkedMessageId,setLinkedMessageId]=useState(initialMessageId);
   const [requestedPage,setRequestedPage]=useState(1),[selectedId,setSelectedId]=useState<string|null>(initialMessageId);
   const [busyId,setBusyId]=useState<string|null>(null),[refreshing,setRefreshing]=useState(false),[notice,setNotice]=useState('');

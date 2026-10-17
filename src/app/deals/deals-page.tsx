@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import {useEditSession} from '@/ui/use-edit-session';
 import { useEffect,useState } from 'react';
 import type { Platform } from '@/lib/config';
 import { confirmedDeal,dealCounts,dealEditSchema,dealFields,dealSource,filterDeals,suggestionIssue,type Deal,type DealConfig,type DealData,type DealFilters,type DealStatus } from '@/lib/deal-model';
@@ -32,6 +33,7 @@ export default function DealsPage({config,channels,platforms,initialData,initial
   const count=(n:number)=>data.recordsReady?n.toLocaleString('en-US'):'--';
   const fields=editor?{brand:editor.brand.trim()||null,requirement:editor.requirement.trim()||null,status:editor.status}:null;
   const dirty=!!editor&&JSON.stringify(fields)!==JSON.stringify(dealFields(editor.base));
+  useEditSession(`deals:${initialId??'list'}`,{editor},dirty,saved=>{setEditor(saved.editor);setEditError('已恢复本窗口未保存的商单编辑，请核对后保存。');});
   const latest=editor?items.find(d=>d.id===editor.base.id):null;
   const conflict=!!editor&&(!latest||latest.revision!==editor.base.revision);
   const editValid=!!fields&&dealEditSchema(config).safeParse({...fields,expectedRevision:editor?.base.revision}).success;

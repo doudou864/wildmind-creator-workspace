@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { Content } from './content-model';
 import type { Asset } from './image-model';
 export const layoutPlatformSchema = z.enum(['wechat','douyin','x']);
 export type LayoutPlatform = z.infer<typeof layoutPlatformSchema>;
@@ -14,9 +15,9 @@ export type LayoutBlock=z.infer<typeof layoutBlockSchema>;
 export const layoutContentSchema=z.object({title:z.string().max(200),blocks:z.array(layoutBlockSchema).max(1000).refine(blocks=>new Set(blocks.map(b=>b.id)).size===blocks.length),covers:z.record(z.string(),z.string())}).strict();
 export type LayoutContent=z.infer<typeof layoutContentSchema>;
 export type LayoutVariant=LayoutContent & {status:'draft'|'confirmed'|'sent';revision:number;confirmedRevision:number|null};
-export type LayoutDocument={id:string|null;revision:number;source:string;variants:Record<LayoutPlatform,LayoutVariant>};
-export type LayoutData={documents:LayoutDocument[];assets:Asset[];storageReady:boolean;aiReady:boolean;handoffReady:boolean;message:string};
-export const layoutSaveSchema=z.object({source:z.string().max(100000),variants:z.object({wechat:layoutContentSchema,douyin:layoutContentSchema,x:layoutContentSchema}).strict()}).strict();
+export type LayoutDocument={id:string|null;revision:number;contentId:string|null;source:string;variants:Record<LayoutPlatform,LayoutVariant>};
+export type LayoutData={documents:LayoutDocument[];contents:Content[];assets:Asset[];storageReady:boolean;aiReady:boolean;handoffReady:boolean;message:string};
+export const layoutSaveSchema=z.object({contentId:z.string().min(1).nullable(),source:z.string().max(100000),variants:z.object({wechat:layoutContentSchema,douyin:layoutContentSchema,x:layoutContentSchema}).strict()}).strict();
 export const layoutUpdateSchema=layoutSaveSchema.extend({expectedRevision:z.number().int().nonnegative()});
 export const layoutActionSchema=z.object({platform:layoutPlatformSchema,action:z.enum(['confirm','send','revise','ai']),expectedRevision:z.number().int().nonnegative(),instruction:z.string().trim().max(10000).optional()}).strict().refine(v=>v.action!=='ai'||!!v.instruction,{message:'请填写修改要求'});
 export type LayoutAction=z.infer<typeof layoutActionSchema>['action'];
@@ -34,10 +35,10 @@ export function parseArticle(source:string):{title:string;blocks:LayoutBlock[]} 
   }
   return {title,blocks:blocks.filter(b=>b.text.trim())};
 }
-export function createLayout(source:string):LayoutDocument {
+export function createLayout(source:string,contentId:string|null=null):LayoutDocument {
   const article=parseArticle(source);
   const make=(platform:LayoutPlatform):LayoutVariant=>({title:article.title,blocks:article.blocks.map(b=>({...b,type:platform==='x'&&b.type==='quote'?'paragraph':b.type})),covers:{},status:'draft',revision:0,confirmedRevision:null});
-  return {id:null,revision:0,source,variants:{wechat:make('wechat'),douyin:make('douyin'),x:make('x')}};
+  return {id:null,revision:0,contentId,source,variants:{wechat:make('wechat'),douyin:make('douyin'),x:make('x')}};
 }
 export function editLayout(document:LayoutDocument,platform:LayoutPlatform,content:LayoutContent):LayoutDocument {
   const current=document.variants[platform];
@@ -46,7 +47,7 @@ export function editLayout(document:LayoutDocument,platform:LayoutPlatform,conte
 }
 export function layoutPayload(document:LayoutDocument) {
   const content=(v:LayoutVariant)=>({title:v.title,blocks:v.blocks,covers:v.covers});
-  return {source:document.source,variants:{wechat:content(document.variants.wechat),douyin:content(document.variants.douyin),x:content(document.variants.x)}};
+  return {contentId:document.contentId,source:document.source,variants:{wechat:content(document.variants.wechat),douyin:content(document.variants.douyin),x:content(document.variants.x)}};
 }
 export function fitsRatio(asset:Asset,ratio:string){const [w,h]=ratio.split(':').map(Number);return asset.width>0&&asset.height>0&&Math.abs(asset.width*h-asset.height*w)<0.01;}
 export function layoutIssues(variant:LayoutVariant,platform:LayoutPlatform,assets:Asset[],config:LayoutConfig):string[]{

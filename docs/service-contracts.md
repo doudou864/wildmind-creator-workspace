@@ -101,3 +101,36 @@ HitRatePeriod 由服务按平台、首发月份和 FIRE 分组聚合：抖音视
 - 新线索进入今日行动的完整链路仍依赖后端自动识别、创建与消息读取；当前页面仅消费真实服务结果或展示未接入空态，不演示自动入库成功。不会新增平台回复、删除消息、合同、预算、回款或强制抓取操作。
 
 数据库持久化、线索生成和 AI 建议生成尚未接入；上述事务、幂等和平台证据核验为后端接入要求，不代表已有运行中的数据库实现。
+
+## 2026-10-17 全站审查修订（以下条款替代前文冲突约定）
+
+### 作品关联
+- `GET /api/contents` → `ContentData`。每条作品包含 id、revision、title、topicId、form（视频 / 图文）、plannedDate（有效的北京时间日历日期或 null）、videoCovers（比例 → 明确资产版本 ID）。选题与作品是一对多关系，不从同名标题猜测身份。
+- `POST /api/contents`：`{title,topicId,form,plannedDate}` → 持久化后的完整 Content。服务核对选题是否存在。一个选题可多次新建不同作品，不将重复 topicId 当作唯一键。
+- 创建入口复用于选题、生图、排版和发布；不可用时禁用。前端收到同 ID、真实字段的回执后才确认创建，接口失败保留填写内容。
+- LayoutDocument 和保存请求增加 contentId（未关联的本地编辑可为 null，但界面保存/确认前须关联图文作品）。服务禁止将已保存排版稿改挂其他作品，send 创建的快照继承该 contentId。所有版本归同一作品；可从稿件进入 `/publishing?content=...&kind=layout`，发布记录可回到 `/layouts?layout=...&content=...`。
+- ImageData、LayoutData、PublishingData 中的作品列表使用同一 Content 定义与稳定 ID。生图选择作品时同步其 topicId，已有作品关联后不允许另选冲突选题。服务仍须核验关联一致性和内容形式。
+
+### 素材来源、用途与作品采用
+- 上传是文件来源与操作入口；请求中的 purposeId 必须为实际用途，不能再把 upload 当作新资产用途。旧 upload 资产可以编辑用途与关联，也可以作为单图修改原图。保留 source=upload，不允许改成 AI。
+- ImageDraft 增加 uploadPurposeId，保存文字不代表保存本地预览文件。自由用途上传允许实际比例，视频/公众号等固定比例用途检查真实尺寸；服务接入时再次解码核验。
+- `PATCH /api/images/assets/:id`：`{title,purposeId,topicId,contentId,expectedRevision}` → 更新后的 Asset。expectedRevision 是 familyRevision。更改家族元数据需原子更新相关版本，不能改变文件、原来源或已确认快照；被作品采用或确认稿引用而会破坏引用时返回 409，要求先解除采用/退回稿件。
+- `POST /api/contents/:id/covers`：`{ratio,assetId:string|null,expectedRevision}` → 更新后的 Content。expectedRevision 是作品 revision；assetId=null 表示解除该比例采用。选择另一组的版本会原子替换该作品/比例的采用关系，其他图片组的默认 selected 不改变。
+- 采用前核验资产属于本作品、用途 video_cover、真实比例和文件可读。Content.videoCovers 是发布采用的唯一来源，不再按全库 selected 自动猜封面；未指定或失效时阻断。family 内部 selected 仅为素材选择默认，不能自动替换已采用版本。
+- 生图用途配置增加 reuseAnyRatio；普通文章插图可保留任意比例，抖音图文配图必须满足配置比例。两端按真实尺寸核验。
+
+### 编辑保护与发布确认
+- 未保存编辑仅在当前浏览器文档内存中保留，供站内前进/后退后恢复，不写 localStorage、不表示保存到业务库。刷新/关闭窗口仍提醒；明确放弃或保存后清除相应临时会话。本地预览 File 和对象 URL 在未保存会话恢复时继续可用。
+- 生图保存只确认请求发出时的编辑版本。请求未结束时的新增编辑继续标记未保存；本地预览文件需独立上传，不能因为文字保存而取消提醒。
+- 发布核对时记录 materials（确定性序列化的草稿、作品修订、明确封面/配图版本、视频、确认快照、模板与账号条件）。条件变化后当前勾选失效，需要重新打开核对清单。
+- publish 动作新增必填 materials；后端事务内根据真实状态重算并比较，不能相信客户端任意传来的内容。不同则返回 409，禁止用最新封面替换用户核对过的封面。匹配成功才冻结执行快照。前端指纹不是服务端授权凭据。
+
+### 总控台完整待办
+- DashboardData 增加 questions / questionsReady（未同步的有价值问题）、plannedContents / plansReady（仍待发布的作品计划）、themes / themesReady / themeSyncReady、accountAlerts / accountAlertsReady。各来源未就绪时显示未知，不冒充零待办；仅所有来源完整且无记录时显示今天没有待办。
+- 总控台按今日计划日期筛作品，视频进入视频发布，图文进入排版确认稿分发。计划记录由服务与真实发布状态联动，已完成计划不得继续返回为待发布。
+- themes 返回 `{id,revision,title,count,signalId}`；来源在 `/inbox?theme=...` 追溯。`POST /api/dashboard/themes/:id/topic` 输入 `{expectedRevision}`，返回 `{themeId,signalId}`，按主题稳定 ID 幂等，服务核对真实消息来源并创建 TopicSignal，不生成假候选、不修改回复状态。
+- accountAlerts 包含账号违规、限流或粉丝下降的真实证据时间、原因与可选原页链接，不由前端猜测异常。
+- 同平台同私信会话仅一个沟通待办，组内保留全部商单入口；评论逐条计数。商单业务状态仍独立于回复证据。不得因为商单数量多而重复计同一会话等待。
+- 小红书与视频号的内容形式配置包含视频和图文，生产与复盘共用此配置。
+
+以上新写接口与现有能力一样，未接入时合法请求返回 503，非法请求返回 400。没有新增数据库、真实上传、采集、AI 或平台发布能力。

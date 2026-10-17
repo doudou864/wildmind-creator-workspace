@@ -1,3 +1,4 @@
+
 import { z } from 'zod';
 import type { InboxMessage,ReplyState } from './inbox-model';
 export const dealStatusSchema=z.enum(['pending','following','completed']);
@@ -48,3 +49,13 @@ export function acceptDealSuggestion(current:Deal,input:z.infer<typeof dealSugge
 export function confirmedDeal(current:Deal,fields:DealFields,value:unknown){const result=dealSchema.parse(value);if(result.id!==current.id||result.revision<=current.revision||result.createdAt!==current.createdAt||result.source.messageId!==current.source.messageId||result.source.platformId!==current.source.platformId||result.source.channel!==current.source.channel||result.brand!==fields.brand||result.requirement!==fields.requirement||result.status!==fields.status||Date.parse(result.updatedAt)<Date.parse(current.updatedAt))throw new Error('保存结果未确认，请刷新记录核对');return result;}
 // 仅展示读取时能确认的等待时长，不伪装成实时监控。
 export function waitingDuration(message:InboxMessage){const start=Date.parse(message.reply.kind==='dm'?message.reply.lastMessageAt??'':message.sentAt??''),end=Date.parse(message.capturedAt??'');if(!Number.isFinite(start)||!Number.isFinite(end)||end<start)return '--';const minutes=Math.floor((end-start)/60000);return minutes>=1440?`${Math.floor(minutes/1440)}天 ${Math.floor(minutes%1440/60)}小时`:minutes>=60?`${Math.floor(minutes/60)}小时 ${minutes%60}分钟`:`${minutes}分钟`;}
+
+export function dealActionGroups(items:Deal[],messages:InboxMessage[],replies:Map<string,{state:ReplyState}>){
+  const groups=new Map<string,{id:string;message:InboxMessage;deals:Deal[]}>();
+  for(const deal of dealActions(items,messages,replies)){
+    const message=dealSource(deal,messages)!;
+    const id=JSON.stringify(message.reply.kind==='dm'?['dm',message.platformId,message.reply.conversationId||message.id]:['comment',message.platformId,message.id]);
+    const group=groups.get(id);if(group)group.deals.push(deal);else groups.set(id,{id,message,deals:[deal]});
+  }
+  return [...groups.values()];
+}

@@ -5,8 +5,8 @@ import { readImages } from '@/lib/workspace-service';
 import ImagesPage from './images-page';
 export const dynamic='force-dynamic';
 export const metadata: Metadata={title:'生图中心 · WILDMIND 野生脑洞工作台'};
-export default async function Page({searchParams}:{searchParams:Promise<{topic?:string}>}){
+export default async function Page({searchParams}:{searchParams:Promise<{topic?:string;content?:string}>}){
   const [config,imageConfig,data,query]=await Promise.all([loadConfig(),loadImageConfig(),readImages(),searchParams]);
   const today=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Shanghai',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
-  return <ImagesPage config={imageConfig} initialData={data} today={today} syncWindow={config.parameters.syncWindow} initialTopic={query.topic??null}/>;
+  return <ImagesPage key={`${query.topic??""}:${query.content??""}`} initialContent={query.content??null} config={imageConfig} initialData={data} today={today} syncWindow={config.parameters.syncWindow} initialTopic={query.topic??null}/>;
 }
