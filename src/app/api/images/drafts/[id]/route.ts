@@ -1,10 +1,11 @@
-import { imageDraftSchema } from '@/lib/image-model';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function PATCH(request: Request) {
+import { saveImageDraft, usingDatabase } from '@/lib/media-store';
+import { serviceError } from '@/lib/api-response';
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    imageDraftSchema.parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const input = await request.json();
+    const id = (await context.params).id;
+    return Response.json(await usingDatabase((db) => saveImageDraft(db, input, id)));
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('草稿存储服务');
 }

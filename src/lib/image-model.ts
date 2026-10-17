@@ -56,6 +56,15 @@ export type Asset = {
   createdAt: string;
 };
 export type ImageData = {
+  generations?: {
+    id: string;
+    kind: string;
+    status: string;
+    startedAt: string;
+    durationMs: number | null;
+    reason: string | null;
+    calls: number;
+  }[];
   assets: Asset[];
   drafts: ImageDraft[];
   topics: { id: string; title: string }[];

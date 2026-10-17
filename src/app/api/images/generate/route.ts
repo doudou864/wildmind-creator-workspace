@@ -1,10 +1,10 @@
-import { imageDraftSchema } from '@/lib/image-model';
-import { invalid, unavailable } from '@/lib/api-response';
+import { generateAssets, usingDatabase } from '@/lib/media-store';
+import { serviceError } from '@/lib/api-response';
 export async function POST(request: Request) {
   try {
-    imageDraftSchema.parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const input = await request.json();
+    return Response.json(await usingDatabase((db) => generateAssets(db, input)));
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('图片生成服务');
 }

@@ -270,12 +270,12 @@ export default function ImagesPage({
     if (!canGenerate) return;
     setBusy(true);
     try {
-      await request('/api/images/generate', {
+      const result = await request<{ message: string }>('/api/images/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(draft),
       });
-      setNotice('生成请求已受理，请刷新查看结果。');
+      setNotice(result.message);
       await refresh();
     } catch (e) {
       setNotice(e instanceof Error ? e.message : '生成失败，当前要求保留。');
@@ -1020,6 +1020,21 @@ export default function ImagesPage({
           </div>
         </Dialog>
       )}
+      <Card index="07" title="最近生图记录" meta="套餐次数 / 耗时">
+        {(data.generations ?? []).length ? (
+          (data.generations ?? []).slice(0, 10).map((run) => (
+            <p key={run.id} className="small mono">
+              {new Date(run.startedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })} ·{' '}
+              {run.kind === 'edit' ? '修改' : '生成'} · {run.calls} 次 ·{' '}
+              {run.durationMs === null ? '--' : Math.round(run.durationMs / 1000) + '秒'} ·{' '}
+              {run.status === 'success' ? '成功' : run.status === 'running' ? '进行中' : '失败'}
+              {run.reason ? '：' + run.reason : ''}
+            </p>
+          ))
+        ) : (
+          <Empty>还没有生图记录</Empty>
+        )}
+      </Card>
       {pickSlot !== null && (
         <Dialog title="选择已有素材" onClose={() => setPickSlot(null)}>
           <p className="dialog-intro">优先使用已有图片；保留原尺寸，不自动裁剪。</p>

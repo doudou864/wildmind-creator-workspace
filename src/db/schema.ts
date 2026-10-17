@@ -377,3 +377,18 @@ export const collectionState = sqliteTable('collection_state', {
   value: json<Record<string, unknown>>('value').notNull(),
   updatedAt: updatedAt(),
 });
+
+export const imageGenerations = sqliteTable('image_generations', {
+  id: id(),
+  kind: text('kind', { enum: ['generate', 'edit'] }).notNull(),
+  usageDate: text('usage_date').notNull(),
+  status: text('status', { enum: ['running', 'success', 'failed'] }).notNull(),
+  startedAt: text('started_at').notNull(),
+  finishedAt: text('finished_at'),
+  durationMs: integer('duration_ms'),
+  calls: integer('calls').notNull(),
+  reason: text('reason'),
+  threadId: text('thread_id'),
+  sourcePath: text('source_path'),
+  assetId: text('asset_id').references(() => assets.id),
+});

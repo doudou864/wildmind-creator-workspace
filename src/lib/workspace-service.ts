@@ -1,3 +1,8 @@
+import { usingDatabase, usedImages } from './media-store.ts';
+import { assets, contents, topics, imageDrafts, imageGenerations } from '../db/schema.ts';
+import { loadGenerationConfig } from '../ai/image-generation.ts';
+import { shanghaiDate } from '../browser/policy.ts';
+import { desc } from 'drizzle-orm';
 import type { ContentData } from './content-model';
 import type { DealData } from './deal-model';
 import type { InboxData } from './inbox-model';
@@ -34,16 +39,22 @@ export async function readTopics(): Promise<TopicData> {
   };
 }
 export async function readImages(): Promise<ImageData> {
-  return {
-    assets: [],
-    drafts: [],
-    topics: [],
-    contents: [],
-    contentWriteReady: false,
-    generationReady: false,
-    storageReady: false,
-    generationMessage: '生图服务待接入；素材与草稿存储服务待接入。',
-  };
+  const config = await loadGenerationConfig();
+  return usingDatabase((db) => ({
+    assets: db.db.select().from(assets).all(),
+    drafts: db.db
+      .select()
+      .from(imageDrafts)
+      .all()
+      .map((r) => ({ ...r.input, id: r.id, updatedAt: r.updatedAt })),
+    topics: db.db.select({ id: topics.id, title: topics.title }).from(topics).all(),
+    contents: db.db.select().from(contents).all(),
+    contentWriteReady: true,
+    generationReady: true,
+    storageReady: true,
+    generationMessage: `使用本机ChatGPT套餐；今天已用${usedImages(db, shanghaiDate())}/${config.dailyLimit}次，一次只生成一张。`,
+    generations: db.db.select().from(imageGenerations).orderBy(desc(imageGenerations.startedAt)).limit(30).all(),
+  }));
 }
 
 export async function readLayouts(): Promise<LayoutData> {
@@ -100,5 +111,11 @@ export async function readDeals(): Promise<DealData> {
 }
 
 export async function readContents(): Promise<ContentData> {
-  return { items: [], topics: [], recordsReady: false, writeReady: false, message: '作品存储服务待接入' };
+  return usingDatabase((db) => ({
+    items: db.db.select().from(contents).all(),
+    topics: db.db.select({ id: topics.id, title: topics.title }).from(topics).all(),
+    recordsReady: true,
+    writeReady: true,
+    message: '',
+  }));
 }

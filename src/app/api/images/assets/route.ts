@@ -1,6 +1,7 @@
+import { uploadImage, usingDatabase } from '@/lib/media-store';
 import { z } from 'zod';
 import { loadImageConfig } from '@/lib/image-config';
-import { invalid, unavailable } from '@/lib/api-response';
+import { serviceError } from '@/lib/api-response';
 const metadataSchema = z
   .object({
     title: z.string().trim().min(1).max(200),
@@ -26,8 +27,9 @@ export async function POST(request: Request) {
       throw new Error('请选择有效的 PNG / JPEG 图片');
     if (!config.purposes.some((p) => p.id === metadata.purposeId && p.contentMode !== 'upload'))
       throw new Error('请选择图片实际用途');
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    return Response.json(await usingDatabase((db) => uploadImage(db, metadata, bytes)));
   } catch (e) {
-    return invalid(e);
+    return serviceError(e);
   }
-  return unavailable('素材存储服务');
 }

@@ -1,14 +1,14 @@
 import { readContents } from '@/lib/workspace-service';
-import { contentInputSchema } from '@/lib/content-model';
-import { invalid, unavailable } from '@/lib/api-response';
+import { createContent, usingDatabase } from '@/lib/media-store';
+import { serviceError } from '@/lib/api-response';
 export async function GET() {
   return Response.json(await readContents());
 }
 export async function POST(request: Request) {
   try {
-    contentInputSchema.parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const input = await request.json();
+    return Response.json(await usingDatabase((db) => createContent(db, input)));
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('作品存储服务');
 }

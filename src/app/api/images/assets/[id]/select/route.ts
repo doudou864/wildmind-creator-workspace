@@ -1,12 +1,14 @@
 import { z } from 'zod';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function POST(request: Request) {
+import { selectImage, usingDatabase } from '@/lib/media-store';
+import { serviceError } from '@/lib/api-response';
+export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     z.object({})
       .strict()
       .parse(await request.json());
-  } catch (error) {
-    return invalid(error);
+    const { id } = await context.params;
+    return Response.json(await usingDatabase((db) => selectImage(db, id)));
+  } catch (e) {
+    return serviceError(e);
   }
-  return unavailable('素材选定与作品采用服务');
 }

@@ -1,0 +1,6 @@
+# 只走本机 ChatGPT 套餐；model 是 Codex 执行模型，null 使用其默认模型。
+method: codex-sdk
+model: null
+timeoutMs: 600000
+dailyLimit: 6
+maxCropFraction: 0.02

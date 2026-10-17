@@ -416,3 +416,11 @@ PostSnapshot / AccountDaily 增加 precision（exact/display/unknown）和 rawVa
 第 3 步导出与截图共用长表：视频号、YouTube 优先用平台原生作品 ID 关联，同标题的不同 ID 不合并，改标题不新建作品。只有发布日期的导出保留 YYYY-MM-DD，不虚构时分秒，作品年龄按北京时间日历日计算。YouTube 时钟格式的观看时长由代码转成秒；账号订阅净增只在相邻两日总数均精确时相减，否则为空。
 
 分页容量由 config/collection.yaml 的 capacity 配置：近期作品 80 条提前提醒、100 条上限（可调整），仅统计起号日以后且在跟踪期的作品。B站每批最多10条并核对CSV名单；小红书/YouTube按页面总数核对逐页覆盖。capacity 复用原有 TEXT kind 字段，无数据库结构变更。
+
+## image_generations（第 8 步）
+
+套餐生图调用日志，迁移 `0005_breezy_corsair` 仅新增表，执行前已备份数据库。
+- id、kind（generate/edit）、usage_date（北京时间）、status（running/success/failed）。
+- started_at、finished_at、duration_ms、calls：按实际调用记录次数和耗时；失败尝试同样计入每日上限。
+- reason：中文失败原因；thread_id：本机 Codex 会话；source_path：data/ 原始文件；asset_id：成功后关联素材。
+- 失败不写 assets；批次全部成功后统一入库。生成与上传共用 assets，不在数据库保存图片二进制。
