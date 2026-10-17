@@ -22,7 +22,7 @@ export const topicSchema = z.object({
   frozenFire: z.boolean().nullable(),
   frozenEvidence: evidenceSchema.nullable(),
   selectedAt: z.iso.datetime().nullable(),
-  revision: z.number().int().nonnegative(),
+  updatedAt: z.iso.datetime(),
   createdAt: z.iso.datetime(),
   automatic: z.boolean(),
 });
@@ -61,28 +61,24 @@ export function filterTopics(
         .includes(query.trim().toLocaleLowerCase()),
   );
 }
-// 后端接入时必须在单条记录的原子事务中调用；客户端只提交意图和版本，不提交定格值。
+// 后端接入时必须在单条记录的原子事务中调用；客户端只提交意图，不提交定格值。
 export function applyTopicDecision(
   current: Topic,
   status: 'candidate' | 'selected' | 'skipped',
-  expectedRevision: number,
   samples: number,
   threshold: number,
   now: string,
 ): Topic {
-  if (current.revision !== expectedRevision) throw new Error('选题已在其他页面更新，请刷新后重试');
   if (current.status === 'published') throw new Error('已发布选题不可退回候选');
   const firstSelection = status === 'selected' && current.selectedAt === null;
   const fire = firstSelection ? samples >= threshold && current.evidence !== null : current.frozenFire;
   return {
     ...current,
     status,
-    revision: current.revision + 1,
+    updatedAt: now,
     frozenFire: fire,
     frozenEvidence: firstSelection ? (fire ? structuredClone(current.evidence) : null) : current.frozenEvidence,
     selectedAt: firstSelection ? now : current.selectedAt,
   };
 }
-export const topicDecisionInputSchema = z
-  .object({ status: z.enum(['candidate', 'selected', 'skipped']), expectedRevision: z.number().int().nonnegative() })
-  .strict();
+export const topicDecisionInputSchema = z.object({ status: z.enum(['candidate', 'selected', 'skipped']) }).strict();

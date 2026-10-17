@@ -1,5 +1,5 @@
 # 当前产品需求文档
 
-当前有效版本：[PRD v1.8](wildmind-creator-workspace-PRD-v1.8.md)。v1.7 保留为历史版本，冲突以 v1.8 为准。
+当前有效版本：[PRD v1.8](wildmind-creator-workspace-PRD-v1.8.md)。[v1.7](archive/wildmind-creator-workspace-PRD-v1.7.md) 已移入 archive，保留为历史版本，冲突以 v1.8 为准。
 
 本次发布中心需求变更只交付文档、前端和接口契约。交付后回到第 13 章第 1 步；数据库、登录态与抓取日志不属于本次实现。

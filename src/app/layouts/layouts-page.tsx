@@ -1,9 +1,9 @@
 'use client';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ContentPicker } from '@/ui/content-picker';
+import { useAutosave } from '@/ui/use-autosave';
 import { useEditSession } from '@/ui/use-edit-session';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Asset } from '@/lib/image-model';
 import {
   canSendLayout,
@@ -46,7 +46,6 @@ export default function LayoutsPage({
   today: string;
   syncWindow: string;
 }) {
-  const router = useRouter();
   const { data, error, refresh } = useResource('/api/layouts', initialData);
   const [source, setSource] = useState('');
   const [contentId, setContentId] = useState<string | null>(initialContent);
@@ -65,7 +64,6 @@ export default function LayoutsPage({
   const [picker, setPicker] = useState<Picker | null>(null);
   const [search, setSearch] = useState('');
   const [library, setLibrary] = useState(false);
-  const [pending, setPending] = useState<(() => void) | null>(null);
   const [confirmation, setConfirmation] = useState<{ platform: LayoutPlatform; action: LayoutAction } | null>(null);
   useEditSession(
     `layouts:${initialLayout ?? initialContent ?? 'new'}`,
@@ -77,31 +75,9 @@ export default function LayoutsPage({
       setContentId(saved.contentId);
       setInstructions(saved.instructions);
       setDirty(true);
-      setFeedback('已恢复本窗口未保存的排版编辑，请保存后再离开。');
+      setFeedback('已恢复本窗口排版编辑。');
     },
   );
-  useEffect(() => {
-    if (!dirty) return;
-    const unload = (event: BeforeUnloadEvent) => event.preventDefault();
-    const navigate = (event: MouseEvent) => {
-      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const link = (event.target as HTMLElement).closest('a');
-      if (!link || link.target === '_blank' || link.hasAttribute('download') || link.href === window.location.href)
-        return;
-      event.preventDefault();
-      event.stopPropagation();
-      setPending(() => () => {
-        setDirty(false);
-        window.setTimeout(() => router.push(link.href), 0);
-      });
-    };
-    window.addEventListener('beforeunload', unload);
-    window.document.addEventListener('click', navigate, true);
-    return () => {
-      window.removeEventListener('beforeunload', unload);
-      window.document.removeEventListener('click', navigate, true);
-    };
-  }, [dirty]);
   function reset() {
     setContentId(initialContent);
     setSource('');
@@ -111,8 +87,7 @@ export default function LayoutsPage({
     setInstructions({ wechat: '', douyin: '', x: '' });
   }
   function protect(action: () => void) {
-    if (dirty) setPending(() => action);
-    else action();
+    action();
   }
   function generate() {
     const draft = createLayout(source, contentId);
@@ -175,7 +150,7 @@ export default function LayoutsPage({
         {
           method: document.id ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(document.id ? { ...payload, expectedRevision: document.revision } : payload),
+          body: JSON.stringify(payload),
         },
       );
       setDocument(saved);
@@ -188,6 +163,7 @@ export default function LayoutsPage({
       setBusy(false);
     }
   }
+  useAutosave(JSON.stringify(document), dirty && !!document && data.storageReady && !busy, save);
   async function act(platform: LayoutPlatform, action: LayoutAction) {
     if (!document?.id || dirty || busy) return;
     setBusy(true);
@@ -200,20 +176,17 @@ export default function LayoutsPage({
         body: JSON.stringify({
           platform,
           action,
-          expectedRevision: document.revision,
           ...(action === 'ai' ? { instruction: instructions[platform] } : {}),
         }),
       });
       setDocument(saved);
       setDirty(false);
       setFeedback(
-        action === 'send'
+        action === 'confirm-send'
           ? '确认稿已送进发布中心，尚未发布。'
-          : action === 'confirm'
-            ? '该版本已确认。'
-            : action === 'ai'
-              ? '该版本已修改，请重新检查并确认。'
-              : '该版本已退回，可继续修改。',
+          : action === 'ai'
+            ? '该版本已修改，请重新检查并确认。'
+            : '该版本已退回，可继续修改。',
       );
       await refresh();
     } catch (e) {
@@ -243,7 +216,15 @@ export default function LayoutsPage({
           <p>一份文章，三个版本。分别编辑，分别确认。</p>
         </div>
         <div className="image-heading-actions">
-          <span className="small">{dirty ? '有未保存的内容' : document?.id ? '已保存' : '尚未开始'}</span>
+          <span className="small">
+            {dirty
+              ? data.storageReady
+                ? '正在自动保存…'
+                : '存储服务未接入，尚未保存'
+              : document?.id
+                ? '已保存'
+                : '尚未开始'}
+          </span>
           <Button disabled={busy} onClick={() => void refresh()}>
             刷新资料
           </Button>
@@ -252,13 +233,6 @@ export default function LayoutsPage({
           </Button>
           <Button disabled={busy} onClick={() => protect(reset)}>
             新建文章
-          </Button>
-          <Button
-            disabled={!contentValid || !document || !dirty || !data.storageReady || busy}
-            title={!data.storageReady ? '稿件存储服务未接入' : undefined}
-            onClick={() => void save()}
-          >
-            {busy ? '处理中…' : '保存稿件'}
           </Button>
         </div>
       </div>
@@ -312,7 +286,7 @@ export default function LayoutsPage({
               <Button className="selected" disabled={!source.trim()} onClick={generate}>
                 开始排版 →
               </Button>
-              <span className="small">仅建立本页稿件，尚未保存</span>
+              <span className="small">建立稿件后自动保存；服务未接入时仅保留本页编辑</span>
             </div>
           </div>
         ) : (
@@ -335,19 +309,13 @@ export default function LayoutsPage({
           const issues = v ? layoutIssues(v, platform.id, data.assets, config) : [];
           const persisted = !!document?.id && !dirty;
           if (v && !contentValid) issues.push('请关联可用的图文作品');
-          const canConfirm =
-            !!v && !locked && v.status !== 'confirmed' && persisted && data.storageReady && !issues.length && !busy;
           const canSend = !!v && canSendLayout(v) && persisted && data.handoffReady && !issues.length && !busy;
           return (
             <Card
               key={platform.id}
               index={`0${index + 1}`}
               title={platform.name}
-              meta={
-                <span className="layout-status">
-                  {!v ? '待排版' : locked ? '已送出 · 锁定' : v.status === 'confirmed' ? '已确认' : '待确认'}
-                </span>
-              }
+              meta={<span className="layout-status">{!v ? '待排版' : locked ? '已送出 · 锁定' : '待确认'}</span>}
               className="layout-version"
             >
               <div className="layout-version-toolbar">
@@ -567,7 +535,7 @@ export default function LayoutsPage({
                       应用修改
                     </Button>
                     <span className="small">
-                      {!data.aiReady ? 'AI 修改服务待接入' : !persisted ? '请先保存当前稿件' : '修改后需重新确认'}
+                      {!data.aiReady ? 'AI 修改服务待接入' : !persisted ? '正在自动保存稿件' : '修改后需重新确认'}
                     </span>
                   </div>
                 </>
@@ -581,25 +549,16 @@ export default function LayoutsPage({
                       : issues.length
                         ? issues.join(' · ')
                         : dirty
-                          ? '内容已更改，请先保存，再人工确认。'
-                          : v.status === 'confirmed'
-                            ? '这一版已确认，可送进发布中心。'
-                            : '内容已齐备，请预览并人工确认。'}
+                          ? '内容正在自动保存。'
+                          : '内容已齐备，请预览并人工确认。'}
                 </div>
                 <div className="layout-confirm-buttons">
                   <Button
-                    disabled={!canConfirm}
-                    title={!data.storageReady ? '确认服务未接入，不能保存确认状态' : undefined}
-                    onClick={() => setConfirmation({ platform: platform.id, action: 'confirm' })}
-                  >
-                    人工确认
-                  </Button>
-                  <Button
                     disabled={!canSend}
                     title={!data.handoffReady ? '发布交接服务未接入' : undefined}
-                    onClick={() => setConfirmation({ platform: platform.id, action: 'send' })}
+                    onClick={() => setConfirmation({ platform: platform.id, action: 'confirm-send' })}
                   >
-                    送进发布中心 →
+                    确认并送去发布
                   </Button>
                   {locked && document?.contentId && (
                     <Link
@@ -625,7 +584,7 @@ export default function LayoutsPage({
       </div>
       <footer className="layout-foot">
         <span>预览按平台结构呈现，平台端最终效果在发布接入时核对。</span>
-        <span>编辑 → 保存 → 逐版确认 → 送进发布中心</span>
+        <span>编辑自动保存 → 确认并送去发布</span>
         <Link
           href={`/images?${new URLSearchParams({ ...(document?.contentId ? { content: document.contentId } : contentId ? { content: contentId } : {}), ...(initialTopic ? { topic: initialTopic } : {}) })}`}
         >
@@ -693,12 +652,9 @@ export default function LayoutsPage({
                 >
                   <strong>{d.variants.wechat.title}</strong>
                   <span>
-                    修订 {d.revision} ·{' '}
+                    更新 {d.updatedAt} ·{' '}
                     {config.platforms
-                      .map(
-                        (p) =>
-                          `${p.name}：${d.variants[p.id].status === 'sent' ? '已送出' : d.variants[p.id].status === 'confirmed' ? '已确认' : '待确认'}`,
-                      )
+                      .map((p) => `${p.name}：${d.variants[p.id].status === 'sent' ? '已送出' : '待确认'}`)
                       .join(' / ')}
                   </span>
                 </button>
@@ -709,40 +665,15 @@ export default function LayoutsPage({
           )}
         </Dialog>
       )}
-      {pending && (
-        <Dialog title="有内容尚未保存" onClose={() => setPending(null)}>
-          <p>离开或新建会丢失本页未保存的编辑。确认继续吗？</p>
-          <div className="layout-dialog-actions">
-            <Button onClick={() => setPending(null)}>继续编辑</Button>
-            <Button
-              onClick={() => {
-                const action = pending;
-                setPending(null);
-                action();
-              }}
-            >
-              放弃未保存内容并继续
-            </Button>
-          </div>
-        </Dialog>
-      )}
       {confirmation && document && (
         <Dialog
-          title={
-            confirmation.action === 'confirm'
-              ? '确认当前版本'
-              : confirmation.action === 'send'
-                ? '送进发布中心'
-                : '退回修改'
-          }
+          title={confirmation.action === 'confirm-send' ? '确认并送去发布' : '退回修改'}
           onClose={() => setConfirmation(null)}
         >
           <p>
-            {confirmation.action === 'confirm'
-              ? '请核对文字、配图和封面。确认仅针对当前版本，后续修改需要重新确认。'
-              : confirmation.action === 'send'
-                ? '将发送这一版的确认快照，其他版本不受影响。此操作不会直接发布。'
-                : '服务将检查发布状态并撤回待发快照；已经发布或正在发布的内容不能直接退回。'}
+            {confirmation.action === 'confirm-send'
+              ? '将发送这一版的确认快照，其他版本不受影响。此操作不会直接发布。'
+              : '服务将检查发布状态并撤回待发快照；已经发布或正在发布的内容不能直接退回。'}
           </p>
           <LayoutPreview
             variant={document.variants[confirmation.platform]}

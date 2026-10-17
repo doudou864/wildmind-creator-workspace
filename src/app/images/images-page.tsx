@@ -1,7 +1,6 @@
 'use client';
-import { useRouter } from 'next/navigation';
-import { contentSchema } from '@/lib/content-model';
 import { ContentPicker } from '@/ui/content-picker';
+import { useAutosave } from '@/ui/use-autosave';
 import { useEditSession } from '@/ui/use-edit-session';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import {
@@ -36,7 +35,6 @@ export default function ImagesPage({
   initialTopic: string | null;
   initialContent?: string | null;
 }) {
-  const router = useRouter();
   const { data, error, refresh } = useResource('/api/images', initialData);
   const blank = (): ImageDraftInput => ({
     uploadPurposeId: config.purposes.find((p) => p.contentMode === 'free')!.id,
@@ -55,7 +53,7 @@ export default function ImagesPage({
     editInstruction: '',
   });
   const [draft, setDraft] = useState<ImageDraftInput>(blank);
-  const [draftMeta, setDraftMeta] = useState<{ id: string; revision: number } | null>(null);
+  const [draftMeta, setDraftMeta] = useState<{ id: string } | null>(null);
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState(
@@ -70,8 +68,6 @@ export default function ImagesPage({
   const [selectedOnly, setSelectedOnly] = useState(false);
   const [search, setSearch] = useState('');
   const [pickSlot, setPickSlot] = useState<string | null>(null);
-  const [leaveUrl, setLeaveUrl] = useState<string | null>(null);
-  const [replaceDraft, setReplaceDraft] = useState<ImageDraft | 'new' | null>(null);
   const [tab, setTab] = useState<'outputs' | 'library'>('outputs');
   const uploadRef = useRef<HTMLInputElement>(null);
   const [uploadRevision, setUploadRevision] = useState(false);
@@ -167,7 +163,6 @@ export default function ImagesPage({
       (!config.purposes.some((p) => p.id === value.purposeId) || !config.styles.some((s) => s.id === value.styleId))
     ) {
       setNotice('该草稿的用途或风格已从配置移除，请先恢复配置。');
-      setReplaceDraft(null);
       return;
     }
     editRevision.current++;
@@ -176,52 +171,21 @@ export default function ImagesPage({
       setDraft(blank());
       setDraftMeta(null);
     } else {
-      setDraft(imageDraftSchema.parse(value));
-      setDraftMeta({ id: value.id, revision: value.revision });
+      const { id, updatedAt, ...input } = value;
+      setDraft(imageDraftSchema.parse(input));
+      setDraftMeta({ id: value.id });
     }
     fileRequest.current++;
     if (previewUrl.current) URL.revokeObjectURL(previewUrl.current);
     previewUrl.current = null;
     setPreview(null);
     setDirty(false);
-    setReplaceDraft(null);
     setNotice('');
     setTab('outputs');
   }
   function requestLoad(value: ImageDraft | 'new') {
-    if (dirty) setReplaceDraft(value);
-    else loadDraft(value);
+    loadDraft(value);
   }
-  useEffect(() => {
-    const warn = (event: BeforeUnloadEvent) => {
-      if (dirty) {
-        event.preventDefault();
-        event.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', warn);
-    return () => window.removeEventListener('beforeunload', warn);
-  }, [dirty]);
-  useEffect(() => {
-    const intercept = (event: MouseEvent) => {
-      const link = (event.target as Element)?.closest('a');
-      if (
-        dirty &&
-        link?.target !== '_blank' &&
-        !event.metaKey &&
-        !event.ctrlKey &&
-        !event.shiftKey &&
-        link?.getAttribute('href')?.startsWith('/') &&
-        !link.hasAttribute('download')
-      ) {
-        event.preventDefault();
-        event.stopPropagation();
-        setLeaveUrl(link.getAttribute('href'));
-      }
-    };
-    document.addEventListener('click', intercept, true);
-    return () => document.removeEventListener('click', intercept, true);
-  }, [dirty]);
   useEffect(
     () => () => {
       fileRequest.current++;
@@ -276,12 +240,12 @@ export default function ImagesPage({
         {
           method: draftMeta ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...result.data, ...(draftMeta ? { expectedRevision: draftMeta.revision } : {}) }),
+          body: JSON.stringify(result.data),
         },
       );
-      setDraftMeta({ id: saved.id, revision: saved.revision });
+      setDraftMeta({ id: saved.id });
       const unchanged = submitted === editRevision.current;
-      setDirty(!unchanged || !!preview);
+      setDirty(!unchanged);
       setNotice(unchanged ? '草稿文字已保存；本地预览文件需单独上传。' : '提交时的草稿已保存，之后的编辑尚未保存。');
       await refresh();
     } catch (e) {
@@ -290,6 +254,11 @@ export default function ImagesPage({
       setBusy(false);
     }
   }
+  useAutosave(
+    JSON.stringify([draftMeta?.id, draft]),
+    dirty && data.storageReady && !busy && !associationIssue && !!draft.title.trim(),
+    saveDraft,
+  );
   async function generate() {
     if (!canGenerate) return;
     setBusy(true);
@@ -322,7 +291,6 @@ export default function ImagesPage({
           contentId: draft.contentId,
           prompt: draft.prompt,
           parentAssetId: draft.parentAssetId,
-          expectedRevision: parentAsset?.familyRevision ?? null,
         }),
       );
       await request('/api/images/assets', { method: 'POST', body });
@@ -342,12 +310,24 @@ export default function ImagesPage({
     if (!data.storageReady || busy) return;
     setBusy(true);
     try {
-      await request(`/api/images/assets/${encodeURIComponent(asset.id)}/select`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expectedRevision: asset.familyRevision }),
-      });
-      setNotice('已选定该版本，供排版与发布环节取用。');
+      const result = await request<{ asset: Asset; content: import('@/lib/content-model').Content | null }>(
+        `/api/images/assets/${encodeURIComponent(asset.id)}/select`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({}),
+        },
+      );
+      if (
+        result.asset.id !== asset.id ||
+        !result.asset.selected ||
+        (asset.contentId && result.content?.id !== asset.contentId) ||
+        (asset.contentId &&
+          asset.purposeId === 'video_cover' &&
+          !Object.values(result.content?.videoCovers ?? {}).includes(asset.id))
+      )
+        throw new Error('选定与作品采用结果未确认，请刷新核对。');
+      setNotice(asset.contentId ? '已选定，关联作品已采用这一张。' : '已设为素材库默认版本。');
       await refresh();
     } catch (e) {
       setNotice(e instanceof Error ? e.message : '选版失败');
@@ -371,39 +351,10 @@ export default function ImagesPage({
     setTab('outputs');
     setNotice('已设为修改原图，填写修改要求后生成新版本；原图保留。');
   }
-  async function adoptCover(asset: Asset, remove: boolean) {
-    const content = data.contents.find((c) => c.id === asset.contentId && c.form === '视频');
-    const ratio = config.purposes
-      .find((p) => p.id === asset.purposeId)
-      ?.ratios.find((r) => canReuseAsset(asset, { key: r, label: r, ratio: r, text: '' }));
-    if (!content || !ratio || !data.contentWriteReady || busy) return;
-    setBusy(true);
-    try {
-      const next = contentSchema.parse(
-        await request(`/api/contents/${encodeURIComponent(content.id)}/covers`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ratio, assetId: remove ? null : asset.id, expectedRevision: content.revision }),
-        }),
-      );
-      if (
-        next.id !== content.id ||
-        next.revision <= content.revision ||
-        (next.videoCovers[ratio] ?? null) !== (remove ? null : asset.id)
-      )
-        throw new Error('封面采用结果未确认，请刷新核对。');
-      setNotice(remove ? '已解除作品采用；发布前需重新指定封面。' : '作品已采用这一版封面；其他图片组保持原样。');
-      await refresh();
-    } catch (e) {
-      setNotice(e instanceof Error ? e.message : '操作失败');
-    } finally {
-      setBusy(false);
-    }
-  }
   async function saveMetadata() {
     if (!metadata || !data.storageReady || busy) return;
     const { asset, ...fields } = metadata;
-    const input = assetMetadataSchema.safeParse({ ...fields, expectedRevision: asset.familyRevision });
+    const input = assetMetadataSchema.safeParse(fields);
     if (!input.success) {
       setNotice('请填写素材名称并选择用途。');
       return;
@@ -415,13 +366,9 @@ export default function ImagesPage({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input.data),
       });
-      if (
-        result.id !== asset.id ||
-        result.familyRevision <= asset.familyRevision ||
-        Object.entries(fields).some(([k, v]) => result[k as keyof Asset] !== v)
-      )
+      if (result.id !== asset.id || Object.entries(fields).some(([k, v]) => result[k as keyof Asset] !== v))
         throw new Error('素材信息保存结果未确认，请刷新核对。');
-      setMetadata(null);
+      setMetadata((current) => (current?.asset.id === result.id ? { ...current, asset: result } : current));
       setNotice('素材用途与关联已保存。');
       await refresh();
     } catch (e) {
@@ -430,6 +377,16 @@ export default function ImagesPage({
       setBusy(false);
     }
   }
+  useAutosave(
+    JSON.stringify(metadata),
+    !!metadata &&
+      data.storageReady &&
+      !busy &&
+      !!metadata.title.trim() &&
+      metadata.purposeId !== 'upload' &&
+      Object.entries(metadata).some(([k, v]) => k !== 'asset' && metadata.asset[k as keyof Asset] !== v),
+    saveMetadata,
+  );
   return (
     <main className="workspace images-workspace">
       <WorkspaceHeader current="/images" date={today} syncWindow={syncWindow} />
@@ -451,15 +408,17 @@ export default function ImagesPage({
           </h1>
         </div>
         <div className="image-heading-actions">
-          <span className="small">{dirty ? '当前填写未保存' : draftMeta ? '已载入草稿' : '新建图片任务'}</span>
+          <span className="small">
+            {dirty
+              ? data.storageReady
+                ? '正在自动保存…'
+                : '存储服务未接入，尚未保存'
+              : draftMeta
+                ? '已载入草稿'
+                : '新建图片任务'}
+          </span>
           <Button disabled={busy} onClick={() => requestLoad('new')}>
             新建任务 +
-          </Button>
-          <Button
-            disabled={!data.storageReady || busy || !!associationIssue || !draft.title.trim()}
-            onClick={() => void saveDraft()}
-          >
-            保存草稿
           </Button>
         </div>
       </div>
@@ -938,39 +897,8 @@ export default function ImagesPage({
                     上传新版本
                   </Button>
                 </div>
-                {focusedAsset.purposeId === 'video_cover' && (
-                  <div className="image-form">
-                    <p className="small">
-                      作品采用关系独立于本组版本选择。指定后，发布中心使用这一张；不会随之后选版自动替换。
-                    </p>
-                    <Button
-                      disabled={
-                        busy ||
-                        !data.storageReady ||
-                        !data.contentWriteReady ||
-                        !data.contents.some((c) => c.id === focusedAsset.contentId && c.form === '视频') ||
-                        !config.purposes
-                          .find((p) => p.id === focusedAsset.purposeId)
-                          ?.ratios.some((r) => canReuseAsset(focusedAsset, { key: r, label: r, ratio: r, text: '' }))
-                      }
-                      onClick={() => void adoptCover(focusedAsset, false)}
-                    >
-                      将此版设为作品封面
-                    </Button>
-                    {data.contents.some(
-                      (c) => c.id === focusedAsset.contentId && Object.values(c.videoCovers).includes(focusedAsset.id),
-                    ) && (
-                      <Button
-                        disabled={busy || !data.contentWriteReady}
-                        onClick={() => void adoptCover(focusedAsset, true)}
-                      >
-                        解除作品采用
-                      </Button>
-                    )}
-                    {!data.contentWriteReady && <span className="small">作品封面保存服务待接入</span>}
-                  </div>
-                )}
-                <p className="section-label">版本记录 · 本组默认版本</p>
+                <p className="small">关联作品后，选定即为作品采用；未关联时只设置素材库默认版本。</p>
+                <p className="section-label">版本记录</p>
                 <div className="asset-versions">
                   {versions.map((asset) => (
                     <div key={asset.id}>
@@ -978,10 +906,27 @@ export default function ImagesPage({
                         V{asset.version} · {asset.createdAt.slice(0, 10)}
                       </button>
                       <Button
-                        disabled={asset.selected || !data.storageReady || busy}
+                        disabled={
+                          (asset.selected &&
+                            (!asset.contentId ||
+                              asset.purposeId !== 'video_cover' ||
+                              Object.values(
+                                data.contents.find((c) => c.id === asset.contentId)?.videoCovers ?? {},
+                              ).includes(asset.id))) ||
+                          !data.storageReady ||
+                          (!!asset.contentId && !data.contentWriteReady) ||
+                          busy
+                        }
                         onClick={() => void selectVersion(asset)}
                       >
-                        {asset.selected ? '已选定' : '选定此版'}
+                        {asset.selected &&
+                        (!asset.contentId ||
+                          asset.purposeId !== 'video_cover' ||
+                          Object.values(
+                            data.contents.find((c) => c.id === asset.contentId)?.videoCovers ?? {},
+                          ).includes(asset.id))
+                          ? '已选定'
+                          : '选定此版'}
                       </Button>
                     </div>
                   ))}
@@ -1019,13 +964,13 @@ export default function ImagesPage({
       />
       <footer className="footer">
         <span className="mono">WILDMIND / IMAGE STUDIO</span>
-        <span>{dirty ? '填写内容未保存，离开前请确认' : '图片用途、比例与风格来自项目配置'}</span>
+        <span>{data.storageReady ? '编辑内容自动保存' : '存储服务未接入，当前编辑仅在本窗口保留'}</span>
       </footer>
       {metadata && (
         <Dialog
           title="素材用途与关联"
           onClose={() => {
-            if (!busy && window.confirm('放弃尚未保存的素材信息？')) setMetadata(null);
+            if (!busy) setMetadata(null);
           }}
         >
           <div className="image-form">
@@ -1066,12 +1011,7 @@ export default function ImagesPage({
               来源始终保留为 AI 或用户上传。已被确认稿或作品采用的素材，服务会校验引用后再允许修改。
             </p>
             {notice && <p role="status">{notice}</p>}
-            <Button
-              disabled={busy || !data.storageReady || !metadata.title.trim() || metadata.purposeId === 'upload'}
-              onClick={() => void saveMetadata()}
-            >
-              保存素材信息
-            </Button>
+            <p className="small">{data.storageReady ? '修改自动保存' : '素材存储服务未接入'}</p>
           </div>
         </Dialog>
       )}
@@ -1098,36 +1038,6 @@ export default function ImagesPage({
           ) : (
             <Empty>素材库暂无图片</Empty>
           )}
-        </Dialog>
-      )}
-      {leaveUrl && (
-        <Dialog title="离开生图中心？" onClose={() => setLeaveUrl(null)}>
-          <p className="dialog-intro">当前填写内容未保存，离开后不会保留。</p>
-          <div className="reset-actions">
-            <Button onClick={() => setLeaveUrl(null)}>继续编辑</Button>
-            <Button
-              className="selected"
-              onClick={() => {
-                setDirty(false);
-                const url = leaveUrl;
-                setLeaveUrl(null);
-                setTimeout(() => router.push(url), 0);
-              }}
-            >
-              放弃并离开
-            </Button>
-          </div>
-        </Dialog>
-      )}
-      {replaceDraft && (
-        <Dialog title="放弃未保存内容？" onClose={() => setReplaceDraft(null)}>
-          <p className="dialog-intro">当前填写内容尚未保存。继续会替换这些内容。</p>
-          <div className="reset-actions">
-            <Button onClick={() => setReplaceDraft(null)}>继续编辑</Button>
-            <Button className="selected" onClick={() => loadDraft(replaceDraft)}>
-              放弃并继续
-            </Button>
-          </div>
         </Dialog>
       )}
     </main>

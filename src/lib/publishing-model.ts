@@ -108,7 +108,7 @@ export type PublishReceipt = {
 export type PublishSnapshot = {
   id: string;
   layoutId: string;
-  layoutRevision: number;
+  layoutUpdatedAt: string;
   contentId: string;
   platform: LayoutPlatform;
   content: LayoutContent;
@@ -140,7 +140,14 @@ export type PublishingData = {
   handoffReady: boolean;
   message: string;
 };
-export const publishUpdateSchema = publishDraftSchema.safeExtend({ expectedRevision: z.number().int().nonnegative() });
+export const publishUpdateSchema = publishDraftSchema;
+export const publishAiSchema = z
+  .object({
+    action: z.literal('ai'),
+    draft: publishDraftSchema,
+    instruction: z.string().trim().min(1).max(10000),
+  })
+  .strict();
 export const publishActionSchema = z.discriminatedUnion('action', [
   z
     .object({
@@ -169,15 +176,7 @@ export const publishActionSchema = z.discriminatedUnion('action', [
     .strict(),
   z
     .object({
-      action: z.literal('ai'),
-      expectedRevision: z.number().int().nonnegative(),
-      instruction: z.string().trim().min(1).max(10000),
-    })
-    .strict(),
-  z
-    .object({
       action: z.literal('return'),
-      expectedRevision: z.number().int().nonnegative(),
       snapshotId: z.string().min(1),
     })
     .strict(),
@@ -277,9 +276,7 @@ export function publishIssues(
   if (!draft.settings.length) issues.push('请选择发布平台');
   if (draft.kind === 'video') {
     if (!data.videos.some((v) => v.id === draft.videoId && v.contentId === draft.contentId))
-      issues.push('请上传并保存这条作品的成片');
-    for (const cover of autoVideoCovers(draft.contentId, data.assets, config, content?.videoCovers))
-      if (!cover.asset) issues.push(`${cover.ratio}：${cover.reason}`);
+      issues.push('请选择这条作品的成片，文件会自动上传保存');
   }
   if (draft.kind === 'xhs') {
     if (!draft.imageIds.length) issues.push('请添加自己制作的图文图片');
@@ -366,39 +363,11 @@ export function publishSettingIssues(
 }
 
 export function publishMaterialKey(draft: PublishDraft, data: PublishingData, config: PublishingConfig): string {
-  const content = data.contents.find((c) => c.id === draft.contentId);
-  const covers =
-    draft.kind === 'video' ? autoVideoCovers(draft.contentId, data.assets, config, content?.videoCovers) : [];
-  const snapshots = data.snapshots
-    .filter((s) => draft.snapshotIds.includes(s.id))
-    .sort((a, b) => a.id.localeCompare(b.id));
-  const ids = new Set([
-    ...draft.imageIds,
-    ...covers.flatMap((c) => (c.asset ? [c.asset.id] : [])),
-    ...snapshots.flatMap((s) => [
-      ...s.content.blocks.flatMap((b) => (b.assetId ? [b.assetId] : [])),
-      ...Object.values(s.content.covers),
-    ]),
-  ]);
-  return JSON.stringify({
-    draft,
-    content,
-    video: data.videos.find((v) => v.id === draft.videoId),
-    snapshots,
-    assets: data.assets
-      .filter((a) => ids.has(a.id))
-      .sort((a, b) => a.id.localeCompare(b.id))
-      .map((a) => ({
-        id: a.id,
-        version: a.version,
-        width: a.width,
-        height: a.height,
-        purposeId: a.purposeId,
-        contentId: a.contentId,
-      })),
-    templates: config.templates.filter((t) => draft.settings.some((s) => s.platformId === t.platformId)),
-    accounts: data.accounts.filter((a) => draft.settings.some((s) => s.platformId === a.platformId)),
-  });
+  return JSON.stringify(
+    draft.settings
+      .map((s) => [s.platformId, platformMaterialKey(draft, s.platformId, data, config)])
+      .sort((a, b) => a[0].localeCompare(b[0])),
+  );
 }
 
 export function generatePublishSetting(
@@ -463,18 +432,53 @@ export function platformMaterialKey(
   data: PublishingData,
   config: PublishingConfig,
 ): string {
-  return publishMaterialKey(
-    {
-      ...draft,
-      commonCopy: { title: '', description: '', tags: [] },
-      settings: draft.settings.filter((s) => s.platformId === platformId),
-      snapshotIds: draft.snapshotIds.filter((id) =>
-        data.snapshots.some((s) => s.id === id && s.platform === platformId),
-      ),
-    },
-    data,
-    config,
-  );
+  const setting = draft.settings.find((s) => s.platformId === platformId);
+  const template = config.templates.find((t) => t.platformId === platformId);
+  const content = data.contents.find((c) => c.id === draft.contentId);
+  const cover =
+    draft.kind === 'video'
+      ? autoVideoCovers(draft.contentId, data.assets, config, content?.videoCovers).find(
+          (c) => c.ratio === template?.videoCoverRatio,
+        )?.asset
+      : null;
+  const snapshots =
+    draft.kind === 'layout'
+      ? data.snapshots
+          .filter((s) => draft.snapshotIds.includes(s.id) && s.platform === platformId)
+          .sort((a, b) => a.id.localeCompare(b.id))
+      : [];
+  const ids = new Set([
+    ...(draft.kind === 'xhs' ? draft.imageIds : []),
+    ...(cover ? [cover.id] : []),
+    ...snapshots.flatMap((s) => [
+      ...s.content.blocks.flatMap((b) => (b.assetId ? [b.assetId] : [])),
+      ...Object.values(s.content.covers),
+    ]),
+  ]);
+  return JSON.stringify({
+    kind: draft.kind,
+    contentId: draft.contentId,
+    setting: setting
+      ? { title: setting.title, description: setting.description, tags: setting.tags, scheduleAt: setting.scheduleAt }
+      : null,
+    video: draft.kind === 'video' ? data.videos.find((v) => v.id === draft.videoId) : null,
+    imageIds: draft.kind === 'xhs' ? draft.imageIds : [],
+    snapshots,
+    coverId: cover?.id ?? null,
+    assets: data.assets
+      .filter((a) => ids.has(a.id))
+      .sort((a, b) => a.id.localeCompare(b.id))
+      .map((a) => ({
+        id: a.id,
+        version: a.version,
+        width: a.width,
+        height: a.height,
+        purposeId: a.purposeId,
+        contentId: a.contentId,
+      })),
+    template,
+    account: data.accounts.find((a) => a.platformId === platformId),
+  });
 }
 export function receiptExpired(receipt: PublishReceipt, now: number, expiryHours: number): boolean {
   const time = receipt.uploadedAt ? Date.parse(receipt.uploadedAt) : NaN;

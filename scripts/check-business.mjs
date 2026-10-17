@@ -31,33 +31,35 @@ const topic = {
   frozenFire: null,
   frozenEvidence: null,
   selectedAt: null,
-  revision: 0,
+  updatedAt: '2026-10-17T00:00:00.000Z',
   createdAt: '2026-10-17T00:00:00.000Z',
   automatic: false,
 };
-const selected = applyTopicDecision(topic, 'selected', 0, 20, 20, '2026-10-17T01:00:00.000Z');
-check('同一条记录的旧版本不能覆盖首次定格', () =>
-  assert.throws(() => applyTopicDecision(selected, 'selected', 0, 0, 20, '2026-10-17T02:00:00.000Z'), /其他页面/),
-);
+const selected = applyTopicDecision(topic, 'selected', 20, 20, '2026-10-17T01:00:00.000Z');
+check('选题状态以最后一次选择为准，保留首次定格', () => {
+  const next = applyTopicDecision(selected, 'candidate', 0, 20, '2026-10-17T02:00:00.000Z');
+  assert.equal(next.status, 'candidate');
+  assert.deepEqual(next.frozenEvidence, selected.frozenEvidence);
+});
 check('不同记录单条更新互不覆盖', () => {
   const records = new Map([
     ['t1', topic],
     ['t2', { ...topic, id: 't2' }],
   ]);
   for (const id of ['t1', 't2'])
-    records.set(id, applyTopicDecision(records.get(id), 'selected', 0, 20, 20, '2026-10-17T01:00:00.000Z'));
+    records.set(id, applyTopicDecision(records.get(id), 'selected', 20, 20, '2026-10-17T01:00:00.000Z'));
   assert.equal([...records.values()].filter((t) => t.status === 'selected').length, 2);
 });
 check('恢复并重选保留首次标记与整份证据', () => {
   const changed = { ...selected, evidence: { count: 9, d21: 0.2, trend: '未命中', reason: '新数据' } };
-  const restored = applyTopicDecision(changed, 'candidate', 1, 0, 20, '2026-10-18T00:00:00.000Z');
-  const again = applyTopicDecision(restored, 'selected', 2, 0, 20, '2026-10-19T00:00:00.000Z');
+  const restored = applyTopicDecision(changed, 'candidate', 0, 20, '2026-10-18T00:00:00.000Z');
+  const again = applyTopicDecision(restored, 'selected', 0, 20, '2026-10-19T00:00:00.000Z');
   assert.equal(again.frozenFire, true);
   assert.equal(again.selectedAt, selected.selectedAt);
   assert.deepEqual(topicEvidence(again, false), topic.evidence);
 });
 check('低样本首次选中不会事后变 FIRE', () => {
-  const cold = applyTopicDecision(topic, 'selected', 0, 19, 20, '2026-10-17T01:00:00.000Z');
+  const cold = applyTopicDecision(topic, 'selected', 19, 20, '2026-10-17T01:00:00.000Z');
   assert.equal(topicFire(cold, true), false);
   assert.equal(topicEvidence(cold, true), null);
 });
@@ -67,18 +69,15 @@ check('未选择的候选恰好达到20条才可高亮', () => {
 });
 check('已发布选题不可退回', () =>
   assert.throws(
-    () => applyTopicDecision({ ...selected, status: 'published' }, 'candidate', 1, 20, 20, '2026-10-17T01:00:00.000Z'),
+    () => applyTopicDecision({ ...selected, status: 'published' }, 'candidate', 20, 20, '2026-10-17T01:00:00.000Z'),
     /已发布/,
   ),
 );
 check('客户端不能提交定格字段', () =>
-  assert.equal(
-    topicDecisionInputSchema.safeParse({ status: 'selected', expectedRevision: 0, frozenFire: true }).success,
-    false,
-  ),
+  assert.equal(topicDecisionInputSchema.safeParse({ status: 'selected', frozenFire: true }).success, false),
 );
 check('停用或移除渠道后恢复候选仍可见', () => {
-  const restored = applyTopicDecision(selected, 'candidate', 1, 20, 20, '2026-10-17T01:00:00.000Z');
+  const restored = applyTopicDecision(selected, 'candidate', 20, 20, '2026-10-17T01:00:00.000Z');
   assert.equal(filterTopics([restored], 'candidate', 'all', 'all', '', true).length, 1);
 });
 const checkpoint = {

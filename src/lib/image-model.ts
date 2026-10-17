@@ -19,26 +19,28 @@ export const imageConfigSchema = z.object({
     .min(1),
 });
 export type ImageConfig = z.infer<typeof imageConfigSchema>;
-export const imageDraftSchema = z.object({
-  uploadPurposeId: z.string().default(''),
-  title: z.string().trim().min(1).max(200),
-  purposeId: z.string().min(1),
-  styleId: z.string().min(1),
-  prompt: z.string().max(20000),
-  content: z.string().max(100000),
-  ratio: z.string(),
-  topicId: z.string().nullable(),
-  contentId: z.string().nullable(),
-  existingAssets: z.record(z.string(), z.string()),
-  parentAssetId: z.string().nullable(),
-  editInstruction: z.string().max(10000),
-});
+export const imageDraftSchema = z
+  .object({
+    uploadPurposeId: z.string().default(''),
+    title: z.string().trim().min(1).max(200),
+    purposeId: z.string().min(1),
+    styleId: z.string().min(1),
+    prompt: z.string().max(20000),
+    content: z.string().max(100000),
+    ratio: z.string(),
+    topicId: z.string().nullable(),
+    contentId: z.string().nullable(),
+    existingAssets: z.record(z.string(), z.string()),
+    parentAssetId: z.string().nullable(),
+    editInstruction: z.string().max(10000),
+  })
+  .strict();
 export type ImageDraftInput = z.infer<typeof imageDraftSchema>;
-export type ImageDraft = ImageDraftInput & { id: string; revision: number; updatedAt: string };
+export type ImageDraft = ImageDraftInput & { id: string; updatedAt: string };
 export type Asset = {
   id: string;
   familyId: string;
-  familyRevision: number;
+  updatedAt: string;
   title: string;
   purposeId: string;
   ratio: string;
@@ -98,6 +100,24 @@ export const assetMetadataSchema = z
     purposeId: z.string().min(1),
     topicId: z.string().min(1).nullable(),
     contentId: z.string().min(1).nullable(),
-    expectedRevision: z.number().int().nonnegative(),
   })
   .strict();
+
+// Called inside the storage transaction: selection and work adoption succeed together.
+export function selectAssetVersion(assets: Asset[], contents: Content[], id: string, config: ImageConfig, now: string) {
+  const asset = assets.find((a) => a.id === id);
+  if (!asset) throw new Error('素材不存在');
+  const content = asset.contentId ? contents.find((c) => c.id === asset.contentId) : null;
+  if (asset.contentId && !content) throw new Error('关联作品不存在');
+  let adopted = content ?? null;
+  if (content && asset.purposeId === 'video_cover') {
+    const ratio = config.purposes
+      .find((p) => p.id === asset.purposeId)
+      ?.ratios.find((r) => canReuseAsset(asset, { key: r, label: r, ratio: r, text: '' }));
+    if (content.form !== '视频' || !ratio || asset.width <= 0 || asset.height <= 0)
+      throw new Error('作品或封面比例不符合要求');
+    adopted = { ...content, videoCovers: { ...content.videoCovers, [ratio]: asset.id }, updatedAt: now };
+  }
+  const next = assets.map((a) => (a.familyId === asset.familyId ? { ...a, selected: a.id === id, updatedAt: now } : a));
+  return { assets: next, asset: next.find((a) => a.id === id)!, content: adopted };
+}

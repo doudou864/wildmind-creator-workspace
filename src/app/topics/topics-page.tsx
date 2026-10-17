@@ -62,7 +62,7 @@ export default function TopicsPage({
       await request(`/api/topics/${encodeURIComponent(topic.id)}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: nextStatus, expectedRevision: topic.revision }),
+        body: JSON.stringify({ status: nextStatus }),
       });
       setNotice(`${topic.title} · ${topicStatusLabels[nextStatus]}，已保存。`);
     } catch (error) {

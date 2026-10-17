@@ -46,13 +46,12 @@ export const layoutContentSchema = z
   .strict();
 export type LayoutContent = z.infer<typeof layoutContentSchema>;
 export type LayoutVariant = LayoutContent & {
-  status: 'draft' | 'confirmed' | 'sent';
-  revision: number;
-  confirmedRevision: number | null;
+  status: 'draft' | 'sent';
+  updatedAt: string;
 };
 export type LayoutDocument = {
   id: string | null;
-  revision: number;
+  updatedAt: string;
   contentId: string | null;
   source: string;
   variants: Record<LayoutPlatform, LayoutVariant>;
@@ -73,12 +72,11 @@ export const layoutSaveSchema = z
     variants: z.object({ wechat: layoutContentSchema, douyin: layoutContentSchema, x: layoutContentSchema }).strict(),
   })
   .strict();
-export const layoutUpdateSchema = layoutSaveSchema.extend({ expectedRevision: z.number().int().nonnegative() });
+export const layoutUpdateSchema = layoutSaveSchema;
 export const layoutActionSchema = z
   .object({
     platform: layoutPlatformSchema,
-    action: z.enum(['confirm', 'send', 'revise', 'ai']),
-    expectedRevision: z.number().int().nonnegative(),
+    action: z.enum(['confirm-send', 'revise', 'ai']),
     instruction: z.string().trim().max(10000).optional(),
   })
   .strict()
@@ -123,12 +121,11 @@ export function createLayout(source: string, contentId: string | null = null): L
     blocks: article.blocks.map((b) => ({ ...b, type: platform === 'x' && b.type === 'quote' ? 'paragraph' : b.type })),
     covers: {},
     status: 'draft',
-    revision: 0,
-    confirmedRevision: null,
+    updatedAt: new Date().toISOString(),
   });
   return {
     id: null,
-    revision: 0,
+    updatedAt: new Date().toISOString(),
     contentId,
     source,
     variants: { wechat: make('wechat'), douyin: make('douyin'), x: make('x') },
@@ -141,7 +138,7 @@ export function editLayout(document: LayoutDocument, platform: LayoutPlatform, c
     ...document,
     variants: {
       ...document.variants,
-      [platform]: { ...content, status: 'draft', revision: current.revision + 1, confirmedRevision: null },
+      [platform]: { ...content, status: 'draft', updatedAt: new Date().toISOString() },
     },
   };
 }
@@ -193,5 +190,5 @@ export function layoutIssues(
   return issues;
 }
 export function canSendLayout(variant: LayoutVariant) {
-  return variant.status === 'confirmed' && variant.confirmedRevision === variant.revision;
+  return variant.status === 'draft';
 }

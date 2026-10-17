@@ -1,0 +1,92 @@
+[
+  {
+    "url": "/api/topics/qa",
+    "method": "PATCH",
+    "status": 503
+  },
+  {
+    "url": "/api/topics/qa",
+    "method": "PATCH",
+    "status": 400
+  },
+  {
+    "url": "/api/contents/qa/covers",
+    "method": "POST",
+    "status": 503
+  },
+  {
+    "url": "/api/images/drafts/qa",
+    "method": "PATCH",
+    "status": 503
+  },
+  {
+    "url": "/api/images/drafts/qa",
+    "method": "PATCH",
+    "status": 400
+  },
+  {
+    "url": "/api/images/assets/qa/select",
+    "method": "POST",
+    "status": 503
+  },
+  {
+    "url": "/api/images/assets/qa/select",
+    "method": "POST",
+    "status": 400
+  },
+  {
+    "url": "/api/images/assets/qa",
+    "method": "PATCH",
+    "status": 503
+  },
+  {
+    "url": "/api/layouts/qa",
+    "method": "PATCH",
+    "status": 503
+  },
+  {
+    "url": "/api/layouts/qa/actions",
+    "method": "POST",
+    "status": 503
+  },
+  {
+    "url": "/api/layouts/qa/actions",
+    "method": "POST",
+    "status": 400
+  },
+  {
+    "url": "/api/layouts/qa/actions",
+    "method": "POST",
+    "status": 400
+  },
+  {
+    "url": "/api/publishing/drafts/qa",
+    "method": "PATCH",
+    "status": 503
+  },
+  {
+    "url": "/api/publishing/drafts/qa",
+    "method": "PATCH",
+    "status": 400
+  },
+  {
+    "url": "/api/publishing/ai",
+    "method": "POST",
+    "status": 503
+  },
+  {
+    "url": "/api/publishing/drafts/qa/actions",
+    "method": "POST",
+    "status": 400
+  },
+  {
+    "url": "/api/publishing/drafts/qa/actions",
+    "method": "POST",
+    "status": 503
+  },
+  {
+    "url": "/api/publishing/receipts/qa/retry",
+    "method": "POST",
+    "status": 400
+  }
+]

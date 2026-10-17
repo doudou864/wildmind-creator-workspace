@@ -24,7 +24,7 @@ function check(name, fn) {
 }
 const content = {
   id: 'c1',
-  revision: 1,
+  updatedAt: '2026-10-17T00:00:00Z',
   title: '作品',
   topicId: 't1',
   form: '视频',
@@ -51,7 +51,7 @@ check('排版保存保留作品身份，三版共用同一作品', () => {
 const asset = {
   id: 'a',
   familyId: 'f',
-  familyRevision: 1,
+  updatedAt: '2026-10-17T00:00:00Z',
   title: '手工封面',
   purposeId: 'video_cover',
   ratio: '3:4',
@@ -73,9 +73,9 @@ check('多图片组不互相取消默认选版，采用关系仍唯一明确', (
   assert.equal(autoVideoCovers('c1', [asset, other], publishConfig, { '3:4': 'b' })[0].asset.id, 'b');
   assert.equal(autoVideoCovers('c1', [asset, other], publishConfig, {})[0].asset, null);
 });
-check('作品采用关系可显式解除，必须带版本避免覆盖', () => {
-  assert(contentCoverSchema.safeParse({ ratio: '3:4', assetId: null, expectedRevision: 1 }).success);
-  assert(!contentCoverSchema.safeParse({ ratio: '3:4', assetId: 'a' }).success);
+check('作品采用关系可以直接更新或解除，无需修订号', () => {
+  assert(contentCoverSchema.safeParse({ ratio: '3:4', assetId: null }).success);
+  assert(contentCoverSchema.safeParse({ ratio: '3:4', assetId: 'a' }).success);
 });
 check('已有上传图片可生成修改版而不是零个输出', () =>
   assert.equal(
@@ -101,7 +101,14 @@ check('普通文章插图保留任意比例复用，不强制裁切用户图片'
   const slot = imageSlots({ purposeId: 'illustration', parentAssetId: null, content: '段落' }, imageConfig)[0];
   assert(canReuseAsset({ ...asset, width: 1600, height: 900 }, slot));
 });
-const draft = { ...newPublishDraft('video'), contentId: 'c1', videoId: 'v', settings: [] };
+const draft = {
+  ...newPublishDraft('video'),
+  contentId: 'c1',
+  videoId: 'v',
+  settings: [
+    { platformId: 'douyin', title: '标题', description: '', tags: [], scheduleAt: null, individuallyEdited: false },
+  ],
+};
 const data = {
   contents: [content],
   videos: [{ id: 'v', contentId: 'c1' }],
@@ -109,11 +116,11 @@ const data = {
   snapshots: [],
   accounts: [],
 };
-check('素材库默认选版变化不会偷偷更换已采用封面', () => {
+check('未关联选版元数据不改变已采用文件的指纹', () => {
   const next = {
     ...data,
     assets: [
-      { ...asset, selected: true, familyRevision: 2 },
+      { ...asset, selected: true, updatedAt: '2026-10-17T01:00:00Z' },
       { ...asset, id: 'new', version: 2, selected: false },
     ],
   };
@@ -122,7 +129,7 @@ check('素材库默认选版变化不会偷偷更换已采用封面', () => {
 check('作品改用新封面后旧人工核对指纹必须失效', () => {
   const next = {
     ...data,
-    contents: [{ ...content, revision: 2, videoCovers: { '3:4': 'new' } }],
+    contents: [{ ...content, updatedAt: '2026-10-17T01:00:00Z', videoCovers: { '3:4': 'new' } }],
     assets: [asset, { ...asset, id: 'new', version: 2 }],
   };
   assert.notEqual(publishMaterialKey(draft, next, publishConfig), publishMaterialKey(draft, data, publishConfig));
@@ -140,8 +147,8 @@ check('发布确认请求必须包含实际核对材料，不能只有勾选布�
     publishActionSchema.safeParse({ ...input, materials: publishMaterialKey(draft, data, publishConfig) }).success,
   );
 });
-check('用途修改不能伪造图片来源或无版本覆盖', () => {
-  const input = { title: '封面', purposeId: 'video_cover', topicId: 't1', contentId: 'c1', expectedRevision: 1 };
+check('用途修改无需版本，但不能伪造图片来源', () => {
+  const input = { title: '封面', purposeId: 'video_cover', topicId: 't1', contentId: 'c1' };
   assert(assetMetadataSchema.safeParse(input).success);
   assert(!assetMetadataSchema.safeParse({ ...input, source: 'ai' }).success);
 });
@@ -177,5 +184,53 @@ check('主题送选题必须核对主题版本，不允许客户端替换来源'
 check('生产与复盘均承认小红书、视频号图文形式', () => {
   const platforms = parse(fs.readFileSync('config/platforms.yaml', 'utf8')).platforms;
   for (const id of ['xiaohongshu', 'channels']) assert(platforms.find((p) => p.id === id).forms.includes('图文'));
+});
+
+const { selectAssetVersion, imageDraftSchema } = await import('../src/lib/image-model.ts');
+check('一键选版同时采用到作品，另一比例及其他家族保持不变', () => {
+  const c = { ...content, videoCovers: { '3:4': 'old', '16:9': 'wide' } };
+  const old = { ...asset, id: 'old', selected: true };
+  const other = { ...asset, id: 'other', familyId: 'other-family', selected: true };
+  const result = selectAssetVersion([asset, old, other], [c], 'a', imageConfig, '2026-10-17T12:00:00Z');
+  assert.equal(result.asset.selected, true);
+  assert.deepEqual(result.content.videoCovers, { '3:4': 'a', '16:9': 'wide' });
+  assert.equal(result.assets.find((a) => a.id === 'old').selected, false);
+  assert.equal(result.assets.find((a) => a.id === 'other').selected, true);
+  assert.equal(c.videoCovers['3:4'], 'old'); // transaction inputs aren't mutated on failure
+  assert.throws(
+    () => selectAssetVersion([{ ...asset, width: 900, height: 900 }], [c], 'a', imageConfig, 'now'),
+    /比例/,
+  );
+  const unlinked = selectAssetVersion([{ ...asset, contentId: null }], [], 'a', imageConfig, 'now');
+  assert.equal(unlinked.content, null);
+  assert(unlinked.asset.selected);
+});
+check('普通编辑不接受旧修订字段', () => {
+  assert(
+    !assetMetadataSchema.safeParse({
+      title: '图',
+      purposeId: 'free',
+      topicId: null,
+      contentId: null,
+      expectedRevision: 1,
+    }).success,
+  );
+  assert(!contentCoverSchema.safeParse({ ratio: '3:4', assetId: 'a', expectedRevision: 1 }).success);
+  const draft = {
+    uploadPurposeId: 'free',
+    title: '任务',
+    purposeId: 'free',
+    styleId: 'default',
+    prompt: '',
+    content: '',
+    ratio: '3:4',
+    topicId: null,
+    contentId: null,
+    existingAssets: {},
+    parentAssetId: null,
+    editInstruction: '',
+  };
+  assert(imageDraftSchema.safeParse(draft).success);
+  assert(!imageDraftSchema.safeParse({ ...draft, expectedRevision: 1 }).success);
 });
 console.log(`${passed} audit regression checks passed`);

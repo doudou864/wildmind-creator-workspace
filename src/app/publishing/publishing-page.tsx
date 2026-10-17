@@ -1,7 +1,7 @@
 'use client';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { ContentPicker } from '@/ui/content-picker';
+import { useAutosave } from '@/ui/use-autosave';
 import { useEditSession } from '@/ui/use-edit-session';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import type { Platform } from '@/lib/config';
@@ -83,7 +83,6 @@ export default function PublishingPage({
   syncWindow: string;
   expiryHours: number;
 }) {
-  const router = useRouter();
   const { data, error, refresh } = useResource('/api/publishing', initialData);
   const [draft, setDraft] = useState<PublishDraft>(() => ({
     ...newPublishDraft(initialKind),
@@ -98,7 +97,7 @@ export default function PublishingPage({
   const urls = useRef<string[]>([]),
     sequence = useRef(0);
   const [instruction, setInstruction] = useState('');
-  const [pending, setPending] = useState<(() => void) | null>(null);
+  const [history, setHistory] = useState<PublishBatch | null>(null);
   const [picker, setPicker] = useState(false),
     [search, setSearch] = useState('');
   const [preview, setPreview] = useState<PublishSnapshot | null>(null);
@@ -160,6 +159,10 @@ export default function PublishingPage({
     data.assets,
     config,
     data.contents.find((c) => c.id === draft.contentId)?.videoCovers,
+  ).filter((c) =>
+    draft.settings.some(
+      (s) => config.templates.find((t) => t.platformId === s.platformId)?.videoCoverRatio === c.ratio,
+    ),
   );
   const snapshots = data.snapshots.filter((s) => s.contentId === draft.contentId && s.state === 'ready');
   const saved = !!meta && !dirty && !local.length;
@@ -214,6 +217,16 @@ export default function PublishingPage({
       setDraft(structuredClone(liveBatch.draft));
     }
   }, [liveBatch, dirty, meta?.revision, meta?.state]);
+  useEffect(() => {
+    if (meta || dirty || !draft.contentId) return;
+    const active = data.batches.find(
+      (b) => b.draft.contentId === draft.contentId && b.draft.kind === draft.kind && b.state !== 'finished',
+    );
+    if (active) {
+      setMeta(active);
+      setDraft(structuredClone(active.draft));
+    }
+  }, [data.batches, meta, dirty, draft.contentId, draft.kind]);
   const inFlight = data.receipts.some(
     (r) => r.batchId === meta?.id && ['queued', 'uploading', 'submitting'].includes(r.status),
   );
@@ -233,31 +246,6 @@ export default function PublishingPage({
     },
     [sessionDirty],
   );
-  useEffect(() => {
-    if (!dirty) return;
-    const unload = (event: BeforeUnloadEvent) => {
-      event.preventDefault();
-      event.returnValue = '';
-    };
-    const intercept = (event: MouseEvent) => {
-      if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-      const link = (event.target as HTMLElement).closest('a');
-      if (!link || link.target === '_blank' || link.href === window.location.href || link.hasAttribute('download'))
-        return;
-      event.preventDefault();
-      event.stopPropagation();
-      setPending(() => () => {
-        setDirty(false);
-        window.setTimeout(() => router.push(link.href), 0);
-      });
-    };
-    window.addEventListener('beforeunload', unload);
-    document.addEventListener('click', intercept, true);
-    return () => {
-      window.removeEventListener('beforeunload', unload);
-      document.removeEventListener('click', intercept, true);
-    };
-  }, [dirty]);
   function clearMedia() {
     sequence.current++;
     urls.current.forEach((url) => URL.revokeObjectURL(url));
@@ -266,8 +254,7 @@ export default function PublishingPage({
     setMediaLoading(false);
   }
   function protect(action: () => void) {
-    if (dirty) setPending(() => action);
-    else action();
+    action();
   }
   function fresh(kind: PublishKind) {
     clearMedia();
@@ -349,7 +336,7 @@ export default function PublishingPage({
       setLocal(selected);
       if (video) change({ videoId: null });
       setDirty(true);
-      setNotice('文件仅在本页预览，尚未上传或保存。');
+      setNotice(data.storageReady ? '正在自动上传保存文件…' : '素材存储服务未接入，文件仅在本页预览，尚未保存。');
     } catch {
       selected.forEach((item) => URL.revokeObjectURL(item.url));
       if (token === sequence.current) setNotice('图片无法读取，原有选择已保留。');
@@ -371,7 +358,8 @@ export default function PublishingPage({
       setDraft((d) => ({ ...d, videoId: result.videoId ?? d.videoId, imageIds: [...d.imageIds, ...result.assetIds] }));
       clearMedia();
       await refresh();
-      setNotice('文件已保存，发布准备仍需保存。');
+      setDirty(true);
+      setNotice('文件已保存，内容会自动保存。');
     } catch (e) {
       setNotice(e instanceof Error ? e.message : '上传失败，文件预览已保留。');
     } finally {
@@ -379,7 +367,7 @@ export default function PublishingPage({
     }
   }
   async function save() {
-    if (!data.storageReady || busy || locked || stale || local.length) return;
+    if (!data.storageReady || busy || locked || local.length) return;
     if (!publishDraftSchema.safeParse(draft).success) {
       setNotice('发布内容格式有误，请检查标题、话题标签和时间。');
       return;
@@ -391,13 +379,13 @@ export default function PublishingPage({
         {
           method: meta ? 'PATCH' : 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...draft, ...(meta ? { expectedRevision: meta.revision } : {}) }),
+          body: JSON.stringify(draft),
         },
       );
       setMeta(result);
       setDraft(result.draft);
       setDirty(false);
-      setNotice('发布准备已保存，尚未发布。');
+      setNotice('已自动保存，尚未发布。');
       await refresh();
     } catch (e) {
       setNotice(e instanceof Error ? e.message : '保存失败，填写内容已保留。');
@@ -405,7 +393,39 @@ export default function PublishingPage({
       setBusy(false);
     }
   }
-  async function action(kind: 'upload' | 'publish-all' | 'ai' | 'return', snapshotId?: string, onlyPlatform?: string) {
+  useAutosave(
+    JSON.stringify([draft, meta?.id]),
+    dirty && data.storageReady && !busy && !locked && !local.length && !!draft.contentId,
+    save,
+  );
+  useAutosave(
+    JSON.stringify([local.map((item) => [item.file.name, item.file.size, item.file.lastModified]), draft.contentId]),
+    !!local.length && data.storageReady && !!draft.contentId && !busy && !locked && !mediaLoading,
+    upload,
+  );
+  async function writeWithAI() {
+    if (!data.aiReady || busy || locked) return;
+    setBusy(true);
+    try {
+      const result = await request<PublishDraft>('/api/publishing/ai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'ai',
+          draft,
+          instruction: instruction.trim() || '生成通用标题、简介和话题，保留已单独修改的平台版本。',
+        }),
+      });
+      setDraft(publishDraftSchema.parse(result));
+      setDirty(true);
+      setNotice('文案已生成，正在自动保存。');
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : 'AI 修改失败');
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function action(kind: 'upload' | 'publish-all' | 'return', snapshotId?: string, onlyPlatform?: string) {
     if (!meta || busy || dirty || locked || stale) return;
     const time = Date.now();
     const ready = readyPublishReceipts(meta.id, draft, data, config, platforms, time, expiryHours);
@@ -427,7 +447,6 @@ export default function PublishingPage({
       return;
     }
     if (kind === 'upload' && (!canUpload || publishIssues(draft, data, config, platforms, time).length)) return;
-    if (kind === 'ai' && !data.aiReady) return;
     if (kind === 'return' && !data.handoffReady) return;
     const targets = uploadPlatformIds(meta.id, draft, data, config, time, expiryHours).filter(
       (id) => !onlyPlatform || id === onlyPlatform,
@@ -440,7 +459,7 @@ export default function PublishingPage({
     try {
       const payload = {
         action: kind,
-        expectedRevision: meta.revision,
+        ...(['upload', 'publish-all'].includes(kind) ? { expectedRevision: meta.revision } : {}),
         ...(kind === 'publish-all'
           ? {
               confirmed: true,
@@ -450,11 +469,7 @@ export default function PublishingPage({
             }
           : kind === 'upload'
             ? { requestId: uploadRequest.current.id, platformIds: targets, materials }
-            : kind === 'ai'
-              ? {
-                  instruction: instruction.trim() || '根据关联作品生成通用标题、简介和话题，保留已单独修改的平台版本。',
-                }
-              : { snapshotId }),
+            : { snapshotId }),
       };
       const result = await request<PublishBatch>(`/api/publishing/drafts/${encodeURIComponent(meta.id)}/actions`, {
         method: 'POST',
@@ -471,9 +486,7 @@ export default function PublishingPage({
           ? '发布任务已受理，请以逐平台回执为准。'
           : kind === 'upload'
             ? '上传任务已受理；完成后请检查各平台截图，尚未发布。'
-            : kind === 'return'
-              ? '确认稿已退回排版中心。'
-              : '通用文案已更新；已单独修改的平台保持不变。',
+            : '确认稿已退回排版中心。',
       );
       await refresh();
     } catch (e) {
@@ -520,7 +533,7 @@ export default function PublishingPage({
     setMeta(batch);
     setDirty(false);
     setInstruction('');
-    setNotice('已打开保存的发布批次。');
+    setNotice('已载入最新发布状态。');
   }
   return (
     <main className="workspace publishing-workspace">
@@ -535,7 +548,15 @@ export default function PublishingPage({
           <p>文案只写一次。先上传看截图，再一次确认发布。</p>
         </div>
         <div className="image-heading-actions">
-          <span className="small">{dirty ? '有未保存的准备内容' : meta ? batchNames[meta.state] : '新建发布准备'}</span>
+          <span className="small">
+            {dirty
+              ? data.storageReady
+                ? '正在自动保存…'
+                : '存储服务未接入，尚未保存'
+              : meta
+                ? batchNames[meta.state]
+                : '新建发布准备'}
+          </span>
           <Button
             disabled={busy}
             onClick={() => {
@@ -545,15 +566,6 @@ export default function PublishingPage({
             }}
           >
             刷新资料
-          </Button>
-          <Button disabled={busy} onClick={() => protect(() => fresh(draft.kind))}>
-            新建批次
-          </Button>
-          <Button
-            disabled={!data.storageReady || !dirty || busy || locked || stale || !!local.length || !draft.contentId}
-            onClick={() => void save()}
-          >
-            保存准备
           </Button>
         </div>
       </div>
@@ -572,7 +584,7 @@ export default function PublishingPage({
             <strong>{mode.label}</strong>
             <span>
               {mode.value === 'video'
-                ? '上传成片 · 自动带出三比例封面'
+                ? '选择成片 · 自动保存与封面匹配'
                 : mode.value === 'layout'
                   ? '接收确认版本 · 内容只读'
                   : '上传自制图片 · 套用发布模板'}
@@ -582,9 +594,9 @@ export default function PublishingPage({
       </div>
       {stale && liveBatch && (
         <p className="topic-feedback" role="alert">
-          这份批次已在其他页面更新，当前编辑已保留。
+          发布状态已更新，请载入最新状态后继续上传或发布。
           <Button disabled={busy} onClick={() => protect(() => loadBatch(liveBatch))}>
-            载入最新批次
+            载入最新发布状态
           </Button>
         </p>
       )}
@@ -605,10 +617,17 @@ export default function PublishingPage({
               <ContentPicker
                 value={draft.contentId}
                 form={draft.kind === 'video' ? '视频' : '图文'}
-                disabled={locked || busy}
+                disabled={busy}
                 onChange={(id) =>
                   protect(() => {
                     clearMedia();
+                    const existing = data.batches.find(
+                      (b) => b.draft.contentId === id && b.draft.kind === draft.kind && b.state !== 'finished',
+                    );
+                    if (existing) {
+                      loadBatch(existing);
+                      return;
+                    }
                     setDraft({
                       ...newPublishDraft(draft.kind),
                       contentId: id,
@@ -688,7 +707,7 @@ export default function PublishingPage({
                         <strong>
                           {name(s.platform)} · {s.content.title}
                         </strong>
-                        <span className="small">排版修订 {s.layoutRevision} · 已人工确认</span>
+                        <span className="small">排版修订 {s.layoutUpdatedAt} · 已人工确认</span>
                         <div>
                           <Button onClick={() => setPreview(s)}>查看确认稿</Button>
                           <Link
@@ -813,16 +832,10 @@ export default function PublishingPage({
               )}
               {draft.kind !== 'layout' && (
                 <>
-                  <Button
-                    disabled={!local.length || !data.storageReady || !draft.contentId || busy || locked || mediaLoading}
-                    onClick={() => void upload()}
-                  >
-                    {mediaLoading ? '正在读取文件…' : '上传并保存素材'}
-                  </Button>
                   <p className="small">
                     {!data.storageReady
                       ? '上传服务待接入；本机文件仅在本页预览。'
-                      : '先关联作品并上传素材，再保存发布准备。'}
+                      : '选择文件后自动上传保存，编辑内容也会自动保存。'}
                   </p>
                 </>
               )}
@@ -830,7 +843,7 @@ export default function PublishingPage({
           </Card>
           {draft.kind === 'video' && (
             <Card index="02" title="作品封面" meta={<span className="eyebrow">AUTO MATCH</span>}>
-              <p className="small publish-card-note">带出这条作品明确采用的封面版本；素材库选版不会自动替换。</p>
+              <p className="small publish-card-note">只检查所选平台需要的封面；在生图中心选定即采用。</p>
               <div className="publish-covers">
                 {covers.map((cover) => (
                   <div key={cover.ratio}>
@@ -941,14 +954,11 @@ export default function PublishingPage({
                   />
                 </label>
                 <div className="publish-ai-actions">
-                  <Button
-                    disabled={!data.aiReady || !saved || locked || stale || busy}
-                    onClick={() => void action('ai')}
-                  >
+                  <Button disabled={!data.aiReady || locked || busy} onClick={() => void writeWithAI()}>
                     AI 帮我写
                   </Button>
                   <span className="small">
-                    {!data.aiReady ? 'AI 服务未接入' : !saved ? '请先保存准备内容' : '保留已单独修改的平台版本'}
+                    {!data.aiReady ? 'AI 服务未接入' : '直接根据当前填写内容生成，保留已单独修改的平台版本'}
                   </span>
                 </div>
               </fieldset>
@@ -1046,6 +1056,13 @@ export default function PublishingPage({
                             <li key={problem}>{problem}</li>
                           ))}
                         </ul>
+                      )}
+                      {draft.kind === 'video' && !covers.find((c) => c.ratio === template?.videoCoverRatio)?.asset && (
+                        <Link
+                          href={`/images?${new URLSearchParams(draft.contentId ? { content: draft.contentId } : {})}`}
+                        >
+                          去生图中心补 →
+                        </Link>
                       )}
                       <div className="publish-copy-action">
                         <span className="small">
@@ -1169,7 +1186,7 @@ export default function PublishingPage({
               {!data.uploadReady
                 ? '平台上传服务未接入；不会上传或点击发布。'
                 : !saved
-                  ? '先保存准备内容，再上传到平台。'
+                  ? '内容正在自动保存；完成后即可上传。'
                   : '上传后逐个平台查看截图，再确认发布。'}
             </p>
             <Button className="publish-review-button" disabled={!canUpload} onClick={() => void action('upload')}>
@@ -1177,11 +1194,11 @@ export default function PublishingPage({
             </Button>
             <p className="small publish-card-note">上传只填好后台并停在发布前；支持草稿的平台优先存草稿。</p>
           </Card>
-          <Card index="06" title="已保存批次" meta={<span className="eyebrow">{data.batches.length} ITEMS</span>}>
+          <Card index="06" title="最近的发布记录" meta={<span className="eyebrow">{data.batches.length} ITEMS</span>}>
             {data.batches.length ? (
               <div className="publish-batches">
                 {data.batches.map((batch) => (
-                  <button key={batch.id} disabled={busy} onClick={() => protect(() => loadBatch(batch))}>
+                  <button key={batch.id} disabled={busy} onClick={() => setHistory(batch)}>
                     <strong>
                       {data.contents.find((c) => c.id === batch.draft.contentId)?.title ?? '关联作品不可用'}
                     </strong>
@@ -1192,7 +1209,7 @@ export default function PublishingPage({
                 ))}
               </div>
             ) : (
-              <Empty>暂无保存的发布批次</Empty>
+              <Empty>暂无发布记录</Empty>
             )}
           </Card>
         </aside>
@@ -1200,7 +1217,7 @@ export default function PublishingPage({
       <Card
         index="07"
         title="截图审核与发布回执"
-        meta={<span className="eyebrow">{meta ? 'CURRENT BATCH' : 'SELECT A BATCH'}</span>}
+        meta={<span className="eyebrow">{meta ? 'CURRENT RECORD' : 'NO RECORD'}</span>}
       >
         <div className="publish-review-heading">
           <p className="small">逐个平台查看填好后的真实截图。上传完成满 {expiryHours} 小时未发布，须重新上传。</p>
@@ -1292,7 +1309,7 @@ export default function PublishingPage({
               })}
           </div>
         ) : (
-          <Empty>{meta ? '尚未上传到平台，暂无后台截图' : '保存并打开批次后，在这里核对平台截图'}</Empty>
+          <Empty>{meta ? '尚未上传到平台，暂无后台截图' : '上传完成后，在这里核对平台截图'}</Empty>
         )}
       </Card>
       <footer className="layout-foot">
@@ -1336,14 +1353,41 @@ export default function PublishingPage({
           )}
         </Dialog>
       )}
+      {history && (
+        <Dialog title="发布记录 · 只读" onClose={() => setHistory(null)}>
+          <p>
+            {batchNames[history.state]} · {history.createdAt}
+          </p>
+          {history.draft.settings.map((item) => (
+            <section key={item.platformId}>
+              <strong>
+                {name(item.platformId)} · {item.title}
+              </strong>
+              <p>{item.description}</p>
+              <p>{item.scheduleAt ?? '立即发布'}</p>
+              {data.receipts
+                .filter((r) => r.batchId === history.id && r.platformId === item.platformId)
+                .map((r) => (
+                  <p key={r.id}>
+                    {statusNames[r.status]} · {r.reason ?? ''}
+                    {r.url && (
+                      <a href={r.url} target="_blank" rel="noreferrer">
+                        查看作品
+                      </a>
+                    )}
+                  </p>
+                ))}
+            </section>
+          ))}
+        </Dialog>
+      )}
       {preview && (
         <Dialog title={`${name(preview.platform)} · 确认稿只读`} onClose={() => setPreview(null)}>
           <LayoutPreview
             variant={{
               ...preview.content,
-              status: 'confirmed',
-              revision: preview.layoutRevision,
-              confirmedRevision: preview.layoutRevision,
+              status: 'sent',
+              updatedAt: preview.layoutUpdatedAt,
             }}
             platform={preview.platform}
             assets={data.assets}
@@ -1444,23 +1488,6 @@ export default function PublishingPage({
             <Button onClick={() => setRetry(null)}>取消</Button>
             <Button disabled={busy || !data.publishReady || !retryAllowed} onClick={() => void retryReceipt()}>
               确认重试
-            </Button>
-          </div>
-        </Dialog>
-      )}
-      {pending && (
-        <Dialog title="有发布准备尚未保存" onClose={() => setPending(null)}>
-          <p>继续会丢失本页填写内容和本机文件预览。是否放弃？</p>
-          <div className="layout-dialog-actions">
-            <Button onClick={() => setPending(null)}>继续编辑</Button>
-            <Button
-              onClick={() => {
-                const run = pending;
-                setPending(null);
-                run();
-              }}
-            >
-              放弃并继续
             </Button>
           </div>
         </Dialog>

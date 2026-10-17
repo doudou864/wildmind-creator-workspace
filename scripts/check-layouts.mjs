@@ -50,19 +50,14 @@ check('三版对象互不共用，修改公众号不改变抖音与 X', () => {
   assert.equal(next.variants.douyin.title, '测试文章');
   assert.equal(next.variants.x.title, '测试文章');
 });
-check('改稿撤销原确认并使旧确认不能送出', () => {
-  const confirmed = {
-    ...document,
-    variants: {
-      ...document.variants,
-      wechat: { ...document.variants.wechat, status: 'confirmed', confirmedRevision: 0 },
-    },
-  };
-  assert.equal(canSendLayout(confirmed.variants.wechat), true);
-  const edited = editLayout(confirmed, 'wechat', { ...confirmed.variants.wechat, title: '变更' });
-  assert.equal(edited.variants.wechat.confirmedRevision, null);
-  assert.equal(canSendLayout(edited.variants.wechat), false);
-  assert.equal(canSendLayout({ ...confirmed.variants.wechat, revision: 1 }), false);
+check('草稿直接确认并送出，不存在单独确认状态', () => {
+  assert(canSendLayout(document.variants.x));
+  assert(!canSendLayout({ ...document.variants.x, status: 'sent' }));
+  assert(layoutActionSchema.safeParse({ platform: 'x', action: 'confirm-send' }).success);
+  for (const action of ['confirm', 'send']) assert(!layoutActionSchema.safeParse({ platform: 'x', action }).success);
+  const edited = editLayout(document, 'x', { ...document.variants.x, title: '变更' });
+  assert.equal(edited.variants.x.title, '变更');
+  assert.equal(edited.variants.x.status, 'draft');
 });
 check('已送出版本禁止直接修改', () =>
   assert.throws(
@@ -148,20 +143,14 @@ check('客户端保存不能伪造确认、送出与修订状态', () => {
     false,
   );
 });
-check('旧版更新必须携带修订号，拒绝缺失或负数', () => {
-  assert.equal(layoutUpdateSchema.safeParse(layoutPayload(document)).success, false);
+check('排版自动保存无需修订号，拒绝旧的冲突字段', () => {
+  assert.equal(layoutUpdateSchema.safeParse(layoutPayload(document)).success, true);
   assert.equal(layoutUpdateSchema.safeParse({ ...layoutPayload(document), expectedRevision: -1 }).success, false);
 });
 check('AI 空要求、非法动作、伪造确认字段被拒绝', () => {
-  assert.equal(
-    layoutActionSchema.safeParse({ platform: 'x', action: 'ai', expectedRevision: 0, instruction: '  ' }).success,
-    false,
-  );
-  assert.equal(layoutActionSchema.safeParse({ platform: 'x', action: 'publish', expectedRevision: 0 }).success, false);
-  assert.equal(
-    layoutActionSchema.safeParse({ platform: 'x', action: 'send', expectedRevision: 0, confirmed: true }).success,
-    false,
-  );
+  assert.equal(layoutActionSchema.safeParse({ platform: 'x', action: 'ai', instruction: '  ' }).success, false);
+  assert.equal(layoutActionSchema.safeParse({ platform: 'x', action: 'publish' }).success, false);
+  assert.equal(layoutActionSchema.safeParse({ platform: 'x', action: 'send', confirmed: true }).success, false);
 });
 check('重复块 ID 被拒绝，避免编辑指向多段', () => {
   const payload = layoutPayload(document);

@@ -20,6 +20,7 @@ import {
   publishingConfigSchema,
   publishDraftSchema,
   publishActionSchema,
+  publishAiSchema,
   publishRetrySchema,
   publishIssues,
   scheduleTime,
@@ -75,7 +76,7 @@ check('未知平台限制与时间保持 null，不伪造推荐', () => {
   assert(config.templates.every((t) => t.titleMax === null && t.defaultTime === null && !t.verified));
   assert.equal(makePublishSetting('douyin', '标题', config).scheduleAt, null);
 });
-check('新建批次不默认替用户勾选发布目标', () => assert.deepEqual(newPublishDraft('video').settings, []));
+check('发布准备不默认替用户勾选发布目标', () => assert.deepEqual(newPublishDraft('video').settings, []));
 check('封面采用明确资产而非素材库当前选定版，仍核对作品和真实尺寸', () => {
   const result = autoVideoCovers(
     'c1',
@@ -108,13 +109,14 @@ check('完整视频材料通过内容校验，模板未核验仍阻断', () => {
   assert.deepEqual(publishIssues(video, { ...data, assets }, verified, platforms, now), []);
   assert(publishIssues(video, { ...data, assets }, config, platforms, now).some((s) => s.includes('待核验')));
 });
-check('视频三种封面缺一不可，即使某目标只用一种', () =>
-  assert(
-    publishIssues(video, { ...data, assets: assets.slice(0, 2) }, verified, platforms, now).some((s) =>
-      s.includes('16:9'),
-    ),
-  ),
+check('只选抖音时只有3:4封面即可上传，未选平台不阻断', () =>
+  assert.deepEqual(publishIssues(video, { ...data, assets: [assets[0]] }, verified, platforms, now), []),
 );
+check('所选平台缺封面只报告该平台', () => {
+  const issues = publishIssues(video, { ...data, assets: [assets[2]] }, verified, platforms, now);
+  assert.equal(issues.length, 1);
+  assert.match(issues[0], /抖音.*3:4/);
+});
 check('不能使用其他作品的视频', () =>
   assert(
     publishIssues({ ...video, videoId: 'foreign' }, data, verified, platforms, now).some((s) => s.includes('成片')),
@@ -558,4 +560,74 @@ try {
 } finally {
   globalThis.fetch = originalFetch;
 }
+
+check('换16:9只作废YouTube，作品更新时间和其他比例不影响抖音', () => {
+  const d = {
+    ...multi,
+    settings: [...multi.settings, generatePublishSetting('youtube', multi, complete, verified, now)],
+  };
+  const next = {
+    ...complete,
+    contents: [
+      { ...complete.contents[0], updatedAt: 'new', title: '改作品名', videoCovers: { ...choices, '16:9': 'wide-new' } },
+    ],
+    assets: [...assets, asset('wide-new', '16:9', 1600, 900, { version: 2 })],
+  };
+  const dy = { ...ready('douyin'), materials: platformMaterialKey(d, 'douyin', complete, verified) };
+  const yt = { ...ready('youtube'), materials: platformMaterialKey(d, 'youtube', complete, verified) };
+  assert.equal(receiptStatus(dy, d, next, verified, now, 2), 'ready');
+  assert.equal(receiptStatus(yt, d, next, verified, now, 2), 'expired');
+  for (const patch of [
+    { title: '新标题' },
+    { description: '新简介' },
+    { tags: ['新话题'] },
+    { scheduleAt: '2026-10-19T10:00' },
+  ]) {
+    const changed = { ...d, settings: d.settings.map((s) => (s.platformId === 'douyin' ? { ...s, ...patch } : s)) };
+    assert.equal(receiptStatus(dy, changed, complete, verified, now, 2), 'expired');
+    assert.equal(receiptStatus(yt, changed, complete, verified, now, 2), 'ready');
+  }
+  for (const changed of [
+    { ...complete, videos: [{ ...complete.videos[0], bytes: 100 }] },
+    { ...complete, accounts: complete.accounts.map((a) => (a.platformId === 'douyin' ? { ...a, ready: false } : a)) },
+    { ...complete, assets: assets.map((a) => (a.id === 'vertical' ? { ...a, version: 99 } : a)) },
+  ])
+    assert.equal(receiptStatus(dy, d, changed, verified, now, 2), 'expired');
+  const cfg = {
+    ...verified,
+    templates: verified.templates.map((t) => (t.platformId === 'youtube' ? { ...t, titleMax: 99 } : t)),
+  };
+  assert.equal(receiptStatus(dy, d, complete, cfg, now, 2), 'ready');
+  assert.equal(receiptStatus(yt, d, complete, cfg, now, 2), 'expired');
+});
+check('AI直接接收当前草稿，不需要已存记录或修订号', () => {
+  assert(publishAiSchema.safeParse({ action: 'ai', draft: video, instruction: '写标题' }).success);
+});
+
+check('确认稿仅影响自身平台；别的平台账号变化不影响抖音', () => {
+  const d = {
+    ...layout,
+    snapshotIds: ['s1', 'sx'],
+    settings: [layout.settings[0], makePublishSetting('x', '确认标题', verified)],
+  };
+  const articleData = { ...complete, snapshots: [snap, { ...snap, id: 'sx', platform: 'x' }] };
+  const beforeDy = platformMaterialKey(d, 'douyin', articleData, verified);
+  const beforeX = platformMaterialKey(d, 'x', articleData, verified);
+  const changed = {
+    ...articleData,
+    snapshots: articleData.snapshots.map((s) =>
+      s.platform === 'x' ? { ...s, content: { ...s.content, title: '新X稿' } } : s,
+    ),
+  };
+  assert.equal(platformMaterialKey(d, 'douyin', changed, verified), beforeDy);
+  assert.notEqual(platformMaterialKey(d, 'x', changed, verified), beforeX);
+  const accounts = {
+    ...complete,
+    accounts: complete.accounts.map((a) => (a.platformId === 'youtube' ? { ...a, ready: false } : a)),
+  };
+  assert.equal(
+    platformMaterialKey(multi, 'douyin', accounts, verified),
+    platformMaterialKey(multi, 'douyin', complete, verified),
+  );
+});
 console.log(`${passed} publishing checks passed`);

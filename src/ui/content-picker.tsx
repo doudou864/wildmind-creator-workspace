@@ -130,7 +130,7 @@ export function ContentPicker({
         <Dialog
           title="新建作品"
           onClose={() => {
-            if (!busy && (!(title || date) || window.confirm('放弃未保存的新作品信息？'))) setOpen(false);
+            if (!busy) setOpen(false);
           }}
         >
           <fieldset className="image-form" disabled={busy}>
@@ -179,7 +179,7 @@ export function ContentPicker({
             }
             onClick={() => void create()}
           >
-            保存作品并关联
+            创建并关联
           </Button>
         </Dialog>
       )}

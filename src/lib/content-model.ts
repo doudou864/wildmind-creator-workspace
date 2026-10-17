@@ -17,7 +17,7 @@ export const contentInputSchema = z
   .strict();
 export const contentSchema = contentInputSchema.extend({
   id: z.string().min(1),
-  revision: z.number().int().nonnegative(),
+  updatedAt: z.string(),
   videoCovers: z.record(z.string(), z.string()).default({}),
 });
 export type Content = z.infer<typeof contentSchema>;
@@ -36,6 +36,5 @@ export const contentCoverSchema = z
   .object({
     ratio: z.string().regex(/^\d+(\.\d+)?:\d+(\.\d+)?$/),
     assetId: z.string().min(1).nullable(),
-    expectedRevision: z.number().int().nonnegative(),
   })
   .strict();
