@@ -1,0 +1,17 @@
+# 工作台默认比例映射，接入平台时需核验；null 表示未核对，不伪造平台限制与推荐时间。
+videoMaxMB: 4096
+videoTypes: [video/mp4, video/quicktime]
+imageMaxMB: 20
+imageTypes: [image/png, image/jpeg]
+xhsMaxImages: 9
+requiredVideoRatios: ['3:4', '4:3', '16:9']
+templates:
+  - { platformId: douyin, kinds: [video, layout], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: xiaohongshu, kinds: [video, xhs], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: bilibili, kinds: [video], videoCoverRatio: '4:3', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: channels, kinds: [video], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: youtube, kinds: [video], videoCoverRatio: '16:9', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: wechat, kinds: [layout], videoCoverRatio: null, titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: kuaishou, kinds: [video], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: tiktok, kinds: [video], videoCoverRatio: '3:4', titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }
+  - { platformId: x, kinds: [layout], videoCoverRatio: null, titleMax: null, descriptionMax: null, tags: [], description: '', defaultTime: null, verified: false }

@@ -1,0 +1,46 @@
+[
+  {
+    "name": "成片可本机预览，不冒充上传成功",
+    "passed": true
+  },
+  {
+    "name": "同作品三比例封面自动对应",
+    "passed": true
+  },
+  {
+    "name": "503 保存失败保留编辑与未保存标记",
+    "passed": true
+  },
+  {
+    "name": "发现远端修订变化，禁止旧稿覆盖且保留填写",
+    "passed": true
+  },
+  {
+    "name": "确认稿标题只读，没有可编辑正文",
+    "passed": true
+  },
+  {
+    "name": "可预览完整确认快照",
+    "passed": true
+  },
+  {
+    "name": "退回失败不会解锁确认稿或宣称退回成功",
+    "passed": true
+  },
+  {
+    "name": "已结束批次禁止再次编辑",
+    "passed": true
+  },
+  {
+    "name": "只有已核实未发布的失败项允许重试",
+    "passed": true
+  },
+  {
+    "name": "重试弹窗打开后状态变更仍阻止提交",
+    "passed": true
+  },
+  {
+    "name": "恢复真实服务空态且不保留验收数据",
+    "passed": true
+  }
+]

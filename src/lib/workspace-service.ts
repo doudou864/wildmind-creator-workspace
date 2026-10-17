@@ -1,3 +1,4 @@
+import type { PublishingData } from './publishing-model';
 import type { LayoutData } from './layout-model';
 import type { DashboardData } from './workspace-model';
 import type { TopicData } from './topic-model';
@@ -8,3 +9,5 @@ export async function readTopics(): Promise<TopicData> { return {topics:[],d21Sa
 export async function readImages(): Promise<ImageData> { return {assets:[],drafts:[],topics:[],contents:[],generationReady:false,storageReady:false,generationMessage:'生图服务待接入；素材与草稿存储服务待接入。'}; }
 
 export async function readLayouts(): Promise<LayoutData> { return {documents:[],assets:[],storageReady:false,aiReady:false,handoffReady:false,message:'稿件保存、AI 修改与确认稿交接待接入；本页编辑离开后不会保存。'}; }
+
+export async function readPublishing(): Promise<PublishingData> { return {contents:[],videos:[],assets:[],snapshots:[],batches:[],receipts:[],accounts:[],recommendations:[],storageReady:false,aiReady:false,publishReady:false,handoffReady:false,message:'发布存储、AI 配置与平台发布服务待接入；本页仅准备内容，不会上传或发布。'}; }

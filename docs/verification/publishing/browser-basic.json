@@ -1,0 +1,46 @@
+[
+  {
+    "name": "默认未选发布目标且上传保存不可用",
+    "passed": true
+  },
+  {
+    "name": "不同平台标题独立，标签间空格可输入",
+    "passed": true
+  },
+  {
+    "name": "过去时间阻止发布",
+    "passed": true
+  },
+  {
+    "name": "清单显示逐平台内容，未接入不能确认发布",
+    "passed": true
+  },
+  {
+    "name": "切换来源先保护未保存的配置",
+    "passed": true
+  },
+  {
+    "name": "取消切换保留已填写内容",
+    "passed": true
+  },
+  {
+    "name": "小红书本机图片只预览，未虚报上传",
+    "passed": true
+  },
+  {
+    "name": "本机图片可调整顺序",
+    "passed": true
+  },
+  {
+    "name": "真实素材为空时显示空态",
+    "passed": true
+  },
+  {
+    "name": "确认稿空态不允许手工伪造稿件",
+    "passed": true
+  },
+  {
+    "name": "1728 无横向溢出",
+    "passed": true
+  }
+]

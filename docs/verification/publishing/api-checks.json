@@ -1,0 +1,92 @@
+[
+  {
+    "method": "GET",
+    "path": "/api/publishing",
+    "status": 200,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/publishing/drafts",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/publishing/drafts",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/publishing/drafts/test",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "PATCH",
+    "path": "/api/publishing/drafts/test",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/publishing/drafts/test/actions",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/publishing/drafts/test/actions",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/publishing/drafts/test/actions",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/publishing/drafts/test/actions",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/publishing/drafts/test/actions",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/publishing/receipts/test/retry",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "method": "POST",
+    "path": "/api/publishing/receipts/test/retry",
+    "status": 400,
+    "passed": true
+  },
+  {
+    "method": "GET",
+    "path": "/api/publishing/media/test/file",
+    "status": 503,
+    "passed": true
+  },
+  {
+    "path": "/api/publishing/media",
+    "validMime": true,
+    "status": 503,
+    "passed": true
+  },
+  {
+    "path": "/api/publishing/media",
+    "validMime": false,
+    "status": 400,
+    "passed": true
+  }
+]
