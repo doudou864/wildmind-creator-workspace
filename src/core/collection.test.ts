@@ -71,3 +71,25 @@ test('账号日期按北京时间归一，等价日期不误报，真正跨日�
   expect(() => normalizeDataDate('2026-02-30')).toThrow();
   expect(() => normalizeDataDate('昨天')).toThrow();
 });
+
+test('固定起号日按北京时间，置顶不例外；过30天仍属于起号后历史', async () => {
+  const { sinceStartDate } = await import('./collection');
+  const now = new Date('2026-12-01T00:00:00+08:00');
+  expect(sinceStartDate('2026-09-16T15:59:59Z', '2026-09-17', now)).toBe(false);
+  expect(sinceStartDate('2026-09-16T16:00:00Z', '2026-09-17', now)).toBe(true);
+});
+test('万单位只能标为显示精度；精确净增可以求和，约数不能算增长', async () => {
+  const { displayedPrecision, exactGrowth, missingAccountDates } = await import('./collection');
+  expect(displayedPrecision('3.07万')).toBe('display');
+  expect(displayedPrecision('-6')).toBe('exact');
+  expect(displayedPrecision(null)).toBe('unknown');
+  expect(
+    exactGrowth([
+      { value: -6, precision: 'exact' },
+      { value: 1, precision: 'exact' },
+    ]),
+  ).toBe(-5);
+  expect(exactGrowth([{ value: 30700, precision: 'display' }])).toBeNull();
+  expect(missingAccountDates('2026-10-14', '2026-10-17')).toEqual(['2026-10-15', '2026-10-16']);
+  expect(missingAccountDates(null, '2026-10-17')).toEqual([]);
+});

@@ -408,3 +408,7 @@ id、platform_id、kind（login / confirmation / risk）、reason、status（pen
 key（主键）、value（JSON）、updated_at。保存每天随机启动分钟和已执行时段、成功平台、一次性历史导入状态、检查点完成日期、月度画像状态。实际数字仍在长表，原文仍在 raw_records；该表不用于承载作品指标。迁移 0003 只新增该表，执行前在线备份。
 
 数值来自平台显示文本，单位（如“万”）由确定性代码换算，显示精度保留在同名截图识别 JSON。它不代表平台未展示的更精细计数。每个 PostSnapshot 的 captured_at 对应识别文件时间，来源文件路径由本轮 CrawlLog.archive_paths 保存。首次仅接纳近 30 天视频和图文；范围外作品不建档、不建选题、不写快照。已在上线后积累的历史记录保留。
+
+## 2026-10-17 精度和运行可观测性
+
+PostSnapshot / AccountDaily 增加 precision（exact/display/unknown）和 rawValue；旧记录无法核对时为 unknown，不默认精确。AccountDaily 增加 backfilled。增长只汇总精确净增，禁止约数总量相减。CrawlLog 增加可空 telemetry：延迟、同日截图复用、页面操作数、AI 调用次数、需要处理项；旧日志显示未记录，耗时从开始/完成时间计算。

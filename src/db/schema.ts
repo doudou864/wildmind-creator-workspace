@@ -84,6 +84,10 @@ export const postSnapshots = sqliteTable(
     dayAfterPublish: integer('day_after_publish'),
     metricId: text('metric_id').notNull(),
     value: real('value'),
+    precision: text('precision', { enum: ['exact', 'display', 'unknown'] })
+      .notNull()
+      .default('unknown'),
+    rawValue: text('raw_value'),
     backfillKind: text('backfill_kind', { enum: ['none', 'checkpoint', 'historical'] }).notNull(),
     updatedAt: updatedAt(),
   },
@@ -97,8 +101,13 @@ export const accountDaily = sqliteTable(
       .notNull()
       .references(() => accounts.platformId),
     dataDate: text('data_date').notNull(),
+    backfilled: integer('backfilled', { mode: 'boolean' }).notNull().default(false),
     metricId: text('metric_id').notNull(),
     value: real('value'),
+    precision: text('precision', { enum: ['exact', 'display', 'unknown'] })
+      .notNull()
+      .default('unknown'),
+    rawValue: text('raw_value'),
     capturedAt: text('captured_at').notNull(),
     updatedAt: updatedAt(),
   },
@@ -114,6 +123,13 @@ export const crawlLogs = sqliteTable(
     status: text('status', { enum: ['running', 'success', 'failed'] }).notNull(),
     reason: text('reason'),
     archivePaths: json<string[]>('archive_paths').notNull(),
+    telemetry: json<{
+      delayed: boolean;
+      reusedScreenshots: boolean;
+      pages: number;
+      aiCalls: number;
+      attention: boolean;
+    }>('telemetry'),
     updatedAt: updatedAt(),
   },
   (t) => [

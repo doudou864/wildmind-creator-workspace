@@ -1,3 +1,4 @@
+import { reusedScreenshots } from '../../jobs/telemetry.ts';
 import { writeFile, readFile, rename, mkdir } from 'node:fs/promises';
 import { z } from 'zod';
 import { randomUUID } from 'node:crypto';
@@ -14,7 +15,9 @@ import {
   groupSources,
   normalizeTitle,
   matchPost,
+  sinceStartDate,
   withinRecentWindow,
+  missingAccountDates,
   normalizeDataDate,
 } from '../../core/collection.ts';
 import { screenshotReading } from '../recognition.ts';
@@ -28,6 +31,7 @@ import {
   type CapturedReading,
 } from '../storage.ts';
 import { loadDouyinConfig } from './config.ts';
+import { selectAccountDate } from './dates.ts';
 export async function collectDouyin(
   database: WorkspaceDatabase,
   session: CollectionSession,
@@ -38,6 +42,9 @@ export async function collectDouyin(
   const config = await loadDouyinConfig();
   const workspace = await loadConfig();
   const now = new Date();
+  const eligiblePost = (publishedAt: string) =>
+    sinceStartDate(publishedAt, workspace.parameters.startDate, now) &&
+    withinRecentWindow(publishedAt, now, workspace.parameters.recentWindow);
   const history = !readState(database, `${config.platformId}:history`)?.completed;
   const folder = `data/captures/${config.platformId}/${shanghaiDate(now)}/${randomUUID()}`;
   const readings: CapturedReading[] = [];
@@ -81,7 +88,7 @@ export async function collectDouyin(
         })
       : await judgment.read(
           screenshotReading,
-          `只按截图提取数据；不输出比较增减、排名、舍弃指标或估计值。raw保留单位和百分号；不要加法或单位换算。流量来源各行单独按原标签返回（包含${JSON.stringify(Object.values(config.sourceGroups).flat())}），归组由程序处理；数据不足为null。缺失不可见的指标不输出。没有相关数据时相应数组为空。失败填写reason。发布时间带+08:00；账号dataDate只写YYYY-MM-DD。只取“作品数据”和“粉丝数据”的昨天账号指标，不取“数据总览”。原文记录只要诊断、性别/年龄/地域、观看时段、流量来源；不要设备/兴趣/评论热词。\n允许的数值指标：${JSON.stringify(allowedMetrics)}\n${context}`,
+          `只按截图提取数据；不输出比较增减、排名、舍弃指标或估计值。raw保留单位和百分号；不要加法或单位换算。流量来源各行单独按原标签返回（包含${JSON.stringify(Object.values(config.sourceGroups).flat())}），归组由程序处理；数据不足为null。缺失不可见的指标不输出。没有相关数据时相应数组为空。失败填写reason。发布时间带+08:00；账号dataDate只写YYYY-MM-DD。只取“作品数据”和“粉丝数据”的指定日期账号指标，不取“数据总览”。原文记录只要诊断、性别/年龄/地域、观看时段、流量来源；不要设备/兴趣/评论热词。\n允许的数值指标：${JSON.stringify(allowedMetrics)}\n${context}`,
           [sourcePath],
         );
     await writeFile(
@@ -123,6 +130,9 @@ export async function collectDouyin(
         item.form = post.form;
       }
     }
+    if (kind === 'list') reading.posts = reading.posts.filter((p) => eligiblePost(p.publishedAt));
+    for (const p of reading.posts)
+      if (ageInDays(p.publishedAt, now) > workspace.parameters.recentWindow) p.metrics = [];
     readings.push({ sourcePath, capturedAt, reading, kind, postKey: post?.key });
     progress(`已核验截图 ${sequence}：${kind}`);
   }
@@ -158,9 +168,7 @@ export async function collectDouyin(
   ) {
     const stage = stageSchema.parse(JSON.parse(await readFile(saved.path, 'utf8')));
     if (stage.date === shanghaiDate(now) && stage.history === history) {
-      for (const p of stage.posts.filter((p) =>
-        withinRecentWindow(p.publishedAt, now, workspace.parameters.recentWindow),
-      )) {
+      for (const p of stage.posts.filter((p) => eligiblePost(p.publishedAt))) {
         incoming.set(p.key, p);
         recognized.add(p.key);
       }
@@ -169,9 +177,7 @@ export async function collectDouyin(
           ...r,
           reading: {
             ...r.reading,
-            posts: r.reading.posts.filter((p) =>
-              withinRecentWindow(p.publishedAt, now, workspace.parameters.recentWindow),
-            ),
+            posts: r.reading.posts.filter((p) => eligiblePost(p.publishedAt)),
           },
         }))
         .filter((r) => r.reading.posts.length);
@@ -182,6 +188,7 @@ export async function collectDouyin(
       );
       sequence = scopedReadings.length;
       restored = true;
+      reusedScreenshots();
       progress(`恢复已核验列表：${incoming.size} 条近期作品`);
     }
   }
@@ -208,7 +215,10 @@ export async function collectDouyin(
             (c) =>
               c.date &&
               ageInDays(c.date.replace(/(\d{4})年(\d{2})月(\d{2})日 (\d{2}:\d{2})/, '$1-$2-$3T$4:00+08:00'), now) >
-                workspace.parameters.recentWindow,
+                Math.min(
+                  workspace.parameters.recentWindow,
+                  Math.max(0, ageInDays(workspace.parameters.startDate + 'T00:00:00+08:00', now)),
+                ),
           )
       ) {
         reachedEnd = true;
@@ -256,7 +266,7 @@ export async function collectDouyin(
     if (!reachedEnd) throw new Error('列表未完整读取：达到截图上限，历史导入不标完成');
   }
   const all = [...incoming.values()];
-  const target = all.filter((p) => withinRecentWindow(p.publishedAt, now, workspace.parameters.recentWindow));
+  const target = all.filter((p) => eligiblePost(p.publishedAt));
   if (target.some((p) => !recognized.has(p.key))) throw new Error('部分作品没有完整的截图识别结果，停止入库');
   if (!restored) {
     await mkdir(folder, { recursive: true, mode: 0o700 });
@@ -312,6 +322,7 @@ export async function collectDouyin(
       const eligible = new Set(target.map((p) => p.key));
       const reused = savedDetails.readings.filter((r) => eligible.has(r.postKey));
       readings.push(...reused);
+      if (reused.length) reusedScreenshots();
       archivePaths.push(
         detailState.path,
         ...reused.flatMap((r) => [r.sourcePath, r.sourcePath.replace('.png', '.json')]),
@@ -384,26 +395,37 @@ export async function collectDouyin(
   await session.navigate(config.accountUrl, 'loc=role:tabpanel[name="投稿"]');
   await session.click(`${config.accountYesterdaySelector} >> nth=0`);
   await session.click(`${config.accountYesterdaySelector} >> nth=1`);
-  for (let rewind = 0; rewind < config.maxScreens; rewind++) {
-    const state = await session.inspect(config.platformId);
-    if (state.scroll.top <= 1) break;
-    await session.scroll('html', -1);
-  }
-  const accountPage = await session.inspect(config.platformId);
-  const workDate = accountPage.text.match(/作品数据\s*统计周期：(\d{4}-\d{2}-\d{2})（/u)?.[1];
-  const fansDate = accountPage.text.match(/粉丝数据\s*统计周期：(\d{4}-\d{2}-\d{2})（/u)?.[1];
-  if (!workDate || !fansDate || workDate !== fansDate) throw new Error('账号数据未切为同一天，拒绝写入日数据');
-  accountDate = workDate;
-  for (let segment = 0; segment < config.maxScreens; segment++) {
-    const state = await session.inspect(config.platformId);
-    await capture(
-      session,
-      'account',
-      `只读昨天的作品数据和粉丝数据，日期已从页面标注核实为${accountDate}；不取顶部数据总览的7日区间。`,
-    );
-    if (state.scroll.top + state.scroll.height >= state.scroll.total - 3) break;
-    if (segment === config.maxScreens - 1) throw new Error('账号页面截图未完成');
-    await session.scroll();
+  const yesterday = shanghaiDate(new Date(now.getTime() - 86400000));
+  const last = database.sqlite
+    .prepare('SELECT max(data_date) date FROM account_daily WHERE platform_id = ?')
+    .get(config.platformId) as { date: string | null };
+  const missing = missingAccountDates(last.date, yesterday);
+  for (const requestedDate of [...missing, yesterday]) {
+    if (requestedDate !== yesterday || missing.length) {
+      await selectAccountDate(session, config, requestedDate);
+    }
+    for (let rewind = 0; rewind < config.maxScreens; rewind++) {
+      const state = await session.inspect(config.platformId);
+      if (state.scroll.top <= 1) break;
+      await session.scroll('html', -1);
+    }
+    const accountPage = await session.inspect(config.platformId);
+    const workDate = accountPage.text.match(/作品数据\s*统计周期：(\d{4}-\d{2}-\d{2})（/u)?.[1];
+    const fansDate = accountPage.text.match(/粉丝数据\s*统计周期：(\d{4}-\d{2}-\d{2})（/u)?.[1];
+    if (!workDate || !fansDate || workDate !== fansDate) throw new Error('账号数据未切为同一天，拒绝写入日数据');
+    accountDate = workDate;
+    for (let segment = 0; segment < config.maxScreens; segment++) {
+      const state = await session.inspect(config.platformId);
+      await capture(
+        session,
+        'account',
+        `只读当前指定日期的作品数据和粉丝数据，日期已从页面标注核实为${accountDate}；不取顶部数据总览的7日区间。`,
+      );
+      if (state.scroll.top + state.scroll.height >= state.scroll.total - 3) break;
+      if (segment === config.maxScreens - 1) throw new Error('账号页面截图未完成');
+      await session.scroll();
+    }
+    if (accountDate !== requestedDate) throw new Error(`账号日期选择失败：需要${requestedDate}，实际${accountDate}`);
   }
   if (readState(database, `${config.platformId}:audience-month`)?.month !== shanghaiDate(now).slice(0, 7)) {
     monthly = true;
@@ -500,7 +522,7 @@ export async function collectDouyin(
   for (const old of database.db.select().from(posts).where(eq(posts.platformId, config.platformId)).all()) {
     if (
       old.publishedAt &&
-      withinRecentWindow(old.publishedAt, now, workspace.parameters.recentWindow) &&
+      sinceStartDate(old.publishedAt, workspace.parameters.startDate, now) &&
       !target.some((p) => decisions.get(p.key)?.postId === old.id)
     )
       database.db.update(posts).set({ removed: true, updatedAt: now.toISOString() }).where(eq(posts.id, old.id)).run();

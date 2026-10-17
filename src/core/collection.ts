@@ -66,3 +66,28 @@ export function normalizeDataDate(value: string) {
     day: '2-digit',
   }).format(new Date(value));
 }
+
+// Enrollment boundary is fixed; the independent collection lifetime never moves it.
+export function sinceStartDate(publishedAt: string, startDate: string, now: Date) {
+  const time = Date.parse(publishedAt);
+  return Number.isFinite(time) && time >= Date.parse(startDate + 'T00:00:00+08:00') && time <= now.getTime();
+}
+export function displayedPrecision(raw: string | null): 'exact' | 'display' | 'unknown' {
+  return parseDisplayedNumber(raw) === null ? 'unknown' : /[万亿]/.test(raw!) ? 'display' : 'exact';
+}
+export function exactGrowth(values: { value: number | null; precision: string }[]) {
+  return values.length && values.every((v) => v.value !== null && v.precision === 'exact')
+    ? values.reduce((sum, v) => sum + v.value!, 0)
+    : null;
+}
+export function missingAccountDates(lastDate: string | null, yesterday: string) {
+  if (!lastDate) return [];
+  const dates: string[] = [];
+  for (
+    let time = Date.parse(lastDate + 'T00:00:00Z') + 86400000;
+    time < Date.parse(yesterday + 'T00:00:00Z');
+    time += 86400000
+  )
+    dates.push(new Date(time).toISOString().slice(0, 10));
+  return dates;
+}

@@ -1,3 +1,4 @@
+import { telemetry } from './telemetry.ts';
 import { mkdir } from 'node:fs/promises';
 import { acquireJobLock } from './lock.ts';
 import { randomUUID } from 'node:crypto';
@@ -118,6 +119,8 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
     for (const [index, id] of ids.entries()) {
       if (index) await pause(randomBetween((await loadBrowserPolicy()).platformDelayMs));
       const crawlId = startCrawl(database, id);
+      telemetry()!.delayed =
+        mode === 'scheduled' && (Date.now() - Date.parse(date + 'T00:00:00+08:00')) / 60000 > Number(state.chosen) + 1;
       const paths: string[] = [];
       try {
         const [login] = await browser.checkLogins([id]);
@@ -151,6 +154,7 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
         collectionFailed = true;
         writeState(database, 'browser:retry-space', { id: activeSpace });
         const reason = error instanceof Error ? error.message : '采集失败';
+        if (error instanceof AttentionRequired) telemetry()!.attention = true;
         if (error instanceof AttentionRequired && !keepForConfirmation)
           requireAttention(database, { platformId: id, kind: error.kind, reason, spaceId: activeSpace, page: 'p1' });
         await finishCrawl(database, crawlId, { status: 'failed', reason, archivePaths: paths });

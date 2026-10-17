@@ -1,3 +1,4 @@
+import { countPage } from '../jobs/telemetry.ts';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parse } from 'yaml';
@@ -55,6 +56,7 @@ export async function consumePage(root = process.cwd(), now = new Date()) {
     }
     if (record.count >= (await loadBrowserPolicy(root)).dailyPageLimit) throw new Error('已达到每天页面数上限');
     record.count++;
+    countPage();
     await writeFile(filename + '.tmp', JSON.stringify(record), { mode: 0o600 });
     await rename(filename + '.tmp', filename);
   } finally {

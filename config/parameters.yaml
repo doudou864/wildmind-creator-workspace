@@ -1,3 +1,4 @@
+startDate: '2026-09-17' # 北京时间起号日，早于此日的作品永不建档
 timeRanges: [7, 30, 90]
 defaultRange: 30
 recentWindow: 30

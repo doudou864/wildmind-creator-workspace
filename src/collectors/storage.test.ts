@@ -39,7 +39,13 @@ test('真实零和未知分开；失败回滚，不导入超30天历史作品，
           ],
         },
       ],
-      account: { dataDate: '2026-10-16', metrics: [{ label: '吸粉量', raw: '1' }] },
+      account: {
+        dataDate: '2026-10-16',
+        metrics: [
+          { label: '吸粉量', raw: '1' },
+          { label: '总粉丝量', raw: '3.07万' },
+        ],
+      },
       records: [{ type: 'diagnosis', text: '作品状态正常' }],
       signals: [{ type: 'search', text: '测试搜索词', share: '10%' }],
     });
@@ -68,6 +74,9 @@ test('真实零和未知分开；失败回滚，不导入超30天历史作品，
       data_date: '2026-10-16',
       value: 1,
     });
+    expect(
+      db.sqlite.prepare("SELECT precision,raw_value FROM account_daily WHERE metric_id='followers'").get(),
+    ).toEqual({ precision: 'display', raw_value: '3.07万' });
     expect(db.sqlite.prepare('SELECT text FROM topic_signals').get()).toEqual({ text: '测试搜索词' });
     expect(db.sqlite.prepare('SELECT type FROM raw_records').get()).toEqual({ type: 'diagnosis' });
     const repeat = await prepareAssociations(
@@ -109,7 +118,7 @@ test('真实零和未知分开；失败回滚，不导入超30天历史作品，
         config,
         { ...options, completed: {} },
       ),
-    ).toThrow('最近30天');
+    ).toThrow('起号日');
     expect(db.sqlite.prepare("SELECT count(*) n FROM post_snapshots WHERE post_id='old'").get()).toEqual({ n: 0 });
     expect(db.sqlite.prepare("SELECT count(*) n FROM posts WHERE id='old'").get()).toEqual({ n: 0 });
   } finally {

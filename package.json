@@ -19,7 +19,8 @@
     "collect": "node --experimental-strip-types scripts/collect.mjs",
     "collect:resume": "node --experimental-strip-types scripts/collect.mjs --resume",
     "collect:install": "node --experimental-strip-types scripts/install-collector.mjs",
-    "collect:attention": "node --experimental-strip-types scripts/attention.mjs"
+    "collect:attention": "node --experimental-strip-types scripts/attention.mjs",
+    "data:show": "node --experimental-strip-types scripts/data-show.mjs"
   },
   "dependencies": {
     "@openai/codex-sdk": "^0.163.0",

@@ -1,3 +1,4 @@
+import { countAI } from '../jobs/telemetry.ts';
 import { Codex } from '@openai/codex-sdk';
 import { readFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
@@ -32,6 +33,7 @@ export class CodexJudgment implements Judgment {
       modelReasoningEffort: config.reasoningEffort,
       ...(config.model ? { model: config.model } : {}),
     });
+    countAI();
     const result = await thread.run(
       [
         {

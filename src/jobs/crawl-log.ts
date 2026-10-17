@@ -1,3 +1,5 @@
+import { beginTelemetry, type RunTelemetry } from './telemetry.ts';
+const activeRuns = new Map<string, RunTelemetry>();
 import { randomUUID } from 'node:crypto';
 import { and, eq } from 'drizzle-orm';
 import type { WorkspaceDatabase } from '../db/database.ts';
@@ -7,6 +9,7 @@ import { crawlLogs } from '../db/schema.ts';
 export function startCrawl(database: WorkspaceDatabase, platformId: string, now = new Date().toISOString()) {
   if (!platformId.trim()) throw new Error('抓取日志必须指定平台');
   const id = randomUUID();
+  activeRuns.set(id, beginTelemetry());
   database.db
     .insert(crawlLogs)
     .values({ id, platformId, startedAt: now, status: 'running', archivePaths: [], updatedAt: now })
@@ -28,6 +31,7 @@ export async function finishCrawl(
     .update(crawlLogs)
     .set({
       status: result.status,
+      telemetry: activeRuns.get(id) ?? null,
       reason: result.status === 'failed' ? result.reason : null,
       archivePaths: paths,
       finishedAt: now,
@@ -36,6 +40,7 @@ export async function finishCrawl(
     .where(and(eq(crawlLogs.id, id), eq(crawlLogs.status, 'running')))
     .run();
   if (saved.changes !== 1) throw new Error('抓取不存在或已结束，不能重复结束');
+  activeRuns.delete(id);
   // Every finished crawl, including failures, leaves a recoverable database backup.
   return backupDatabase(database);
 }

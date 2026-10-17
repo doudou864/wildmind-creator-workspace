@@ -23,7 +23,9 @@ import {
   historicalKind,
   normalizeTitle,
   parseDisplayedNumber,
+  sinceStartDate,
   withinRecentWindow,
+  displayedPrecision,
 } from '../core/collection.ts';
 import { readState, writeState } from './state.ts';
 export type CapturedReading = {
@@ -155,8 +157,14 @@ export function persistCollection(
     now: Date;
   },
 ) {
-  if (incoming.some((p) => !withinRecentWindow(p.publishedAt, options.now, config.parameters.recentWindow)))
-    throw new Error('作品超出最近30天范围，禁止建档和建立历史选题');
+  if (
+    incoming.some(
+      (p) =>
+        !sinceStartDate(p.publishedAt, config.parameters.startDate, options.now) ||
+        !withinRecentWindow(p.publishedAt, options.now, config.parameters.recentWindow),
+    )
+  )
+    throw new Error('作品早于起号日或在未来，禁止建档和建立历史选题');
   const now = options.now.toISOString();
   database.sqlite
     .transaction(() => {
@@ -220,7 +228,7 @@ export function persistCollection(
           const match = decisions.get(key);
           if (!item || !match) throw new Error('识别出了列表以外的作品');
           const age = ageInDays(item.publishedAt, options.now);
-          if (options.history && age > options.historyRange[1]) continue;
+          if (age > config.parameters.recentWindow) continue;
           for (const metric of reading.metrics) {
             const definition = metricFor(config, platformId, 'post', item.form, metric.label, options.aliases);
             if (!definition) continue;
@@ -236,6 +244,8 @@ export function persistCollection(
                 dayAfterPublish: historical === 'historical' ? options.historyRange[0] : age,
                 metricId: definition.id,
                 value,
+                precision: displayedPrecision(metric.raw),
+                rawValue: metric.raw,
                 backfillKind:
                   historical === 'historical'
                     ? 'historical'
@@ -254,7 +264,14 @@ export function persistCollection(
           for (const metric of capture.reading.account.metrics) {
             const definition = metricFor(config, platformId, 'account', 'all', metric.label, options.accountAliases);
             if (!definition) continue;
-            const values = { value: parseDisplayedNumber(metric.raw), capturedAt: capture.capturedAt, updatedAt: now };
+            const values = {
+              value: parseDisplayedNumber(metric.raw),
+              precision: displayedPrecision(metric.raw),
+              rawValue: metric.raw,
+              backfilled: date < shanghaiDate(new Date(options.now.getTime() - 86400000)),
+              capturedAt: capture.capturedAt,
+              updatedAt: now,
+            };
             database.db
               .insert(accountDaily)
               .values({ id: randomUUID(), platformId, dataDate: date, metricId: definition.id, ...values })

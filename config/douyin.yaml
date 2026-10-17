@@ -36,3 +36,7 @@ sourceGroups:
   搜索流量占比: [搜索]
   私域流量占比: [个人主页, 关注页, 消息页, 朋友页]
   其他流量占比: [其他, 精选App]
+
+accountCalendarSelector: '[role="combobox"] button'
+previousMonthSelector: 'loc=role:button[name="Previous month"]'
+calendarMonthLimit: 24
