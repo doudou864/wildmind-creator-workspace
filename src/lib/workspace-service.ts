@@ -1,3 +1,4 @@
+import { readImageTasks } from '../jobs/image-tasks.ts';
 import { publishingData } from './publishing-store.ts';
 import { usingDatabase, usedImages } from './media-store.ts';
 import { assets, contents, topics, imageDrafts, imageGenerations, layouts } from '../db/schema.ts';
@@ -42,6 +43,7 @@ export async function readTopics(): Promise<TopicData> {
 export async function readImages(): Promise<ImageData> {
   const config = await loadGenerationConfig();
   return usingDatabase((db) => ({
+    tasks: readImageTasks(db),
     assets: db.db.select().from(assets).all(),
     drafts: db.db
       .select()

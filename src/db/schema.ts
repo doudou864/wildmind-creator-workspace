@@ -392,3 +392,14 @@ export const imageGenerations = sqliteTable('image_generations', {
   sourcePath: text('source_path'),
   assetId: text('asset_id').references(() => assets.id),
 });
+
+export const imageTasks = sqliteTable('image_tasks', {
+  id: id(),
+  input: json<ImageDraftInput>('input').notNull(),
+  status: text('status', { enum: ['queued', 'running', 'success', 'failed'] }).notNull(),
+  pid: integer('pid'),
+  assetIds: json<string[]>('asset_ids').notNull(),
+  reason: text('reason'),
+  createdAt: text('created_at').notNull(),
+  updatedAt: updatedAt(),
+});

@@ -56,6 +56,15 @@ export type Asset = {
   createdAt: string;
 };
 export type ImageData = {
+  tasks?: {
+    id: string;
+    input: ImageDraftInput;
+    status: 'queued' | 'running' | 'success' | 'failed';
+    assetIds: string[];
+    reason: string | null;
+    createdAt: string;
+    updatedAt: string;
+  }[];
   generations?: {
     id: string;
     kind: string;

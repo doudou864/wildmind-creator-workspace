@@ -59,7 +59,38 @@ export default function ImagesPage({
   const savedRecord = useRef<string | null>(null);
   const editSession = useRef(0);
   const [dirty, setDirty] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [requestBusy, setBusy] = useState(false);
+  const activeTask = data.tasks?.find((t) => t.status === 'queued' || t.status === 'running');
+  const busy = requestBusy || !!activeTask;
+  const restoredTask = useRef<string | null>(null);
+  useEffect(() => {
+    if (activeTask && restoredTask.current !== activeTask.id) {
+      restoredTask.current = activeTask.id;
+      setDraft(activeTask.input);
+      setDraftMeta(null);
+      savedRecord.current = null;
+      editSession.current++;
+      setDirty(false);
+      setNotice('图片在后台生成中，刷新或关闭页面不会取消，也不会重复计次。');
+    } else if (!activeTask && restoredTask.current) {
+      const finished = data.tasks?.find((t) => t.id === restoredTask.current);
+      if (finished?.status === 'success' || finished?.status === 'failed') {
+        setNotice(
+          finished.status === 'success' ? '后台生成完成，图片已进入素材库。' : (finished.reason ?? '后台生成失败。'),
+        );
+        if (finished.status === 'success') {
+          setTab('library');
+          setAssetId(finished.assetIds[0] ?? '');
+        }
+        restoredTask.current = null;
+      }
+    }
+  }, [activeTask, data.tasks]);
+  useEffect(() => {
+    if (!activeTask) return;
+    const timer = setInterval(() => void refresh(), 3000);
+    return () => clearInterval(timer);
+  }, [activeTask?.id, refresh]);
   const [notice, setNotice] = useState(
     initialTopic && !initialData.topics.some((t) => t.id === initialTopic) ? '关联选题暂不可用，未自动关联。' : '',
   );
@@ -88,6 +119,7 @@ export default function ImagesPage({
     { draft, draftMeta, preview, tab, uploadRevision, metadata },
     dirty || !!metadata,
     (saved) => {
+      if (activeTask) return;
       setDraft(saved.draft);
       setDraftMeta(saved.draftMeta);
       setPreview(saved.preview);
@@ -270,11 +302,17 @@ export default function ImagesPage({
     if (!canGenerate) return;
     setBusy(true);
     try {
+      const payload = JSON.stringify(draft);
+      const stored = localStorage.getItem('wildmind-image-request');
+      const previous = stored ? (JSON.parse(stored) as { id: string; payload: string }) : null;
+      const id = previous?.payload === payload ? previous.id : crypto.randomUUID();
+      localStorage.setItem('wildmind-image-request', JSON.stringify({ id, payload }));
       const result = await request<{ message: string }>('/api/images/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(draft),
+        headers: { 'Content-Type': 'application/json', 'Idempotency-Key': id },
+        body: payload,
       });
+      localStorage.removeItem('wildmind-image-request');
       setNotice(result.message);
       await refresh();
     } catch (e) {
@@ -702,14 +740,16 @@ export default function ImagesPage({
                               <AssetImage src={assetUrl(asset)} alt={asset.title} />
                             ) : (
                               <div
-                                className="aspect-outline"
+                                className={`aspect-outline ${activeTask ? 'image-scanning' : ''}`}
                                 style={{
                                   aspectRatio: slot.ratio.replace(':', '/'),
                                   width: `${Math.min(185, (220 * Number(slot.ratio.split(':')[0])) / Number(slot.ratio.split(':')[1]))}px`,
                                 }}
                               >
                                 <span className="mono">{slot.ratio}</span>
-                                <small>等待生成</small>
+                                <small role={activeTask ? 'status' : undefined}>
+                                  {activeTask ? '后台生成中' : '等待生成'}
+                                </small>
                               </div>
                             )}
                           </div>
@@ -1021,6 +1061,20 @@ export default function ImagesPage({
         </Dialog>
       )}
       <Card index="07" title="最近生图记录" meta="套餐次数 / 耗时">
+        {(data.tasks ?? []).slice(0, 5).map((task) => (
+          <p key={task.id} className="small">
+            {task.input.title} ·{' '}
+            {
+              {
+                queued: '等待后台启动',
+                running: '生成中，关闭页面仍会继续',
+                success: '已完成并进入素材库',
+                failed: '失败',
+              }[task.status]
+            }
+            {task.reason ? ` · ${task.reason}` : ''}
+          </p>
+        ))}
         {(data.generations ?? []).length ? (
           (data.generations ?? []).slice(0, 10).map((run) => (
             <p key={run.id} className="small mono">

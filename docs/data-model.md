@@ -431,3 +431,7 @@ PostSnapshot / AccountDaily 增加 precision（exact/display/unknown）和 rawVa
 - publish_records 保存本地准备草稿，更新要求 If-Match 匹配 revision；执行阶段禁止覆盖。确认稿必须属于同一作品、处于 ready 且标题正文不可在发布中心改写。
 - publish_videos 的文件在 data/videos/，尺寸/时长由本机 ffprobe 核验；图片仍复用 assets。文件读取限 data/ 内真实路径，成片支持 Range。
 - 第 10 步不启用平台上传/真实发布；返回确认稿只改变本地快照状态和准备批次，不操作平台。
+
+## image_tasks（后台生图任务）
+
+迁移 0006 仅新增表，迁移前备份。id 为客户端请求 UUID（幂等键）；input 为校验后的完整生图要求；status 为 queued/running/success/failed；pid 标识独立后台进程；asset_ids 为成功素材 ID；reason、created_at、updated_at 记录原因与时间。页面只查询，不计次数；真正调用次数仍在 image_generations。重复提交相同请求返回原记录；进程异常退出标为失败，不自动重试扣额度。

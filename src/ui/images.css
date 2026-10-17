@@ -535,3 +535,31 @@
   color: var(--ink-2);
   font-size: 11px;
 }
+
+/* 用户指定的生图等待动效；只在后台任务进行时运行。 */
+.image-scanning {
+  position: relative;
+  overflow: hidden;
+}
+.image-scanning::after {
+  content: '';
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 8%;
+  height: 1px;
+  background: var(--ink-2);
+  opacity: 0.45;
+  animation: image-scan 4s ease-in-out infinite alternate;
+}
+@keyframes image-scan {
+  to {
+    top: 92%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .image-scanning::after {
+    animation: none;
+    top: 50%;
+  }
+}

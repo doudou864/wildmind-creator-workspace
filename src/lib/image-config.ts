@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parse } from 'yaml';
-import { imageConfigSchema } from './image-model';
+import { imageConfigSchema } from './image-model.ts';
 export async function loadImageConfig() {
   const config = imageConfigSchema.parse(
     parse(await readFile(path.join(process.cwd(), 'config/image-styles.yaml'), 'utf8')),

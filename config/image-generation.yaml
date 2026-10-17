@@ -2,5 +2,5 @@
 method: codex-sdk
 model: null
 timeoutMs: 600000
-dailyLimit: 6
+dailyLimit: 30
 maxCropFraction: 0.02
