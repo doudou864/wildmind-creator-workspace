@@ -6,3 +6,5 @@
 - 页面截图：data/captures/douyin/precision-date-check.png、fans-total-chart.png、fans-total-tooltip.png。
 - data:show 可按 douyin 筛选，显示最近指标、采集年龄、补数、约数、近七天运行明细。旧日志统计没有证据就显示“未记录”。页面数遵循浏览器日额度口径（导航/点击详情等），AI 次数为实际发起调用，耗时为日志时间差。
 - A 已获用户通过；三天观察和用户抽查五个数字继续并行。第 3 步接下来执行。
+
+验证：npm run check 全绿，8 个文件、36 项 Vitest 通过；SQLite integrity_check 为 ok。实现提交 d7f9df5。
