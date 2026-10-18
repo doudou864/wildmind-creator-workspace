@@ -1,6 +1,6 @@
-import { inboxDate, inboxTimestampInScope } from './inbox-date.ts';
+import { inboxDisplayScope, inboxTimestampInScope, notificationScopes } from './inbox-date.ts';
 import { loadConfig } from '../lib/config.ts';
-import { readFile } from 'node:fs/promises';
+import { readFile, writeFile } from 'node:fs/promises';
 import { parse } from 'yaml';
 import { z } from 'zod';
 import type { WorkspaceDatabase } from '../db/database.ts';
@@ -41,11 +41,8 @@ export async function collectInbox(
     .parse(parse(await readFile('config/inbox-collection.yaml', 'utf8')));
   const { parameters } = await loadConfig();
   const today = shanghaiDate();
-  const beforeStart = (value: string) => {
-    const date = inboxDate(value, today);
-    return date !== null && date < parameters.startDate;
-  };
-  let unknownDates = 0;
+  const beforeStart = (value: string) => inboxDisplayScope(value, today, parameters.startDate) === 'old';
+  const unknownDates = new Set<string>();
   const source = config.platforms.find((p) => p.id === platformId);
   if (!source) {
     for (const channel of ['comment', 'dm'] as const)
@@ -81,14 +78,21 @@ export async function collectInbox(
       const filename = `data/inbox/${shanghaiDate()}/${platformId}-comments-${pageIndex}.png`;
       await session.capture(filename);
       paths.push(filename);
+      await writeFile(filename.replace(/\.png$/, '.json'), JSON.stringify(observed.rows), { mode: 0o600 });
       const reachedStart = observed.rows.some((r) => beforeStart(r.time));
-      const rows = observed.rows.filter((r) => {
+      const scopes = notificationScopes(
+        observed.rows.map((r) => r.time),
+        today,
+        parameters.startDate,
+      );
+      const rows = observed.rows.filter((r, index) => {
         if (beforeStart(r.time) || source.ignoredBodies.includes(r.body)) return false;
-        if (!inboxDate(r.time, today) || inboxDate(r.time, today)! > today) {
-          unknownDates++;
+        const key = JSON.stringify([r.author, r.body]);
+        if (scopes[index] !== 'recent') {
+          unknownDates.add(key);
           return false;
         }
-        const key = JSON.stringify([r.author, r.body]);
+        unknownDates.delete(key);
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
@@ -124,9 +128,9 @@ export async function collectInbox(
     inboxSource(db, {
       platformId,
       channel: 'comment',
-      status: complete && !unknownDates ? 'ready' : 'failed',
+      status: complete && !unknownDates.size ? 'ready' : 'failed',
       capturedAt: new Date().toISOString(),
-      reason: unknownDates
+      reason: unknownDates.size
         ? '部分消息日期无法确定，未入库，需核对日期'
         : complete
           ? '已读起号日以来的通知；回复串未展开，回复状态未知'

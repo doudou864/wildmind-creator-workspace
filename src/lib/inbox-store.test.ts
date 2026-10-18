@@ -15,6 +15,7 @@ test('同一消息重抓不重复商单，回复变化自动退出待回复；�
     const judgment = {
       read: async (_schema: unknown, _prompt: string) => {
         calls++;
+        expect(_prompt).toContain('投资、孵化');
         return {
           items: [
             {
@@ -30,7 +31,7 @@ test('同一消息重抓不重复商单，回复变化自动退出待回复；�
     const raw = {
       key: '1',
       author: '甲',
-      body: '合作咨询',
+      body: '我们提供项目投资和孵化支持，邀请商务合作',
       sentAt: '2026-10-17T00:00:00Z',
       contentTitle: null,
       reply: {
@@ -84,6 +85,71 @@ test('同一消息重抓不重复商单，回复变化自动退出待回复；�
     const saved = syncMessage(db, idea.id, idea.revision);
     expect(syncMessage(db, saved.id, saved.revision).topicSignalId).toBe(saved.topicSignalId);
     expect(() => syncMessage(db, saved.id, idea.revision)).toThrow('已更新');
+  } finally {
+    db.sqlite.close();
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('同一主题内不重复计数，允许一条多问题消息关联不同主题，不能遗漏本轮消息', async () => {
+  const folder = await mkdtemp(path.join(tmpdir(), 'inbox-themes-'));
+  const db = await initializeDatabase(path.join(folder, 'workspace.db'));
+  try {
+    const { refreshThemes } = await import('./inbox-store');
+    const classifier = {
+      read: async () => ({
+        items: ['one', 'two'].map((key) => ({
+          key,
+          classification: { category: 'idea', reason: '问题' },
+          brand: null,
+          requirement: null,
+        })),
+      }),
+    } as unknown as Judgment;
+    await storeInboxReading(
+      db,
+      'douyin',
+      'comment',
+      'https://www.douyin.com/',
+      {
+        messages: ['one', 'two'].map((key) => ({
+          key,
+          author: key,
+          body: key + ' 如何使用？',
+          sentAt: '2026-10-18T00:00:00Z',
+          contentTitle: null,
+          reply: { kind: 'comment' as const, ownReplyFound: null, repliesComplete: false },
+          context: [],
+          contextComplete: false,
+        })),
+        complete: true,
+        reason: null,
+      },
+      classifier,
+    );
+    const ids = inboxData(db).items.map((m) => m.id);
+    const duplicate = {
+      read: async () => ({
+        themes: [{ existingId: null, title: '主题', summary: '说明', messageIds: [ids[0], ids[0]] }],
+      }),
+    } as unknown as Judgment;
+    await expect(refreshThemes(db, duplicate)).rejects.toThrow('遗漏消息');
+    expect(inboxData(db).themes).toHaveLength(0);
+    const missing = {
+      read: async () => ({ themes: [{ existingId: null, title: '主题', summary: '说明', messageIds: [ids[0]] }] }),
+    } as unknown as Judgment;
+    await expect(refreshThemes(db, missing)).rejects.toThrow('遗漏消息');
+    const valid = {
+      read: async () => ({
+        themes: [
+          { existingId: null, title: '主题', summary: '说明', messageIds: ids },
+          { existingId: null, title: '另一个问题', summary: '说明', messageIds: ids },
+        ],
+      }),
+    } as unknown as Judgment;
+    await refreshThemes(db, valid);
+    expect(inboxData(db).themes).toHaveLength(2);
+    expect(inboxData(db).themes[0].messageIds).toHaveLength(2);
   } finally {
     db.sqlite.close();
     await rm(folder, { recursive: true, force: true });

@@ -1,6 +1,6 @@
 pageSize: 20
 categories:
-  - { id: deal, name: 商单线索, description: 自动进入商单列表，并出现在总控台今日行动。 }
+  - { id: deal, name: 商单线索, description: 广告推广、投资、孵化及其他明确的商务合作邀约都算商单线索，自动进入商单列表与今日行动。 }
   - { id: idea, name: 问题与观点, description: 可同步到选题中心，并汇总为需求主题。 }
   - { id: other, name: 其他消息, description: 普通称赞或无关信息，保留原文，不自动回复。 }
 channels:

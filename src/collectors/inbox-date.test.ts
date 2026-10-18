@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { inboxDate, inboxTimestampInScope, inboxDisplayScope } from './inbox-date';
+import { inboxDate, inboxTimestampInScope, inboxDisplayScope, notificationScopes } from './inbox-date';
 test('按北京起号日包含边界，不让 UTC 日期误排或未知日期混入', () => {
   const now = '2026-10-18T00:00:00+08:00';
   expect(inboxTimestampInScope('2026-09-16T16:00:00Z', '2026-09-17', now)).toBe(true);
@@ -20,4 +20,19 @@ test('相对天数跨起号日边界时保留未知，不猜成近期', () => {
   expect(inboxDisplayScope('3天前', '2026-10-18', '2026-09-17')).toBe('recent');
   expect(inboxDisplayScope('31天前', '2026-10-18', '2026-09-17')).toBe('unknown');
   expect(inboxDisplayScope('32天前', '2026-10-18', '2026-09-17')).toBe('old');
+});
+
+test('仅按有日期的前后通知限定星期标签范围，不虚构发送日期', () => {
+  expect(notificationScopes(['昨天', '星期五', '10-14'], '2026-10-18', '2026-09-17')).toEqual([
+    'recent',
+    'recent',
+    'recent',
+  ]);
+  expect(notificationScopes(['星期五', '10-14'], '2026-10-18', '2026-09-17')).toEqual(['unknown', 'recent']);
+  expect(notificationScopes(['09-18', '周三', '09-16'], '2026-10-18', '2026-09-17')).toEqual([
+    'recent',
+    'unknown',
+    'old',
+  ]);
+  expect(inboxDate('星期五', '2026-10-18')).toBeNull();
 });

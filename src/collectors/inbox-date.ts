@@ -37,3 +37,14 @@ export function inboxDisplayScope(value: string, today: string, startDate: strin
   const date = inboxDate(value, today);
   return !date || date > today ? 'unknown' : date < startDate ? 'old' : 'recent';
 }
+
+/** For a newest-first notification list, dated neighbours can bound a weekday label. */
+export function notificationScopes(values: string[], today: string, startDate: string) {
+  const scopes = values.map((value) => inboxDisplayScope(value, today, startDate));
+  return scopes.map((scope, index) => {
+    if (scope !== 'unknown' || !/^(?:星期|周)[日天一二三四五六]$/.test(values[index].trim())) return scope;
+    const newer = scopes.slice(0, index).findLast((s) => s !== 'unknown');
+    const older = scopes.slice(index + 1).find((s) => s !== 'unknown');
+    return newer === 'recent' && older === 'recent' ? ('recent' as const) : ('unknown' as const);
+  });
+}
