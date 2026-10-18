@@ -15,7 +15,7 @@ import type { WorkspaceConfig, Platform } from '@/lib/config';
 import { checkpointNote, findAnomalies, type DashboardData, type Work } from '@/lib/workspace-model';
 import { request, useResource } from '@/ui/use-resource';
 import { HitRates } from '@/ui/hit-rates';
-import { dateLabel, number, signed } from '@/lib/format';
+import { dateLabel, number, signed, lastSuccessTimeLabel } from '@/lib/format';
 import { Button, Card, Dialog, Empty, Ratio, Segmented } from '@/ui/components';
 import { Chart } from '@/ui/charts';
 
@@ -140,11 +140,7 @@ export default function Dashboard({
   const lastSuccessLabel = (id: string) => {
     const source = workspace.platforms[id];
     if (!source?.lastSuccess) return '--';
-    const timestamp = source.lastSuccess;
-    const differenceDays = Math.round(
-      (Date.parse(`${displayDate}T00:00:00Z`) - Date.parse(`${timestamp.slice(0, 10)}T00:00:00Z`)) / 86400000,
-    );
-    return `${differenceDays ? `-${differenceDays}D ` : ''}${timestamp.slice(11, 16)}`;
+    return lastSuccessTimeLabel(source.lastSuccess, displayDate);
   };
   let dialogContent: ReactNode = null;
   let dialogTitle = '';
