@@ -1,5 +1,5 @@
 import { expect, test } from 'vitest';
-import { inboxDate, inboxTimestampInScope } from './inbox-date';
+import { inboxDate, inboxTimestampInScope, inboxDisplayScope } from './inbox-date';
 test('按北京起号日包含边界，不让 UTC 日期误排或未知日期混入', () => {
   const now = '2026-10-18T00:00:00+08:00';
   expect(inboxTimestampInScope('2026-09-16T16:00:00Z', '2026-09-17', now)).toBe(true);
@@ -14,4 +14,10 @@ test('显示日期可确定范围但不编造发送时刻；跨年旧消息不�
   expect(inboxDate('12-31', '2026-01-02')).toBe('2025-12-31');
   expect(inboxDate('周三', '2026-10-18')).toBeNull();
   expect(inboxDate('02-30', '2026-10-18')).toBeNull();
+});
+
+test('相对天数跨起号日边界时保留未知，不猜成近期', () => {
+  expect(inboxDisplayScope('3天前', '2026-10-18', '2026-09-17')).toBe('recent');
+  expect(inboxDisplayScope('31天前', '2026-10-18', '2026-09-17')).toBe('unknown');
+  expect(inboxDisplayScope('32天前', '2026-10-18', '2026-09-17')).toBe('old');
 });

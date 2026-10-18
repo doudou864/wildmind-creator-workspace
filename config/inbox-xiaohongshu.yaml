@@ -1,0 +1,12 @@
+url: https://www.xiaohongshu.com/chat?channel_id=&channel_type=explore_feed
+contact: .xhs-im-conv-item__content
+name: .xhs-im-conv-item__name
+time: .xhs-im-conv-item__time
+listScroll: .xhs-im-conv-list__scroll
+messageScroll: .xhs-im-msg-list
+message: .chat-item
+divider: .xhs-im-msg-list__time-divider
+text: .xhs-im-bubble__text
+self: .chat-item__content--right
+maxScreens: 60
+maxConversations: 30

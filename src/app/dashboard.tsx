@@ -363,7 +363,7 @@ export default function Dashboard({
                 </div>
               );
             })}
-            {workspace.questions.map((item) => (
+            {workspace.questions.slice(0, parameters.dashboardPreviewLimit).map((item) => (
               <Link
                 key={`question-${item.id}`}
                 className="action-row"
@@ -378,6 +378,11 @@ export default function Dashboard({
                 <span>→</span>
               </Link>
             ))}
+            {workspace.questions.length > parameters.dashboardPreviewLimit && (
+              <Link className="small" href="/inbox">
+                查看全部 {workspace.questions.length} 条问题 →
+              </Link>
+            )}
             {planned.map((content) => (
               <Link
                 key={`planned-${content.id}`}
@@ -468,7 +473,7 @@ export default function Dashboard({
           <Card index="06" title="洞察与异常" className="insights-card">
             <p className="section-label">需求主题</p>
             {workspace.themes.length ? (
-              workspace.themes.map((theme) => (
+              workspace.themes.slice(0, parameters.dashboardPreviewLimit).map((theme) => (
                 <div className="insight-row" key={theme.id}>
                   <Link href={`/inbox?theme=${encodeURIComponent(theme.id)}`}>
                     {theme.title}

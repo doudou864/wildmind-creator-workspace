@@ -39,6 +39,7 @@ export const metricSchema = z.object({
 });
 const parametersSchema = z.object({
   startDate: z.iso.date(),
+  dashboardPreviewLimit: z.number().int().positive().default(5),
   anomalyCheckpoints: z.array(z.number().int().positive()),
   reviewPlatforms: z.array(z.string()),
   conclusionMinimum: z.number().int().positive(),

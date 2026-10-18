@@ -28,7 +28,7 @@ const blankFilters: InboxFilters = {
   themeId: null,
 };
 const replyLabels = { waiting: '待回复', replied: '已回复', unknown: '待核对' };
-const sourceLabels = { ready: '读取完成', pending: '等待读取', failed: '读取失败', unavailable: '未接入' };
+const sourceLabels = { ready: '读取完成', pending: '等待读取', failed: '读取失败', unavailable: '当前无入口' };
 export default function InboxPage({
   config,
   platforms,

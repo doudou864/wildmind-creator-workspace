@@ -1,0 +1,11 @@
+url: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/comments/inbox
+row: ytcp-comment-thread
+comment: 'ytcp-comment#comment'
+author: 'a#name'
+body: '#content-text'
+time: .published-time-text
+title: ytcp-comment-video-thumbnail
+replies: '#show-replies-button'
+scroll: ytcp-activity-section
+selfNames: ['@摆烂的逗逗']
+maxScreens: 100

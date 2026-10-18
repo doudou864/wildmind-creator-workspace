@@ -171,7 +171,7 @@ export async function collectInbox(
         dmComplete = false;
         continue;
       }
-      await session.click(`${source.dmTitle} >> text=${JSON.stringify(name)}`);
+      await session.click(`${source.dmTitle}:text-is(${JSON.stringify(name)})`);
       const filename = `data/inbox/${shanghaiDate()}/${platformId}-dm-${index}.png`;
       await session.capture(filename);
       paths.push(filename);

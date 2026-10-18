@@ -1,3 +1,4 @@
+import { collectPlatformInbox } from '../collectors/platform-inbox.ts';
 import { refreshReviews } from '../lib/review-store.ts';
 import { loadConfig } from '../lib/config.ts';
 import { collectYoutube } from '../collectors/youtube/collector.ts';
@@ -80,6 +81,13 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
           const id = startCrawl(database, platformId);
           try {
             await collector(database, new CollectionSession(spaceId, page), new CodexJudgment(), paths);
+            await collectPlatformInbox(
+              database,
+              platformId,
+              new CollectionSession(spaceId, page),
+              new CodexJudgment(),
+              paths,
+            );
             await finishCrawl(database, id, { status: 'success', archivePaths: paths });
             const current = readState(database, key) ?? state;
             const prior = Array.isArray(current.successfulPlatforms) ? (current.successfulPlatforms as string[]) : [];
@@ -144,16 +152,21 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
         const [login] = await browser.checkLogins([id]);
         if (login.state === 'awaiting_confirmation') {
           const config = (await loadBrowserConfig()).find((p) => p.id === id)!;
-          await browser.requestConfirmation(id, activeSpace);
-          requireAttention(database, {
-            platformId: id,
-            kind: 'confirmation',
-            reason: config.confirmation!.message,
-            deadline: confirmationDeadline(config.confirmation!.deadline),
-            spaceId: activeSpace,
-            page: 'p1',
-          });
-          keepForConfirmation = true;
+          const existing = pendingAttention(database).find(
+            (item) => item.platformId === id && item.kind === 'confirmation',
+          );
+          if (!existing) {
+            await browser.requestConfirmation(id, activeSpace);
+            requireAttention(database, {
+              platformId: id,
+              kind: 'confirmation',
+              reason: config.confirmation!.message,
+              deadline: confirmationDeadline(config.confirmation!.deadline),
+              spaceId: activeSpace,
+              page: 'p1',
+            });
+          }
+          keepForConfirmation = !existing || existing.spaceId === activeSpace;
           throw new AttentionRequired(config.confirmation!.message, 'login');
         }
         if (login.state === 'logged_out') throw new AttentionRequired(login.reason, 'login');
@@ -162,6 +175,7 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
         const collector = collectors.get(id);
         if (!collector) throw new Error('该平台采集器尚未接入，未伪造成功');
         const result = await collector(database, new CollectionSession(activeSpace), new CodexJudgment(), paths);
+        await collectPlatformInbox(database, id, new CollectionSession(activeSpace), new CodexJudgment(), paths);
         refreshReviews(database, await loadConfig());
         await finishCrawl(database, crawlId, { status: 'success', archivePaths: paths });
         resolveAttention(database, id);

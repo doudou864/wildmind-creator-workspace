@@ -21,3 +21,5 @@ anomalyCheckpoints: [1, 3]
 reviewPlatforms: [douyin, wechat]
 conclusionMinimum: 30
 publishUploadExpiryHours: 2
+
+dashboardPreviewLimit: 5 # 总控台预览条数；全部记录在收件箱

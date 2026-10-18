@@ -1,5 +1,5 @@
 # 页面结构由2026-10-18真实界面确认；未知入口显式保留待核对。
-maxScreens: 20
+maxScreens: 100
 maxConversations: 20
 platforms:
   - id: douyin

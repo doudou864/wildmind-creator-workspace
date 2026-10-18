@@ -24,3 +24,16 @@ export function inboxTimestampInScope(value: string | null, startDate: string, n
   const time = Date.parse(value);
   return Number.isFinite(time) && time >= Date.parse(startDate + 'T00:00:00+08:00') && time <= Date.parse(now);
 }
+
+/** Relative day labels are rounded: refuse the boundary day instead of guessing. */
+export function inboxDisplayScope(value: string, today: string, startDate: string): 'recent' | 'old' | 'unknown' {
+  const days = value.trim().match(/^(\d+)\s*天前$/);
+  if (days) {
+    const shift = (n: number) => new Date(Date.parse(today + 'T00:00:00Z') - n * 86400000).toISOString().slice(0, 10);
+    if (shift(Number(days[1]) + 1) >= startDate) return 'recent';
+    if (shift(Number(days[1])) < startDate) return 'old';
+    return 'unknown';
+  }
+  const date = inboxDate(value, today);
+  return !date || date > today ? 'unknown' : date < startDate ? 'old' : 'recent';
+}
