@@ -23,3 +23,5 @@ conclusionMinimum: 30
 publishUploadExpiryHours: 2
 
 dashboardPreviewLimit: 5 # 总控台预览条数；全部记录在收件箱
+
+topicExternalMaxScreens: 20 # 外部选题页面分段滚动上限，超限明确失败

@@ -1,4 +1,10 @@
-import { unavailable } from '@/lib/api-response';
+import { usingDatabase } from '@/lib/media-store';
+import { generateTopics } from '@/lib/topic-store';
+import { serviceError } from '@/lib/api-response';
 export async function POST() {
-  return unavailable('选题生成服务');
+  try {
+    return Response.json(await usingDatabase((db) => generateTopics(db)));
+  } catch (error) {
+    return serviceError(error);
+  }
 }

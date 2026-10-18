@@ -1,10 +1,15 @@
 import { topicDecisionInputSchema } from '@/lib/topic-model';
-import { invalid, unavailable } from '@/lib/api-response';
-export async function PATCH(request: Request) {
+import { serviceError } from '@/lib/api-response';
+import { usingDatabase } from '@/lib/media-store';
+import { decideTopic } from '@/lib/topic-store';
+import { loadConfig } from '@/lib/config';
+export async function PATCH(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    topicDecisionInputSchema.parse(await request.json());
+    const { status } = topicDecisionInputSchema.parse(await request.json());
+    const { id } = await context.params;
+    const config = await loadConfig();
+    return Response.json(await usingDatabase((db) => decideTopic(db, id, status, config)));
   } catch (error) {
-    return invalid(error);
+    return serviceError(error);
   }
-  return unavailable('选题存储服务');
 }

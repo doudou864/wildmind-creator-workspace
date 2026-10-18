@@ -148,7 +148,7 @@ export default function TopicsPage({
       <div className="topic-feedback" role="status" aria-live="polite">
         {error ||
           notice ||
-          `每批 ${parameters.topicCandidateCount} 个候选，含 ${parameters.topicExploreMin}–${parameters.topicExploreMax} 个已验证热度的探索位。`}
+          `每批 ${parameters.topicCandidateCount} 个候选，含 ${parameters.topicExploreMin}–${parameters.topicExploreMax} 个探索位；热度证据范围见具体来源。`}
       </div>
       <div className="topics-grid">
         <aside className="topic-sidebar">

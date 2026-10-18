@@ -1,3 +1,4 @@
+import { topicData } from './topic-store.ts';
 import { inboxData, dealData } from './inbox-store.ts';
 import { loadConfig } from './config.ts';
 import { dashboardData } from './dashboard-store.ts';
@@ -22,13 +23,8 @@ export async function readDashboard(): Promise<DashboardData> {
   return usingDatabase((db) => dashboardData(db, config));
 }
 export async function readTopics(): Promise<TopicData> {
-  return {
-    topics: [],
-    d21Samples: null,
-    generationReady: false,
-    writeReady: false,
-    serviceMessage: '选题服务待接入，暂不能生成或保存选择。',
-  };
+  const config = await loadConfig();
+  return usingDatabase((db) => topicData(db, config));
 }
 export async function readImages(): Promise<ImageData> {
   const config = await loadGenerationConfig();
