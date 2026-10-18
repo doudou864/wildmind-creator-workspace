@@ -149,13 +149,15 @@ export async function collectBilibiliDM(
           lastSender: parsed[0].body === '[非文字消息]' ? 'unknown' : parsed[0].self ? 'self' : 'other',
           lastMessageAt: parsed[0].at,
         },
-        context: parsed.map((r) => ({
-          id: r.key,
-          sender: r.self ? 'self' : 'other',
-          author: r.self ? '我' : contact.name,
-          body: r.body,
-          sentAt: r.at,
-        })),
+        context: parsed
+          .filter((r) => r.at.slice(0, 10) >= parameters.startDate)
+          .map((r) => ({
+            id: r.key,
+            sender: r.self ? 'self' : 'other',
+            author: r.self ? '我' : contact.name,
+            body: r.body,
+            sentAt: r.at,
+          })),
         contextComplete: false,
       });
   }

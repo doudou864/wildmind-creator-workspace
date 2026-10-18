@@ -1,3 +1,4 @@
+import { inboxDate, inboxTimestampInScope } from './inbox-date.ts';
 import { loadConfig } from '../lib/config.ts';
 import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
@@ -39,13 +40,12 @@ export async function collectInbox(
     })
     .parse(parse(await readFile('config/inbox-collection.yaml', 'utf8')));
   const { parameters } = await loadConfig();
+  const today = shanghaiDate();
   const beforeStart = (value: string) => {
-    const match = value.match(/^(?:(\d{4})[-/])?(\d{1,2})[-/](\d{1,2})/);
-    return match
-      ? `${match[1] ?? shanghaiDate().slice(0, 4)}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}` <
-          parameters.startDate
-      : false;
+    const date = inboxDate(value, today);
+    return date !== null && date < parameters.startDate;
   };
+  let unknownDates = 0;
   const source = config.platforms.find((p) => p.id === platformId);
   if (!source) {
     for (const channel of ['comment', 'dm'] as const)
@@ -84,6 +84,10 @@ export async function collectInbox(
       const reachedStart = observed.rows.some((r) => beforeStart(r.time));
       const rows = observed.rows.filter((r) => {
         if (beforeStart(r.time) || source.ignoredBodies.includes(r.body)) return false;
+        if (!inboxDate(r.time, today) || inboxDate(r.time, today)! > today) {
+          unknownDates++;
+          return false;
+        }
         const key = JSON.stringify([r.author, r.body]);
         if (seen.has(key)) return false;
         seen.add(key);
@@ -120,9 +124,13 @@ export async function collectInbox(
     inboxSource(db, {
       platformId,
       channel: 'comment',
-      status: complete ? 'ready' : 'failed',
+      status: complete && !unknownDates ? 'ready' : 'failed',
       capturedAt: new Date().toISOString(),
-      reason: complete ? '已读完整通知列表；回复串未展开，回复状态未知' : '达到本轮翻页上限，评论未读完',
+      reason: unknownDates
+        ? '部分消息日期无法确定，未入库，需核对日期'
+        : complete
+          ? '已读起号日以来的通知；回复串未展开，回复状态未知'
+          : '达到本轮翻页上限，评论未读完',
     });
     if (!source.dmSteps.length) {
       await refreshThemes(db, judgment);
@@ -177,6 +185,13 @@ export async function collectInbox(
           snapshot,
         [filename],
       );
+      const now = new Date().toISOString();
+      reading.messages = reading.messages
+        .filter((m) => inboxTimestampInScope(m.sentAt, parameters.startDate, now))
+        .map((m) => ({
+          ...m,
+          context: m.context.filter((c) => inboxTimestampInScope(c.sentAt, parameters.startDate, now)),
+        }));
       await storeInboxReading(db, platformId, 'dm', source.url, reading, judgment);
     }
     inboxSource(db, {
