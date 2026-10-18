@@ -6,7 +6,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const input = publishActionSchema.parse(await request.json());
     const { id } = await context.params;
-    if (input.action !== 'return') return unavailable('平台上传与真实发布：须先通过审查 E');
+    if (input.action !== 'return')
+      return unavailable('平台上传与真实发布：审查 E 已通过，等待新作品完成上传核验；首次发布仍须审查 F');
     return Response.json(await usingDatabase((db) => returnSnapshot(db, id, input.snapshotId)));
   } catch (e) {
     return serviceError(e);

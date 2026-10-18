@@ -34,7 +34,8 @@ export function publishingData(db: WorkspaceDatabase): PublishingData {
     handoffReady: true,
     uploadReady: false,
     publishReady: false,
-    message: '材料会自动保存，可复制文案和下载素材。审查 E 前不开放平台上传；模板与账号状态在真实发布接入时核验。',
+    message:
+      '审查 E 已通过。当前等待可真实发布的新作品，平台上传尚未完成实测；材料可继续准备，每个平台首次真实发布前仍须审查 F 确认。',
   };
 }
 export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: string, expectedRevision?: number) {
