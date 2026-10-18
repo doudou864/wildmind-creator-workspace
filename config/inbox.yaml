@@ -1,7 +1,17 @@
 pageSize: 20
+valueRules:
+  version: 2
+  minReplies: 5
+  batchSize: 30
+  instruction: >-
+    idea仅限两类：specific_help：对方在向博主寻求一个具体帮助，有明确对象与希望解决的问题或请求，例如“请问博主如何使用Claude”“这个报错怎么解决”“求这套模板”。
+    resonance：评论有实际回复数达到门槛的互动证据（至少5条回复；点赞不单独作为入选条件）。不能只凭观点内容推断共鸣。
+    普通称赞、吐槽、反问、泛泛评价、单纯要求结论、给别人建议或分享自己经历，若没有高互动证据一律other。
+    “讲了这么多，也没给出个结论”“因为你都没有给出测试数据和结论”“我觉得喝astra真是不能比啊 看个文献都一堆错误”“你换手机上，秒解决，之前5.6的时候我也遇到过”均不是具体求助。
+    明确商务合作仍为deal。valueKind只允许specific_help、resonance或none；非idea用none。
 categories:
   - { id: deal, name: 商单线索, description: 广告推广、投资、孵化及其他明确的商务合作邀约都算商单线索，自动进入商单列表与今日行动。 }
-  - { id: idea, name: 问题与观点, description: 可同步到选题中心，并汇总为需求主题。 }
+  - { id: idea, name: 有价值的求助与共鸣, description: 具体求助，或至少有5条回复证据的共鸣评论；可同步选题与汇总需求主题。 }
   - { id: other, name: 其他消息, description: 普通称赞或无关信息，保留原文，不自动回复。 }
 channels:
   - { id: comment, name: 评论 }

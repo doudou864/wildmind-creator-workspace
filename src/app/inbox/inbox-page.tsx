@@ -35,10 +35,12 @@ export default function InboxPage({
   initialData,
   initialMessageId,
   initialThemeId = null,
+  initialFilters = {},
   today,
   syncWindow,
 }: {
   initialThemeId?: string | null;
+  initialFilters?: Partial<InboxFilters>;
   initialMessageId: string | null;
   config: InboxConfig;
   platforms: Platform[];
@@ -47,7 +49,7 @@ export default function InboxPage({
   syncWindow: string;
 }) {
   const { data, error, refresh } = useResource('/api/inbox', initialData);
-  const [filters, setFilters] = useState<InboxFilters>({ ...blankFilters, themeId: initialThemeId });
+  const [filters, setFilters] = useState<InboxFilters>({ ...blankFilters, ...initialFilters, themeId: initialThemeId });
   const [linkedMessageId, setLinkedMessageId] = useState(initialMessageId);
   const [requestedPage, setRequestedPage] = useState(1),
     [selectedId, setSelectedId] = useState<string | null>(initialMessageId);
@@ -484,6 +486,12 @@ export default function InboxPage({
                 {evidence?.kind === 'dm' && (
                   <p className="small">
                     会话末条时间：<span className="mono">{inboxTime(evidence.lastMessageAt)}</span>
+                  </p>
+                )}
+                {active.reply.kind === 'comment' && (
+                  <p className="small">
+                    评论互动：点赞 <span className="mono">{active.reply.likes ?? '--'}</span> · 回复{' '}
+                    <span className="mono">{active.reply.replyCount ?? '--'}</span>；未读到数字时不判断热度。
                   </p>
                 )}
                 <div className="inbox-classification">

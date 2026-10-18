@@ -1,3 +1,4 @@
+import { assessReplies } from './inbox-model.ts';
 import { inboxData } from './inbox-store.ts';
 import { demandThemes } from '../db/schema.ts';
 import type { WorkspaceDatabase } from '../db/database.ts';
@@ -54,14 +55,19 @@ export function dashboardData(db: WorkspaceDatabase, config: WorkspaceConfig, no
       ),
     };
   }
+  const inbox = inboxData(db);
+  const replies = assessReplies(inbox.items);
   return {
     platforms,
     hitRates: review.hitRates,
     collectionReady: true,
     reviewReady: true,
-    questions: inboxData(db)
-      .items.filter(
-        (m) => m.classification.status === 'ready' && m.classification.result.category === 'idea' && !m.topicSignalId,
+    questions: inbox.items
+      .filter(
+        (m) =>
+          m.classification.status === 'ready' &&
+          m.classification.result.category === 'idea' &&
+          replies.get(m.id)?.state !== 'replied',
       )
       .map((m) => ({ id: m.id, title: m.body, platformId: m.platformId })),
     questionsReady: true,
@@ -75,11 +81,12 @@ export function dashboardData(db: WorkspaceDatabase, config: WorkspaceConfig, no
       .select()
       .from(demandThemes)
       .all()
+      .filter((t) => inbox.themes.some((visible) => visible.id === t.id))
       .map((t) => ({
         id: t.id,
         revision: t.revision,
         title: t.title,
-        count: t.messageIds.length,
+        count: inbox.themes.find((visible) => visible.id === t.id)!.messageIds.length,
         signalId: t.signalId,
       })),
     themesReady: true,

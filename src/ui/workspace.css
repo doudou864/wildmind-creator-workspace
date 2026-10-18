@@ -901,3 +901,9 @@ dialog::backdrop {
 .hit-period .hit-groups strong {
   font-size: 25px;
 }
+
+.action-summary .action-count {
+  margin-left: auto;
+  font-size: 32px;
+  font-weight: 700;
+}

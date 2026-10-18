@@ -41,16 +41,25 @@ test('评论列表稳定到尾才完成，排除本人评论，无回复可判�
       },
     } as unknown as CollectionSession;
     const judgment = {
-      read: async () => ({
-        items: [
-          {
-            key: '0',
-            classification: { category: 'other', reason: '普通感谢' },
-            brand: null,
-            requirement: null,
-          },
-        ],
-      }),
+      read: async (_schema: unknown, prompt: string, images?: string[]) =>
+        images?.length
+          ? {
+              items: JSON.parse(prompt.split('\n').at(-1)!).map((r: { key: string }) => ({
+                key: r.key,
+                likes: null,
+                replyCount: null,
+              })),
+            }
+          : {
+              items: [
+                {
+                  key: '0',
+                  classification: { category: 'other', reason: '普通感谢' },
+                  brand: null,
+                  requirement: null,
+                },
+              ],
+            },
     } as unknown as Judgment;
     expect(await collectYoutubeInbox(db, session, judgment, [])).toEqual({ messages: 1, complete: true });
     expect(screens).toBe(2);

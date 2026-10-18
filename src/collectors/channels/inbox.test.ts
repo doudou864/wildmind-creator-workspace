@@ -78,16 +78,25 @@ test('仅开起号日后作品，排除本人和旧消息，同文不同作品�
     },
   } as unknown as CollectionSession;
   const judgment = {
-    read: async () => ({
-      items: [
-        {
-          key: '0',
-          classification: { category: 'other', reason: '普通评论' },
-          brand: null,
-          requirement: null,
-        },
-      ],
-    }),
+    read: async (_schema: unknown, prompt: string, images?: string[]) =>
+      images?.length
+        ? {
+            items: JSON.parse(prompt.split('\n').at(-1)!).map((r: { key: string }) => ({
+              key: r.key,
+              likes: null,
+              replyCount: null,
+            })),
+          }
+        : {
+            items: [
+              {
+                key: '0',
+                classification: { category: 'other', reason: '普通评论' },
+                brand: null,
+                requirement: null,
+              },
+            ],
+          },
   } as unknown as Judgment;
   try {
     const paths: string[] = [];

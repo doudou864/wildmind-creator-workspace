@@ -1,15 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  dealActionGroups,
-  dealCounts,
-  dealSource,
-  waitingDuration,
-  type DealConfig,
-  type DealData,
-} from '@/lib/deal-model';
-import { assessReplies, type InboxConfig } from '@/lib/inbox-model';
+import { dealActionGroups, dealCounts, type DealConfig, type DealData } from '@/lib/deal-model';
+import { assessReplies, waitingCount, replyUnit, type InboxConfig } from '@/lib/inbox-model';
 import { useMemo, useState, type ReactNode } from 'react';
 import type { WorkspaceConfig, Platform } from '@/lib/config';
 import { checkpointNote, findAnomalies, type DashboardData, type Work } from '@/lib/workspace-model';
@@ -20,7 +13,7 @@ import { Button, Card, Dialog, Empty, Ratio, Segmented } from '@/ui/components';
 import { Chart } from '@/ui/charts';
 
 import { WorkspaceHeader } from '@/ui/workspace-header';
-type Modal = { type: 'source'; platform: Platform } | { type: 'work'; work: Work } | null;
+type Modal = { type: 'source'; platform: Platform } | { type: 'work'; work: Work } | { type: 'attention' } | null;
 
 export default function Dashboard({
   config,
@@ -144,7 +137,35 @@ export default function Dashboard({
   };
   let dialogContent: ReactNode = null;
   let dialogTitle = '';
-  if (modal?.type === 'source') {
+  if (modal?.type === 'attention') {
+    dialogTitle = '平台异常待处理';
+    dialogContent = (
+      <div>
+        {[
+          ...new Set([
+            ...failedPlatforms.map((p) => p.id),
+            ...(workspace.attention ?? []).map((a) => a.platformId),
+            ...workspace.accountAlerts.map((a) => a.platformId),
+          ]),
+        ].map((id) => (
+          <section key={id}>
+            <h3>{platforms.find((p) => p.id === id)?.name ?? id}</h3>
+            {[
+              ...new Set(
+                [
+                  workspace.platforms[id]?.status === 'failed' ? workspace.platforms[id].error : null,
+                  ...(workspace.attention ?? []).filter((a) => a.platformId === id).map((a) => a.reason),
+                  ...workspace.accountAlerts.filter((a) => a.platformId === id).map((a) => a.reason),
+                ].filter(Boolean),
+              ),
+            ].map((reason) => (
+              <p key={reason}>{reason}</p>
+            ))}
+          </section>
+        ))}
+      </div>
+    );
+  } else if (modal?.type === 'source') {
     const source = workspace.platforms[modal.platform.id];
     dialogTitle = `${modal.platform.name} · 采集状态`;
     dialogContent = (
@@ -306,141 +327,119 @@ export default function Dashboard({
       </section>
       <div className="dashboard-grid">
         <div className="left-column">
-          <Card
-            index="01"
-            title="今日行动"
-            meta={
-              <span className="eyebrow">
-                {actionsReady
-                  ? failedPlatforms.length +
-                    actions.length +
-                    workspace.questions.length +
-                    planned.length +
-                    workspace.accountAlerts.length
-                  : '--'}{' '}
-                ITEMS
-              </span>
-            }
-            className="actions-card"
-          >
-            {workspace.attention?.map((item) => (
-              <div className="action-row" key={item.id}>
-                <span>
-                  <small>需要你处理 · {platforms.find((p) => p.id === item.platformId)?.name ?? item.platformId}</small>
-                  <strong>{item.reason}</strong>
-                </span>
-              </div>
-            ))}
-            {actions.map((group, index) => {
-              const source = group.message;
-              const evidence = replies.get(source.id)?.observed;
-              return (
-                <div className="action-row deal-dashboard-action" key={group.id}>
+          <Card index="01" title="今日行动" meta={<span className="eyebrow">待办汇总</span>} className="actions-card">
+            {[
+              {
+                label: '商单待回复',
+                count: actions.filter((g) => replies.get(g.message.id)?.state === 'waiting').length,
+                ready: deals.recordsReady,
+                href: '/inbox?category=deal&reply=waiting',
+                note: '按会话汇总',
+              },
+              {
+                label: '价值评论待回复',
+                count: waitingCount(
+                  deals.messages.filter(
+                    (m) =>
+                      m.channel === 'comment' &&
+                      m.classification.status === 'ready' &&
+                      m.classification.result.category === 'idea',
+                  ),
+                  deals.messages,
+                ),
+                ready: deals.recordsReady,
+                href: '/inbox?category=idea&channel=comment&reply=waiting',
+                note: '具体求助 / 高互动评论',
+              },
+              {
+                label: '价值私信待回复',
+                count: waitingCount(
+                  deals.messages.filter(
+                    (m) =>
+                      m.channel === 'dm' &&
+                      m.classification.status === 'ready' &&
+                      m.classification.result.category === 'idea',
+                  ),
+                  deals.messages,
+                ),
+                ready: deals.recordsReady,
+                href: '/inbox?category=idea&channel=dm&reply=waiting',
+                note: '按会话汇总',
+              },
+              {
+                label: '商单回复待核对',
+                count: actions.filter((g) => replies.get(g.message.id)?.state === 'unknown').length,
+                ready: deals.recordsReady,
+                href: '/inbox?category=deal&reply=unknown',
+                note: '回复记录不完整',
+              },
+              {
+                label: '价值消息回复待核对',
+                count: new Set(
+                  deals.messages
+                    .filter(
+                      (m) =>
+                        m.classification.status === 'ready' &&
+                        m.classification.result.category === 'idea' &&
+                        replies.get(m.id)?.state === 'unknown',
+                    )
+                    .map(replyUnit),
+                ).size,
+                ready: deals.recordsReady,
+                href: '/inbox?category=idea&reply=unknown',
+                note: '回复记录不完整',
+              },
+              {
+                label: '今日计划发布',
+                count: planned.length,
+                ready: workspace.plansReady,
+                href: '/publishing',
+                note: '查看发布准备',
+              },
+            ]
+              .filter((row) => !row.ready || row.count > 0)
+              .map((row, index) => (
+                <Link className="action-row action-summary" href={row.href} key={row.label}>
                   <span className="letter mono">{String.fromCharCode(65 + index)}</span>
                   <span>
-                    <Link href={`/inbox?message=${encodeURIComponent(source.id)}`}>
-                      <small>
-                        {replies.get(source.id)?.state === 'unknown' ? '商单回复状态待核对' : '商单会话待回复'} ·{' '}
-                        {platforms.find((p) => p.id === source.platformId)?.name ?? source.platformId}
-                      </small>
-                      <strong>
-                        {source.author || '发送者待核实'} · {group.deals.length} 条关联商单
-                      </strong>
-                    </Link>
-                    <span>
-                      {group.deals.map((deal) => (
-                        <Link key={deal.id} className="small" href={`/deals?deal=${encodeURIComponent(deal.id)}`}>
-                          {deal.brand || '品牌待核实'} →{' '}
-                        </Link>
-                      ))}
-                    </span>
+                    <strong>{row.label}</strong>
+                    <small>{row.note}</small>
                   </span>
-                  <span className="row-arrow mono">读取时已等 {evidence ? waitingDuration(evidence) : '--'}</span>
-                </div>
-              );
-            })}
-            {workspace.questions.slice(0, parameters.dashboardPreviewLimit).map((item) => (
-              <Link
-                key={`question-${item.id}`}
-                className="action-row"
-                href={`/inbox?message=${encodeURIComponent(item.id)}`}
-              >
+                  <span className="action-count mono">{row.ready ? number(row.count) : '--'}</span>
+                  <span aria-hidden="true">→</span>
+                </Link>
+              ))}
+            {(failedPlatforms.length > 0 ||
+              (workspace.attention?.length ?? 0) > 0 ||
+              workspace.accountAlerts.length > 0) && (
+              <button className="action-row action-summary" onClick={() => setModal({ type: 'attention' })}>
                 <span>
-                  <small>
-                    有价值的问题待处理 · {platforms.find((p) => p.id === item.platformId)?.name ?? item.platformId}
-                  </small>
-                  <strong>{item.title}</strong>
+                  <strong>平台异常待处理</strong>
+                  <small>查看原因与处理提示</small>
                 </span>
-                <span>→</span>
-              </Link>
-            ))}
-            {workspace.questions.length > parameters.dashboardPreviewLimit && (
-              <Link className="small" href="/inbox">
-                查看全部 {workspace.questions.length} 条问题 →
-              </Link>
+                <span className="action-count mono">
+                  {
+                    new Set([
+                      ...failedPlatforms.map((p) => p.id),
+                      ...(workspace.attention ?? []).map((a) => a.platformId),
+                      ...workspace.accountAlerts.map((a) => a.platformId),
+                    ]).size
+                  }
+                </span>
+                <span aria-hidden="true">→</span>
+              </button>
             )}
-            {planned.map((content) => (
-              <Link
-                key={`planned-${content.id}`}
-                className="action-row"
-                href={`/publishing?content=${encodeURIComponent(content.id)}&kind=${content.form === '视频' ? 'video' : 'layout'}`}
-              >
-                <span>
-                  <small>计划今天发布 · {content.form}</small>
-                  <strong>{content.title}</strong>
-                </span>
-                <span>→</span>
-              </Link>
-            ))}
-            {workspace.accountAlerts.map((alert) => (
-              <button
-                className="action-row"
-                key={`account-${alert.id}`}
-                onClick={() => {
-                  const p = platforms.find((p) => p.id === alert.platformId);
-                  if (p) setModal({ type: 'source', platform: p });
-                }}
-              >
-                <span>
-                  <small>账号异常 · {platforms.find((p) => p.id === alert.platformId)?.name ?? alert.platformId}</small>
-                  <strong>{alert.title}</strong>
-                  <small>{alert.reason}</small>
-                </span>
-              </button>
-            ))}
-            {failedPlatforms.map((item, index) => (
-              <button className="action-row" key={item.id} onClick={() => setModal({ type: 'source', platform: item })}>
-                <span className="letter mono">{String.fromCharCode(65 + actions.length + index)}</span>
-                <span>
-                  <small>需手动处理</small>
-                  <strong>
-                    {item.name}：{workspace.platforms[item.id].error ?? '需要手动检查'}
-                  </strong>
-                </span>
-                <span className="row-arrow" aria-hidden="true">
-                  ↗
-                </span>
-              </button>
-            ))}
             {!actions.length &&
               !failedPlatforms.length &&
               !workspace.questions.length &&
               !planned.length &&
-              !workspace.accountAlerts.length && (
+              !workspace.accountAlerts.length &&
+              !workspace.attention?.length && (
                 <Empty>{actionsReady ? '今天没有待办' : '待办资料尚未齐备，暂不能判断今天是否有事'}</Empty>
               )}
             {!actionsReady && (
               <p className="small">
-                未就绪：
-                {[
-                  !workspace.questionsReady ? '问题待处理' : null,
-                  !workspace.plansReady ? '发布计划' : null,
-                  !workspace.accountAlertsReady ? '账号异常' : null,
-                  !deals.recordsReady ? '商单' : null,
-                  !workspace.collectionReady ? '采集状态' : null,
-                ]
-                  .filter(Boolean)
-                  .join('、')}
+                {!workspace.accountAlertsReady ? '账号违规 / 限流信息尚未接入。' : '部分待办资料尚未齐备。'}
               </p>
             )}
           </Card>

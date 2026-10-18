@@ -1,3 +1,4 @@
+import { readCommentEngagement } from '../inbox-engagement.ts';
 import { readFile, writeFile } from 'node:fs/promises';
 import { parse } from 'yaml';
 import { z } from 'zod';
@@ -133,12 +134,17 @@ export async function collectChannelsComments(
         await session.capture(file);
         paths.push(file);
         await writeFile(file + '.json', JSON.stringify(view.rows), { mode: 0o600 });
+        const engagement = await readCommentEngagement(judgment, file, rows);
         await storeInboxReading(
           db,
           'channels',
           'comment',
           cfg.url,
-          { messages: rows, complete: false, reason: '正在读取评论列表及回复' },
+          {
+            messages: rows.map((r, i) => ({ ...r, reply: { ...r.reply, ...engagement[i] } })),
+            complete: false,
+            reason: '正在读取评论列表及回复',
+          },
           judgment,
         );
       }

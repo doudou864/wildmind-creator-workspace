@@ -1,3 +1,4 @@
+import { readCommentEngagement } from '../inbox-engagement.ts';
 import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
 import { z } from 'zod';
@@ -92,6 +93,11 @@ export async function collectYoutubeInbox(
     const file = `data/inbox/${today}/youtube-comments-${n}.png`;
     await session.capture(file);
     paths.push(file);
+    const engagement = await readCommentEngagement(judgment, file, data.rows);
+    for (const [index, row] of data.rows.entries()) {
+      const message = messages.get(row.id);
+      if (message && message.reply.kind === 'comment') message.reply = { ...message.reply, ...engagement[index] };
+    }
     const fingerprint = JSON.stringify(data.rows);
     if (
       data.rows.some((r) => inboxDisplayScope(r.time, today, parameters.startDate) === 'old') ||

@@ -4,6 +4,12 @@ export type InboxCategory = z.infer<typeof inboxCategorySchema>;
 export const inboxChannelSchema = z.enum(['comment', 'dm']);
 export type InboxChannel = z.infer<typeof inboxChannelSchema>;
 export const inboxConfigSchema = z.object({
+  valueRules: z.object({
+    version: z.number().int().positive(),
+    minReplies: z.number().int().positive(),
+    batchSize: z.number().int().positive(),
+    instruction: z.string().min(1),
+  }),
   pageSize: z.number().int().min(1).max(100),
   categories: z
     .array(z.object({ id: inboxCategorySchema, name: z.string().min(1), description: z.string() }))
@@ -17,10 +23,14 @@ export const inboxConfigSchema = z.object({
 export type InboxConfig = z.infer<typeof inboxConfigSchema>;
 // AI 只输出分类和证据；去向由代码按分类确定，不由模型决定接口或重试。
 export const inboxClassificationSchema = z
-  .object({ category: inboxCategorySchema, reason: z.string().trim().min(1).max(4000) })
+  .object({
+    category: inboxCategorySchema,
+    reason: z.string().trim().min(1).max(4000),
+    valueKind: z.enum(['specific_help', 'resonance', 'none']).optional(),
+  })
   .strict();
 export type InboxClassification =
-  | { status: 'ready'; result: z.infer<typeof inboxClassificationSchema> }
+  | { status: 'ready'; policyVersion?: number; result: z.infer<typeof inboxClassificationSchema> }
   | { status: 'pending' | 'failed'; reason: string | null };
 export type ReplyEvidence =
   | {
@@ -30,7 +40,13 @@ export type ReplyEvidence =
       lastSender: 'self' | 'other' | 'unknown';
       lastMessageAt: string | null;
     }
-  | { kind: 'comment'; ownReplyFound: boolean | null; repliesComplete: boolean };
+  | {
+      kind: 'comment';
+      ownReplyFound: boolean | null;
+      repliesComplete: boolean;
+      likes?: number | null;
+      replyCount?: number | null;
+    };
 export type InboxMessage = {
   id: string;
   revision: number;
@@ -182,4 +198,28 @@ export function inboxTime(value: string | null) {
   }).formatToParts(new Date(value));
   const part = (type: string) => parts.find((p) => p.type === type)?.value;
   return `${part('month')}-${part('day')} ${part('hour')}:${part('minute')}`;
+}
+
+// 共鸣必须有数字证据；不把缺失当成零，也不从措辞猜热度。
+export function enforceCommentValue(
+  result: z.infer<typeof inboxClassificationSchema>,
+  reply: ReplyEvidence,
+  rules: InboxConfig['valueRules'],
+) {
+  if (result.category === 'deal') return result;
+  if (reply.kind === 'comment' && reply.replyCount != null && reply.replyCount >= rules.minReplies)
+    return {
+      ...result,
+      category: 'idea' as const,
+      valueKind: 'resonance' as const,
+      reason: `已确认评论互动达到门槛（点赞 ${reply.likes ?? '--'}，回复 ${reply.replyCount ?? '--'}）；${result.reason}`,
+    };
+  if (result.valueKind === 'specific_help' || result.valueKind === undefined || result.category === 'other')
+    return result;
+  return {
+    ...result,
+    category: 'other' as const,
+    valueKind: 'none' as const,
+    reason: '未达到高互动门槛或缺少互动数字证据；原判断：' + result.reason,
+  };
 }

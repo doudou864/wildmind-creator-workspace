@@ -1,3 +1,4 @@
+import { readCommentEngagement } from './inbox-engagement.ts';
 import { inboxDisplayScope, notificationScopes } from './inbox-date.ts';
 import { loadConfig } from '../lib/config.ts';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -91,19 +92,20 @@ export async function collectInbox(
         seen.add(key);
         return true;
       });
+      const engagement = await readCommentEngagement(judgment, filename, rows);
       await storeInboxReading(
         db,
         platformId,
         'comment',
         observed.url,
         {
-          messages: rows.map((r) => ({
+          messages: rows.map((r, index) => ({
             key: JSON.stringify([r.author, r.body]),
             author: r.author,
             body: r.body,
             sentAt: null,
             contentTitle: null,
-            reply: { kind: 'comment', ownReplyFound: null, repliesComplete: false },
+            reply: { kind: 'comment', ownReplyFound: null, repliesComplete: false, ...engagement[index] },
             context: [],
             contextComplete: false,
           })),

@@ -5,7 +5,11 @@ import { readInbox } from '@/lib/workspace-service';
 import InboxPage from './inbox-page';
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: '互动收件箱 · WILDMIND 野生脑洞工作台' };
-export default async function Page({ searchParams }: { searchParams: Promise<{ message?: string; theme?: string }> }) {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ message?: string; theme?: string; category?: string; channel?: string; reply?: string }>;
+}) {
   const [workspace, config, data] = await Promise.all([loadConfig(), loadInboxConfig(), readInbox()]);
   const query = await searchParams;
   const messageId = typeof query.message === 'string' ? query.message : null;
@@ -18,7 +22,12 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ m
   return (
     <InboxPage
       initialThemeId={query.theme ?? null}
-      key={`${messageId ?? ''}:${query.theme ?? ''}`}
+      initialFilters={{
+        category: ['deal', 'idea', 'other'].includes(query.category ?? '') ? query.category! : 'all',
+        channel: ['comment', 'dm'].includes(query.channel ?? '') ? query.channel! : 'all',
+        reply: ['waiting', 'replied', 'unknown'].includes(query.reply ?? '') ? query.reply! : 'all',
+      }}
+      key={JSON.stringify(query)}
       initialMessageId={messageId}
       config={config}
       platforms={workspace.platforms}

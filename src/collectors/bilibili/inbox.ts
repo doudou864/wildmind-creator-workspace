@@ -1,3 +1,4 @@
+import { readCommentEngagement } from '../inbox-engagement.ts';
 import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
 import { z } from 'zod';
@@ -43,7 +44,8 @@ export async function collectBilibiliInbox(
     const filename = `data/inbox/${shanghaiDate()}/bilibili-comments-${n}.png`;
     await session.capture(filename);
     paths.push(filename);
-    for (const row of rows) {
+    const engagement = await readCommentEngagement(judgment, filename, rows);
+    for (const [index, row] of rows.entries()) {
       if (row.time.slice(0, 10) < parameters.startDate || cfg.selfNames.includes(row.author) || !row.body) continue;
       all.push({
         key: JSON.stringify([row.author, row.body, row.time, row.title]),
@@ -51,7 +53,7 @@ export async function collectBilibiliInbox(
         body: row.body,
         sentAt: /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(row.time) ? row.time.replace(' ', 'T') + '+08:00' : null,
         contentTitle: row.title,
-        reply: { kind: 'comment', ownReplyFound: null, repliesComplete: false },
+        reply: { kind: 'comment', ownReplyFound: null, repliesComplete: false, ...engagement[index] },
         context: [],
         contextComplete: false,
       });
