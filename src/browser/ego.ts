@@ -51,6 +51,13 @@ export function runEgo(script: string): Promise<unknown> {
   });
 }
 
+// Pending login tabs are reserved until the user completes or the request expires.
+export async function collectionPage(spaceId: number, reserved: string[], execute = runEgo): Promise<string> {
+  return (await execute(
+    `const t=await taskSpace(${spaceId});const reserved=${JSON.stringify(reserved)};const pages=await t.pages();const page=pages.find(p=>!reserved.includes(p.label))??await t.newPage();console.log('WORKSPACE_RESULT:'+JSON.stringify(page.label));`,
+  )) as string;
+}
+
 // Only scoped cookies/localStorage are stored, with owner-only permissions. Never print them.
 function stateScript(root: string, config: BrowserPlatform) {
   return `
@@ -84,10 +91,12 @@ export class EgoBrowser implements WorkspaceBrowser {
   private root: string;
   private execute: typeof runEgo;
   private testSpaceId?: number;
-  constructor(root = process.cwd(), execute = runEgo, testSpaceId?: number) {
+  private pageLabel: string;
+  constructor(root = process.cwd(), execute = runEgo, testSpaceId?: number, pageLabel = 'p1') {
     this.root = root;
     this.execute = execute;
     this.testSpaceId = testSpaceId;
+    this.pageLabel = pageLabel;
   }
   private async config(id: string) {
     const config = (await loadBrowserConfig(this.root)).find((p) => p.id === id);
@@ -105,7 +114,7 @@ export class EgoBrowser implements WorkspaceBrowser {
     await this.beforePage();
     const opened = (await this.execute(`${stateScript(this.root, config)}
 const task=await taskSpace(${this.testSpaceId ?? JSON.stringify('工作台登录 ' + platformId + ' ' + Date.now())});
-const page=task.page('p1');await navigate(page);
+const page=task.page(${JSON.stringify(this.pageLabel)});await navigate(page);
 const observed=await observe(page);
 console.log('WORKSPACE_RESULT:'+JSON.stringify({spaceId:task.spaceId,page:page.label,observed}));
 if(verified(observed)){await saveState(page);${this.testSpaceId ? '' : 'await task.finish({keep:[page.label]});'}}else await task.handOff();`)) as {
@@ -184,7 +193,7 @@ await task.finish({keep:[page.label]});`)) as { url: string; positive: string[];
     let stopped = false;
     let awaiting = false;
     const results: LoginResult[] = [];
-    // One TaskSpace for the complete check command, all platforms reuse p1.
+    // One TaskSpace for the complete check command, all platforms reuse the assigned collection tab.
     const spaceId = (await this.execute(
       `const t=await taskSpace(${this.testSpaceId ?? JSON.stringify('工作台登录检查 ' + Date.now())});console.log('WORKSPACE_RESULT:'+JSON.stringify(t.spaceId));`,
     )) as number;
@@ -193,7 +202,7 @@ await task.finish({keep:[page.label]});`)) as { url: string; positive: string[];
       try {
         await this.beforePage(results.length > 0);
         const observed = (await this.execute(`${stateScript(this.root, config)}
-const task=await taskSpace(${spaceId});const page=task.page('p1');await navigate(page);
+const task=await taskSpace(${spaceId});const page=task.page(${JSON.stringify(this.pageLabel)});await navigate(page);
 const observed=await observe(page);
 if(verified(observed))await saveState(page);
 console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));`)) as {
@@ -206,7 +215,7 @@ console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));`)) as {
         if (result.state === 'awaiting_confirmation') {
           awaiting = true;
           result.spaceId = spaceId;
-          result.page = 'p1';
+          result.page = this.pageLabel;
         }
         results.push(result);
       } catch (error) {

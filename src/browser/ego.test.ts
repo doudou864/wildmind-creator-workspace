@@ -88,3 +88,47 @@ test('断网按调度重试，用户接管优先于任何网络错误', async ()
   expect(egoFailure('TimeoutError: popup timed out')).toContain('页面等待超时');
   expect(egoFailure('unknown')).toContain('不自动重试');
 });
+
+test('重试检查使用分配的标签页，不能导航仍在等待微信确认的 p1', async () => {
+  const scripts: string[] = [];
+  const browser = new EgoBrowser(
+    process.cwd(),
+    async (script) => {
+      scripts.push(script);
+      if (scripts.length === 1) return 20;
+      return { url: 'https://channels.weixin.qq.com/', positive: [], negative: ['登录视频号助手'] };
+    },
+    20,
+    'p2',
+  );
+  const result = await browser.checkLogins(['channels']);
+  expect(scripts[1]).toContain('task.page("p2")');
+  expect(scripts[1]).not.toContain("task.page('p1')");
+  expect(result[0].page).toBe('p2');
+});
+
+test('等待确认的标签始终保留，空闲标签可复用，全部保留时才开新标签', async () => {
+  const { collectionPage } = await import('./ego');
+  let created = 0;
+  const task = {
+    pages: async () => [{ label: 'p1' }, { label: 'p2' }],
+    newPage: async () => {
+      created++;
+      return { label: 'p3' };
+    },
+  };
+  const execute = async (script: string) => {
+    let result: unknown;
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    await new AsyncFunction('taskSpace', 'console', script)(async () => task, {
+      log: (text: string) => {
+        result = JSON.parse(text.slice('WORKSPACE_RESULT:'.length));
+      },
+    });
+    return result;
+  };
+  expect(await collectionPage(20, ['p1'], execute)).toBe('p2');
+  expect(created).toBe(0);
+  expect(await collectionPage(20, ['p1', 'p2'], execute)).toBe('p3');
+  expect(created).toBe(1);
+});

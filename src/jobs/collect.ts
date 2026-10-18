@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { openDatabase } from '../db/database.ts';
 import { accounts, crawlLogs } from '../db/schema.ts';
-import { EgoBrowser, runEgo } from '../browser/ego.ts';
+import { EgoBrowser, runEgo, collectionPage } from '../browser/ego.ts';
 import { CollectionSession, AttentionRequired } from '../browser/collection-session.ts';
 import { loadBrowserConfig } from '../browser/config.ts';
 import { confirmationDeadline, pause, loadBrowserPolicy, randomBetween } from '../browser/policy.ts';
@@ -140,7 +140,13 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
       ((await runEgo(
         `const t=await taskSpace(${JSON.stringify('工作台采集 ' + randomUUID())});console.log('WORKSPACE_RESULT:'+JSON.stringify(t.spaceId));`,
       )) as number);
-    const browser = new EgoBrowser(process.cwd(), undefined, activeSpace);
+    // A pending login owns its tab until confirmation/expiry; retries use a different tab in the same space.
+    const reserved = pendingAttention(database)
+      .filter((item) => item.spaceId === activeSpace && item.page)
+      .map((item) => item.page!);
+    const activePage = await collectionPage(activeSpace, reserved);
+    keepForConfirmation = reserved.length > 0;
+    const browser = new EgoBrowser(process.cwd(), undefined, activeSpace, activePage);
     let allSucceeded = true;
     for (const [index, id] of ids.entries()) {
       if (index) await pause(randomBetween((await loadBrowserPolicy()).platformDelayMs));
@@ -156,17 +162,17 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
             (item) => item.platformId === id && item.kind === 'confirmation',
           );
           if (!existing) {
-            await browser.requestConfirmation(id, activeSpace);
+            await browser.requestConfirmation(id, activeSpace, activePage);
             requireAttention(database, {
               platformId: id,
               kind: 'confirmation',
               reason: config.confirmation!.message,
               deadline: confirmationDeadline(config.confirmation!.deadline),
               spaceId: activeSpace,
-              page: 'p1',
+              page: activePage,
             });
           }
-          keepForConfirmation = !existing || existing.spaceId === activeSpace;
+          keepForConfirmation ||= !existing || existing.spaceId === activeSpace;
           throw new AttentionRequired(config.confirmation!.message, 'login');
         }
         if (login.state === 'logged_out') throw new AttentionRequired(login.reason, 'login');
@@ -174,8 +180,19 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
         if (login.state !== 'logged_in') throw new Error(login.reason);
         const collector = collectors.get(id);
         if (!collector) throw new Error('该平台采集器尚未接入，未伪造成功');
-        const result = await collector(database, new CollectionSession(activeSpace), new CodexJudgment(), paths);
-        await collectPlatformInbox(database, id, new CollectionSession(activeSpace), new CodexJudgment(), paths);
+        const result = await collector(
+          database,
+          new CollectionSession(activeSpace, activePage),
+          new CodexJudgment(),
+          paths,
+        );
+        await collectPlatformInbox(
+          database,
+          id,
+          new CollectionSession(activeSpace, activePage),
+          new CodexJudgment(),
+          paths,
+        );
         refreshReviews(database, await loadConfig());
         await finishCrawl(database, crawlId, { status: 'success', archivePaths: paths });
         resolveAttention(database, id);
@@ -192,12 +209,18 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
           error instanceof AttentionRequired &&
           !pendingAttention(database).some((item) => item.platformId === id && item.kind === 'confirmation')
         )
-          requireAttention(database, { platformId: id, kind: error.kind, reason, spaceId: activeSpace, page: 'p1' });
+          requireAttention(database, {
+            platformId: id,
+            kind: error.kind,
+            reason,
+            spaceId: activeSpace,
+            page: activePage,
+          });
         await finishCrawl(database, crawlId, { status: 'failed', reason, archivePaths: paths });
         console.error(`${id}：${reason}`);
         if (/控制权|ego 操作失败|浏览器操作超时/.test(reason)) {
           browserFailed = true;
-          requireAttention(database, { platformId: id, kind: 'risk', reason, spaceId: activeSpace, page: 'p1' });
+          requireAttention(database, { platformId: id, kind: 'risk', reason, spaceId: activeSpace, page: activePage });
           writeState(database, 'browser:paused', { paused: true });
           break;
         }
