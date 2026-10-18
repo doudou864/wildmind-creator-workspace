@@ -1,0 +1,13 @@
+platformId: douyin
+endDay: 21
+per: 1000
+viewsName: 播放量
+interactionNames: [点赞量, 评论量, 分享量, 收藏量, 涨粉量]
+interactionRateNames: [点赞率, 评论率, 分享率, 收藏率, 涨粉率]
+ai:
+  maxCharacters: 150
+  prompt: >-
+    只根据提供的数字表给出一个可能原因和下一条可试的一件事，不计算数值。
+    原因必须是推测，不能断言因果。样本不足不能得出好坏结论，缺失数字不能补造。
+    原因与建议不写任何数字、不引用新的事实或外部案例，各不超过20字。
+    结论和指标数值由程序从数字表拼接，你只返回cause和action。

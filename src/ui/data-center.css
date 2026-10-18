@@ -1,0 +1,126 @@
+.analysis-workbar {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 12px;
+  padding: 14px 18px;
+}
+.analysis-picker {
+  width: 250px;
+  flex-shrink: 0;
+  display: flex;
+  gap: 6px;
+  flex-direction: column;
+}
+.analysis-picker input,
+.analysis-picker select {
+  min-width: 0;
+  width: 100%;
+  font-size: 12px;
+}
+.analysis-title {
+  flex: 1;
+  min-width: 0;
+}
+.analysis-title strong {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.analysis-title span {
+  display: block;
+  margin-top: 6px;
+}
+.analysis-title .mono,
+.analysis-title .tag {
+  display: inline;
+}
+.analysis-ratio {
+  text-align: right;
+}
+.analysis-ratio strong {
+  font-size: 32px;
+  display: block;
+}
+.analysis-ratio small {
+  color: var(--ink-2);
+}
+.analysis-curve,
+.analysis-comparison,
+.analysis-interpretation {
+  margin-bottom: 12px;
+}
+.data-center-chart {
+  width: 100%;
+  height: 200px;
+}
+.analysis-legend-current {
+  color: var(--accent);
+}
+.analysis-table-scroll {
+  max-height: 200px;
+  overflow: auto;
+}
+.analysis-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  text-align: left;
+}
+.analysis-table th {
+  position: sticky;
+  top: 0;
+  background: var(--card);
+  color: var(--ink-2);
+  font-weight: 400;
+  z-index: 1;
+}
+.analysis-table td,
+.analysis-table th {
+  padding: 7px 12px;
+  border-bottom: 1px dashed var(--line-soft);
+}
+.analysis-table td:first-child {
+  width: 36%;
+}
+.analysis-table td:nth-child(4) {
+  width: 24%;
+}
+.analysis-table small {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-2);
+}
+.metric-needle {
+  position: relative;
+  height: 16px;
+}
+.metric-needle i {
+  position: absolute;
+  top: 5px;
+  height: 6px;
+  background: var(--line-soft);
+}
+.metric-needle b {
+  position: absolute;
+  top: 1px;
+  width: 2px;
+  height: 14px;
+  background: var(--ink);
+}
+.analysis-paragraphs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 24px;
+  font-size: 13px;
+}
+.analysis-paragraphs p {
+  margin: 0;
+}
+.data-center .card-heading {
+  margin-bottom: 8px;
+}
+.data-center .small {
+  font-size: 11px;
+}

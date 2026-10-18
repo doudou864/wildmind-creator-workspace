@@ -418,3 +418,16 @@ export const reviewCheckpoints = sqliteTable(
   },
   (t) => [uniqueIndex('review_post_day_metric').on(t.postId, t.day, t.metricId)],
 );
+
+// Only generated interpretations are persisted; comparison statistics remain computed on read.
+export const dataInterpretations = sqliteTable('data_interpretations', {
+  id: id(),
+  postId: text('post_id')
+    .notNull()
+    .references(() => posts.id),
+  day: integer('day').notNull(),
+  fingerprint: text('fingerprint').notNull().unique(),
+  numbers: json<import('../lib/data-center-model').InterpretationInput>('numbers').notNull(),
+  paragraphs: json<string[]>('paragraphs').notNull(),
+  createdAt: text('created_at').notNull(),
+});

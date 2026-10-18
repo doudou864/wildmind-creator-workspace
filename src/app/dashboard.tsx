@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { dealActionGroups, dealCounts, type DealConfig, type DealData } from '@/lib/deal-model';
 import { assessReplies, waitingCount, replyUnit, type InboxConfig } from '@/lib/inbox-model';
 import { useMemo, useState, type ReactNode } from 'react';
@@ -22,7 +23,9 @@ export default function Dashboard({
   dealConfig,
   dealChannels,
   initialDeals,
+  dataCenterPlatformId,
 }: {
+  dataCenterPlatformId: string;
   dealConfig: DealConfig;
   dealChannels: InboxConfig['channels'];
   initialDeals: DealData;
@@ -30,6 +33,7 @@ export default function Dashboard({
   today: string;
   initialData: DashboardData;
 }) {
+  const router = useRouter();
   const { data: workspace, error, refresh } = useResource('/api/dashboard', initialData);
   const { data: deals, error: dealError, refresh: refreshDeals } = useResource('/api/deals', initialDeals);
   const counts = dealCounts(deals.items),
@@ -516,7 +520,11 @@ export default function Dashboard({
                 <button
                   key={`${work.id}-${day}`}
                   className="insight-row"
-                  onClick={() => setModal({ type: 'work', work })}
+                  onClick={() =>
+                    platform.id === dataCenterPlatformId
+                      ? router.push(`/data-center?post=${encodeURIComponent(work.id)}`)
+                      : setModal({ type: 'work', work })
+                  }
                 >
                   <span className="tag">{ratio > parameters.anomalyHigh ? 'HOT' : 'DROP'}</span>
                   <span>
@@ -640,7 +648,14 @@ export default function Dashboard({
                 {works.map((work) => (
                   <tr key={work.id}>
                     <td>
-                      <button className="work-title" onClick={() => setModal({ type: 'work', work })}>
+                      <button
+                        className="work-title"
+                        onClick={() =>
+                          platform.id === dataCenterPlatformId
+                            ? router.push(`/data-center?post=${encodeURIComponent(work.id)}`)
+                            : setModal({ type: 'work', work })
+                        }
+                      >
                         <strong>{work.title}</strong>
                         <span>
                           {work.form}{' '}

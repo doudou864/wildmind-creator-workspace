@@ -19,6 +19,7 @@ export const metricSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   unit: z.string(),
+  direction: z.enum(['higher', 'lower']).default('higher'),
   level: metricLevel,
   scope: z.enum(['account', 'post']),
   kind: z.enum(['number', 'text', 'distribution']),

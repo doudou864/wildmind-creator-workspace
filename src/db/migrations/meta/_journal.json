@@ -57,6 +57,13 @@
       "when": 1792261006411,
       "tag": "0007_fearless_hemingway",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1792327828622,
+      "tag": "0008_daffy_nocturne",
+      "breakpoints": true
     }
   ]
 }

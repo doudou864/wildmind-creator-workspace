@@ -1,3 +1,4 @@
+import { quantile } from './statistics.ts';
 import type { Checkpoint, HitRatePeriod } from '../lib/workspace-model';
 export type ReviewPost = {
   id: string;
@@ -70,9 +71,7 @@ export function reviewCheckpoint(
     )
     .slice(0, options.baselineSamples);
   const values = candidates.map((c) => c.sample!.value!).sort((a, b) => a - b);
-  const baseline = values.length
-    ? (values[Math.floor((values.length - 1) / 2)] + values[Math.floor(values.length / 2)]) / 2
-    : null;
+  const baseline = quantile(values, 0.5);
   const sufficient = values.length >= options.baselineMinimum;
   const usable = sufficient && baseline !== null && baseline > 0;
   return {

@@ -1,3 +1,4 @@
+import { loadDataCenterConfig } from '@/lib/data-center-config';
 import { loadConfig } from '@/lib/config';
 import { loadDealConfig } from '@/lib/deal-config';
 import { loadInboxConfig } from '@/lib/inbox-config';
@@ -19,6 +20,7 @@ export default async function Page() {
   }).format(new Date());
   return (
     <Dashboard
+      dataCenterPlatformId={(await loadDataCenterConfig()).platformId}
       dealConfig={dealConfig}
       dealChannels={inbox.channels}
       initialDeals={dealData}

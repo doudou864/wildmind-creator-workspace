@@ -3,6 +3,7 @@ import { Button } from './components';
 
 const navigation = [
   { title: '总控台', href: '/' },
+  { title: '数据中心', href: '/data-center' },
   { title: '选题中心', href: '/topics' },
   { title: '生图中心', href: '/images' },
   { title: '排版中心', href: '/layouts' },
@@ -15,7 +16,7 @@ export function WorkspaceHeader({
   date,
   syncWindow,
 }: {
-  current: '/' | '/topics' | '/images' | '/layouts' | '/publishing' | '/inbox' | '/deals';
+  current: '/data-center' | '/' | '/topics' | '/images' | '/layouts' | '/publishing' | '/inbox' | '/deals';
   date: string;
   syncWindow: string;
 }) {
