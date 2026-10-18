@@ -50,7 +50,7 @@ test('末条以会话时间核对，未标日期的历史不进入AI；自己后
       return {
         items: [
           {
-            key: 'scoped:' + JSON.stringify(['近期', '2026-10-17T14:31:00+08:00', '新消息']),
+            key: '0',
             classification: { category: 'other', reason: '普通消息' },
             brand: null,
             requirement: null,

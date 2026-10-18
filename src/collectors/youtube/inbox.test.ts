@@ -44,7 +44,7 @@ test('评论列表稳定到尾才完成，排除本人评论，无回复可判�
       read: async () => ({
         items: [
           {
-            key: 'native:viewer',
+            key: '0',
             classification: { category: 'other', reason: '普通感谢' },
             brand: null,
             requirement: null,

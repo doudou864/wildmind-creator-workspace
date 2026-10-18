@@ -19,6 +19,7 @@ test('仅开起号日后作品，排除本人和旧消息，同文不同作品�
   const db = await initializeDatabase(path.join(folder, 'workspace.db'));
   const opened: string[] = [];
   let current = '';
+  let reads = 0;
   const session = {
     navigate: async () => {},
     inspect: async () => {},
@@ -26,6 +27,7 @@ test('仅开起号日后作品，排除本人和旧消息，同文不同作品�
     scrollShadow: async () => {},
     clickShadow: async (_h: string, _s: string, title: string) => {
       current = title;
+      reads = 0;
       opened.push(title);
     },
     run: async (script: string) => {
@@ -46,7 +48,7 @@ test('仅开起号日后作品，排除本人和旧消息，同文不同作品�
             body: '值得看',
             time: '2026/10/17 10:30',
             self: false,
-            ownReply: true,
+            ownReply: reads++ > 0,
             nested: false,
             more: false,
           },
@@ -71,6 +73,7 @@ test('仅开起号日后作品，排除本人和旧消息，同文不同作品�
         ],
         bottom: true,
         moreText: null,
+        remaining: 0,
       };
     },
   } as unknown as CollectionSession;
@@ -78,7 +81,7 @@ test('仅开起号日后作品，排除本人和旧消息，同文不同作品�
     read: async () => ({
       items: [
         {
-          key: 'scoped:' + JSON.stringify([current, '观众', '2026/10/17 10:30', '值得看']),
+          key: '0',
           classification: { category: 'other', reason: '普通评论' },
           brand: null,
           requirement: null,
@@ -91,10 +94,51 @@ test('仅开起号日后作品，排除本人和旧消息，同文不同作品�
     const result = await collectChannelsComments(db, session, judgment, paths);
     expect(opened).toEqual(['甲', '乙']);
     expect(result.complete).toBe(true);
+    expect(result.messages).toBe(2);
     expect(inboxData(db).items).toHaveLength(2);
     expect(inboxData(db).items.every((m) => m.reply.kind === 'comment' && m.reply.ownReplyFound)).toBe(true);
   } finally {
     vi.useRealTimers();
+    db.sqlite.close();
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('底部仍有未展开回复时回翻，不把漏读的回复当作完成', async () => {
+  const folder = await mkdtemp(path.join(tmpdir(), 'channels-replies-'));
+  const db = await initializeDatabase(path.join(folder, 'workspace.db'));
+  const directions: number[] = [];
+  let expanded = false;
+  let reversed = false;
+  const session = {
+    navigate: async () => {},
+    inspect: async () => {},
+    capture: async () => {},
+    scrollShadow: async (_h: string, _s: string, direction = 1) => {
+      directions.push(direction);
+      if (direction === -1) reversed = true;
+    },
+    clickShadow: async (_h: string, _s: string, text: string) => {
+      if (text === '展开更多回复') expanded = true;
+    },
+    run: async (script: string) => {
+      if (script.includes('rows:Array.from(root.querySelectorAll(cfg.feed))'))
+        return { rows: [{ title: '近期作品', date: '2026/10/14 09:12' }], bottom: true };
+      if (script.includes('direction:')) return { visible: true, direction: 1 };
+      return {
+        rows: [],
+        bottom: true,
+        remaining: expanded ? 0 : 1,
+        moreText: reversed && !expanded ? '展开更多回复' : null,
+      };
+    },
+  } as unknown as CollectionSession;
+  try {
+    const result = await collectChannelsComments(db, session, {} as Judgment, []);
+    expect(directions).toContain(-1);
+    expect(expanded).toBe(true);
+    expect(result.complete).toBe(true);
+  } finally {
     db.sqlite.close();
     await rm(folder, { recursive: true, force: true });
   }

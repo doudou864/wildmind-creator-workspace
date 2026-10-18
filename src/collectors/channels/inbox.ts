@@ -72,7 +72,8 @@ export async function collectChannelsComments(
       await session.scrollShadow(cfg.host, cfg.feedScroll, position.direction);
     }
     await session.clickShadow(cfg.host, cfg.title, title);
-    const seen = new Set<string>();
+    const seen = new Map<string, string>();
+    let seekingReplies = false;
     let previous = '',
       stable = 0,
       finished = false;
@@ -90,8 +91,9 @@ export async function collectChannelsComments(
         }[];
         bottom: boolean;
         moreText: string | null;
+        remaining: number;
       }>(
-        `const s=root.querySelector(cfg.commentScroll);if(!s)throw Error('评论列表未加载');const b=s.getBoundingClientRect();return {rows:Array.from(s.querySelectorAll(cfg.comment)).map(e=>{const m=e.querySelector(cfg.main);return {author:m?.querySelector(cfg.author)?.textContent.trim()??'',body:m?.querySelector(cfg.body)?.textContent.trim()??'',time:m?.querySelector(cfg.time)?.textContent.trim()??'',self:!!m?.querySelector(cfg.self),ownReply:!!e.querySelector(cfg.ownReply),nested:!!e.parentElement.closest(cfg.comment),more:!!e.querySelector(cfg.more)};}),bottom:s.scrollTop+s.clientHeight>=s.scrollHeight-4,moreText:Array.from(s.querySelectorAll(cfg.more)).find(e=>{const r=e.getBoundingClientRect();return r.top>=b.top&&r.bottom<=Math.min(b.bottom,innerHeight)&&e.textContent.trim()===cfg.moreText;})?.textContent.trim()??null};`,
+        `const s=root.querySelector(cfg.commentScroll);if(!s)throw Error('评论列表未加载');const b=s.getBoundingClientRect();return {rows:Array.from(s.querySelectorAll(cfg.comment)).map(e=>{const m=e.querySelector(cfg.main);return {author:m?.querySelector(cfg.author)?.textContent.trim()??'',body:m?.querySelector(cfg.body)?.textContent.trim()??'',time:m?.querySelector(cfg.time)?.textContent.trim()??'',self:!!m?.querySelector(cfg.self),ownReply:!!e.querySelector(cfg.ownReply),nested:!!e.parentElement.closest(cfg.comment),more:!!e.querySelector(cfg.more)};}),bottom:s.scrollTop+s.clientHeight>=s.scrollHeight-4,remaining:Array.from(s.querySelectorAll(cfg.more)).filter(e=>e.textContent.trim()===cfg.moreText).length,moreText:Array.from(s.querySelectorAll(cfg.more)).find(e=>{const r=e.getBoundingClientRect();return r.top>=b.top&&r.bottom<=Math.min(b.bottom,innerHeight)&&e.textContent.trim()===cfg.moreText;})?.textContent.trim()??null};`,
       );
       const rows = view.rows
         .filter((r) => r.body && !r.self)
@@ -105,8 +107,10 @@ export async function collectChannelsComments(
           }
           if (!inboxTimestampInScope(sentAt, parameters.startDate, new Date().toISOString())) return [];
           const key = 'scoped:' + JSON.stringify([title, r.author, r.time, r.body]);
-          if (seen.has(key)) return [];
-          seen.add(key);
+          const evidence = JSON.stringify([r.ownReply, r.nested, r.more]);
+          if (seen.get(key) === evidence) return [];
+          if (!seen.has(key)) count++;
+          seen.set(key, evidence);
           return [
             {
               key,
@@ -137,7 +141,6 @@ export async function collectChannelsComments(
           { messages: rows, complete: false, reason: '正在读取评论列表及回复' },
           judgment,
         );
-        count += rows.length;
       }
       const fingerprint = JSON.stringify(view.rows);
       stable = view.bottom && fingerprint === previous ? stable + 1 : 0;
@@ -147,6 +150,13 @@ export async function collectChannelsComments(
         stable = 0;
         continue;
       }
+      if (view.bottom && view.remaining > 0) seekingReplies = true;
+      if (seekingReplies && view.remaining > 0) {
+        await session.scrollShadow(cfg.host, cfg.commentScroll, -1);
+        stable = 0;
+        continue;
+      }
+      if (!view.remaining) seekingReplies = false;
       if (stable >= 2) {
         finished = true;
         break;

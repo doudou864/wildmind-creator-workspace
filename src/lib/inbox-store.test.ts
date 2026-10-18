@@ -16,10 +16,11 @@ test('同一消息重抓不重复商单，回复变化自动退出待回复；�
       read: async (_schema: unknown, _prompt: string) => {
         calls++;
         expect(_prompt).toContain('投资、孵化');
+        expect(JSON.parse(_prompt.split('\n').at(-1)!)[0].key).toBe('0');
         return {
           items: [
             {
-              key: calls === 1 ? '1' : '2',
+              key: '0',
               classification: { category: calls === 1 ? 'deal' : 'idea', reason: '原文明确请求' },
               brand: null,
               requirement: '合作',
@@ -29,7 +30,7 @@ test('同一消息重抓不重复商单，回复变化自动退出待回复；�
       },
     } as unknown as Judgment;
     const raw = {
-      key: '1',
+      key: 'native:' + '带引号和表情的长编号😀'.repeat(100),
       author: '甲',
       body: '我们提供项目投资和孵化支持，邀请商务合作',
       sentAt: '2026-10-17T00:00:00Z',
@@ -98,7 +99,7 @@ test('同一主题内不重复计数，允许一条多问题消息关联不同�
     const { refreshThemes } = await import('./inbox-store');
     const classifier = {
       read: async () => ({
-        items: ['one', 'two'].map((key) => ({
+        items: ['0', '1'].map((key) => ({
           key,
           classification: { category: 'idea', reason: '问题' },
           brand: null,

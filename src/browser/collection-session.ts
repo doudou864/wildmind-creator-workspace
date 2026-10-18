@@ -104,7 +104,7 @@ export class CollectionSession {
   async scrollShadow(host: string, selector: string, direction = 1) {
     const policy = await loadBrowserPolicy();
     await this.run(
-      `await page.cdp('Emulation.clearDeviceMetricsOverride');const point=await page.evaluate(cfg=>{const e=document.querySelector(cfg.host)?.shadowRoot?.querySelector(cfg.selector);if(!e)throw Error('滚动区域不存在');const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:Math.min(innerHeight-40,r.y+r.height/2)};},${JSON.stringify({ host, selector })});await page.mouse.move(point.x,point.y);await page.waitForTimeout(${randomBetween(policy.actionDelayMs)});await page.mouse.wheel(0,${direction * randomBetween(policy.scrollPixels)});console.log('WORKSPACE_RESULT:true');`,
+      `await page.cdp('Emulation.clearDeviceMetricsOverride');const point=await page.evaluate(cfg=>{const e=document.querySelector(cfg.host)?.shadowRoot?.querySelector(cfg.selector);if(!e)throw Error('滚动区域不存在');const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:Math.min(innerHeight-40,r.y+r.height/2),height:Math.min(r.height,innerHeight)};},${JSON.stringify({ host, selector })});await page.mouse.move(point.x,point.y);await page.waitForTimeout(${randomBetween(policy.actionDelayMs)});await page.mouse.wheel(0,${direction}*Math.min(${randomBetween(policy.scrollPixels)},Math.floor(point.height*0.7)));console.log('WORKSPACE_RESULT:true');`,
     );
     await this.settle();
   }

@@ -49,7 +49,7 @@ test('只打开近期会话，旧消息不进入分类上下文，原生消息�
         return {
           items: [
             {
-              key: 'native:new',
+              key: '0',
               classification: { category: 'deal', reason: '明确合作邀约' },
               brand: null,
               requirement: '合作',
