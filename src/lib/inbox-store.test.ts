@@ -128,7 +128,7 @@ test('同一主题内不重复计数，允许一条多问题消息关联不同�
       },
       classifier,
     );
-    const ids = inboxData(db).items.map((m) => m.id);
+    const ids = ['0', '1'];
     const duplicate = {
       read: async () => ({
         themes: [{ existingId: null, title: '主题', summary: '说明', messageIds: [ids[0], ids[0]] }],
@@ -151,6 +151,8 @@ test('同一主题内不重复计数，允许一条多问题消息关联不同�
     await refreshThemes(db, valid);
     expect(inboxData(db).themes).toHaveLength(2);
     expect(inboxData(db).themes[0].messageIds).toHaveLength(2);
+    expect(new Set(inboxData(db).themes[0].messageIds)).toEqual(new Set(inboxData(db).items.map((m) => m.id)));
+    expect(inboxData(db).themes[0].messageIds).not.toContain('0');
   } finally {
     db.sqlite.close();
     await rm(folder, { recursive: true, force: true });

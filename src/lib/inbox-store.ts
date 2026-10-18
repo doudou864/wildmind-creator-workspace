@@ -234,24 +234,39 @@ export async function refreshThemes(db: WorkspaceDatabase, judgment: Judgment) {
   const existing = db.db.select().from(demandThemes).all();
   const assigned = new Set(existing.flatMap((t) => t.messageIds));
   if (ideas.every((m) => assigned.has(m.id))) return;
+  const unassigned = ideas.filter((m) => !assigned.has(m.id));
+  const messageKeys = unassigned.map((_m, index) => String(index));
+  const existingKeys = existing.map((_t, index) => String(index));
   const result = await judgment.read(
     z.object({
       themes: z.array(
         z.object({
-          existingId: z.string().nullable(),
+          existingId: existingKeys.length ? z.enum(existingKeys).nullable() : z.null(),
           title: z.string().min(1),
           summary: z.string(),
-          messageIds: z.array(z.string()).min(1),
+          messageIds: z.array(z.enum(messageKeys)).min(1),
         }),
       ),
     }),
-    '将未归类的问题归到需求主题；如属于已有主题必须返回existingId，否则null。仅引用输入消息id，不发明需求。\n' +
+    '将每条未归类的问题归到需求主题，必须覆盖全部输入消息，不可遗漏；同一主题内不能重复。若属于已有主题返回existingId，否则null。只引用本批短序号，不发明需求。\n' +
       JSON.stringify({
-        existing,
-        messages: ideas.filter((m) => !assigned.has(m.id)).map((m) => ({ id: m.id, body: m.body })),
+        existing: existing.map((t, index) => ({ id: String(index), title: t.title, summary: t.summary })),
+        messages: unassigned.map((m, index) => ({ id: String(index), body: m.body })),
       }),
   );
-  const unassigned = ideas.filter((m) => !assigned.has(m.id));
+  if (
+    result.themes.some(
+      (t) =>
+        t.messageIds.some((id) => !messageKeys.includes(id)) ||
+        (t.existingId !== null && !existingKeys.includes(t.existingId)),
+    )
+  )
+    throw Error('需求主题引用了不在本轮的消息或不存在的主题');
+  result.themes = result.themes.map((t) => ({
+    ...t,
+    existingId: t.existingId === null ? null : existing[Number(t.existingId)].id,
+    messageIds: t.messageIds.map((id) => unassigned[Number(id)].id),
+  }));
   const known = new Set(unassigned.map((m) => m.id));
   const returned = result.themes.flatMap((t) => t.messageIds);
   if (returned.some((id) => !known.has(id))) throw Error('需求主题引用了不在本轮的消息');
