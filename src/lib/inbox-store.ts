@@ -69,7 +69,7 @@ export async function storeInboxReading(
   const ids: string[] = [];
   const knownRows = db.db.select().from(messages).all();
   const identity = (raw: z.infer<typeof incomingMessageSchema>) =>
-    raw.key.startsWith('native:')
+    raw.key.startsWith('native:') || raw.key.startsWith('scoped:')
       ? createHash('sha256')
           .update(JSON.stringify([platformId, channel, raw.key]))
           .digest('hex')

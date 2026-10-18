@@ -1,0 +1,15 @@
+url: https://channels.weixin.qq.com/platform/private_msg
+host: wujie-app
+tabs: [私信, 打招呼消息]
+tabSelector: a
+contact: .session-wrap
+name: .session-wrap .name
+contactName: .name
+time: .date
+preview: .feed-info
+listScroll: .session-container
+messageScroll: .session-content-wrapper
+message: .text-wrapper
+body: .message-plain
+self: .content-right
+maxScreens: 100

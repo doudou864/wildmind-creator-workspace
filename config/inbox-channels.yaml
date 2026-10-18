@@ -1,0 +1,18 @@
+# 2026-10-18 已核对真实页面；内容应用位于公开 shadow DOM。
+url: https://channels.weixin.qq.com/platform/interaction/comment
+host: wujie-app
+feed: .comment-feed-wrap
+title: .feed-title
+published: .feed-time
+feedScroll: .feeds-container
+commentScroll: .feed-comment__wrp
+comment: .comment-item
+main: ':scope > .comment-item-main > .comment-main-content'
+author: ':scope > .comment-row .comment-user-name'
+time: ':scope > .comment-row .comment-time'
+body: ':scope > .comment-row .comment-content'
+ownReply: .comment-reply-list .comment-author-bandage
+self: ':scope > .comment-row .comment-author-bandage'
+more: .load-more__btn
+moreText: 展开更多回复
+maxScreens: 100

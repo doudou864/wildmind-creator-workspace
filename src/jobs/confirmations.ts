@@ -1,6 +1,8 @@
+import { eq } from 'drizzle-orm';
+import { attentionItems } from '../db/schema.ts';
 import { EgoBrowser } from '../browser/ego.ts';
 import type { WorkspaceDatabase } from '../db/database.ts';
-import { pendingAttention, expireConfirmations, resolveAttention } from './attention.ts';
+import { pendingAttention, expireConfirmations } from './attention.ts';
 import { startCrawl, finishCrawl } from './crawl-log.ts';
 // Called by the scheduler: one bounded check, no long-running browser-side waits.
 export async function checkConfirmations(
@@ -17,8 +19,13 @@ export async function checkConfirmations(
     if (!item.spaceId || !item.page) throw new Error('微信确认任务缺少浏览器位置');
     const result = await browser.observeLogin(item.platformId, item.spaceId, item.page);
     if (result.state === 'logged_in') {
+      // Confirmation succeeded even if later data collection fails. Never expire it as an unconfirmed login.
+      database.db
+        .update(attentionItems)
+        .set({ status: 'resolved', updatedAt: now })
+        .where(eq(attentionItems.id, item.id))
+        .run();
       await onReady(item.platformId, item.spaceId, item.page);
-      resolveAttention(database, item.platformId, now);
     }
   }
 }

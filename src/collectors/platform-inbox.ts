@@ -1,3 +1,5 @@
+import { collectChannelsComments } from './channels/inbox.ts';
+import { collectChannelsDM } from './channels/inbox-dm.ts';
 import { collectYoutubeInbox } from './youtube/inbox.ts';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import type { Judgment } from '../ai/structured.ts';
@@ -15,7 +17,10 @@ export async function collectPlatformInbox(
   paths: string[],
 ) {
   try {
-    if (platformId === 'bilibili') {
+    if (platformId === 'channels') {
+      await collectChannelsComments(db, session, judgment, paths);
+      await collectChannelsDM(db, session, judgment, paths);
+    } else if (platformId === 'bilibili') {
       await collectBilibiliInbox(db, session, judgment, paths);
       await collectBilibiliDM(db, session, judgment, paths);
     } else if (platformId === 'youtube') {

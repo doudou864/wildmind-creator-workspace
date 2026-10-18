@@ -93,6 +93,21 @@ export class CollectionSession {
     );
     await this.settle();
   }
+  // Some embedded platform apps expose a shadow DOM but their iframe intercepts locator clicks.
+  async clickShadow(host: string, selector: string, text: string | null = null, firstVisible = false) {
+    await consumePage();
+    await this.run(
+      `await page.cdp('Emulation.clearDeviceMetricsOverride');await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).actionDelayMs)});const point=await page.evaluate(cfg=>{const root=document.querySelector(cfg.host)?.shadowRoot;if(!root)throw Error('页面内容区域未加载');const nodes=Array.from(root.querySelectorAll(cfg.selector)).filter(e=>cfg.text===null||e.textContent.trim()===cfg.text).filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.height&&(!cfg.firstVisible||(r.top>=0&&r.bottom<=innerHeight&&e.contains(root.elementFromPoint(r.x+r.width/2,r.y+r.height/2))))});if(cfg.firstVisible)nodes.splice(1);if(nodes.length!==1)throw Error('页面目标不唯一');const r=nodes[0].getBoundingClientRect();if(r.top<0||r.bottom>innerHeight)throw Error('请先滚动到目标');const x=r.x+r.width/2,y=r.y+r.height/2;if(!nodes[0].contains(root.elementFromPoint(x,y)))throw Error('目标被遮挡，请先滚动到目标');return {x,y};},${JSON.stringify({ host, selector, text, firstVisible })});await page.mouse.click(point.x,point.y);console.log('WORKSPACE_RESULT:true');`,
+    );
+    await this.settle();
+  }
+  async scrollShadow(host: string, selector: string, direction = 1) {
+    const policy = await loadBrowserPolicy();
+    await this.run(
+      `await page.cdp('Emulation.clearDeviceMetricsOverride');const point=await page.evaluate(cfg=>{const e=document.querySelector(cfg.host)?.shadowRoot?.querySelector(cfg.selector);if(!e)throw Error('滚动区域不存在');const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:Math.min(innerHeight-40,r.y+r.height/2)};},${JSON.stringify({ host, selector })});await page.mouse.move(point.x,point.y);await page.waitForTimeout(${randomBetween(policy.actionDelayMs)});await page.mouse.wheel(0,${direction * randomBetween(policy.scrollPixels)});console.log('WORKSPACE_RESULT:true');`,
+    );
+    await this.settle();
+  }
   async openDetail(title: string, titleSelector: string) {
     await consumePage();
     const label = await this.run<string>(
