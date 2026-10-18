@@ -1,3 +1,4 @@
+import { collectDouyinDM } from './douyin/inbox.ts';
 import { collectChannelsComments } from './channels/inbox.ts';
 import { collectChannelsDM } from './channels/inbox-dm.ts';
 import { collectYoutubeInbox } from './youtube/inbox.ts';
@@ -27,6 +28,7 @@ export async function collectPlatformInbox(
       await collectYoutubeInbox(db, session, judgment, paths);
     } else {
       await collectInbox(db, platformId, session, judgment, paths);
+      if (platformId === 'douyin') await collectDouyinDM(db, session, judgment, paths);
       if (platformId === 'xiaohongshu') await collectXiaohongshuDM(db, session, judgment, paths);
     }
   } catch (error) {

@@ -1,4 +1,4 @@
-import { inboxDisplayScope, inboxTimestampInScope, notificationScopes } from './inbox-date.ts';
+import { inboxDisplayScope, notificationScopes } from './inbox-date.ts';
 import { loadConfig } from '../lib/config.ts';
 import { readFile, writeFile } from 'node:fs/promises';
 import { parse } from 'yaml';
@@ -7,7 +7,7 @@ import type { WorkspaceDatabase } from '../db/database.ts';
 import type { Judgment } from '../ai/structured.ts';
 import { CollectionSession, AttentionRequired } from '../browser/collection-session.ts';
 import { loadBrowserPolicy, shanghaiDate } from '../browser/policy.ts';
-import { inboxReadingSchema, storeInboxReading, inboxSource, refreshThemes } from '../lib/inbox-store.ts';
+import { storeInboxReading, inboxSource, refreshThemes } from '../lib/inbox-store.ts';
 const sourceSchema = z.object({
   id: z.string(),
   url: z.url(),
@@ -19,11 +19,6 @@ const sourceSchema = z.object({
   commentScroll: z.string(),
   commentMore: z.string().nullable(),
   ignoredBodies: z.array(z.string()).default([]),
-  dmSteps: z.array(z.string()),
-  dmRow: z.string(),
-  dmTitle: z.string(),
-  dmScroll: z.string(),
-  dmStrangers: z.string().nullable(),
 });
 export async function collectInbox(
   db: WorkspaceDatabase,
@@ -35,7 +30,6 @@ export async function collectInbox(
   const config = z
     .object({
       maxScreens: z.number().int().positive(),
-      maxConversations: z.number().int().positive(),
       platforms: z.array(sourceSchema),
     })
     .parse(parse(await readFile('config/inbox-collection.yaml', 'utf8')));
@@ -135,75 +129,6 @@ export async function collectInbox(
         : complete
           ? '已读起号日以来的通知；回复串未展开，回复状态未知'
           : '达到本轮翻页上限，评论未读完',
-    });
-    if (!source.dmSteps.length) {
-      await refreshThemes(db, judgment);
-      return;
-    }
-    await session.navigate(source.url, 'body');
-    await session.inspect(platformId, 'html', '', source.url);
-    for (const step of source.dmSteps) await session.click(step);
-    const names = new Set<string>();
-    let dmComplete = false;
-    for (let pageIndex = 0; pageIndex < config.maxScreens; pageIndex++) {
-      const list = await session.run<{ names: string[]; bottom: boolean }>(
-        `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(cfg=>{const scroll=document.querySelector(cfg.dmScroll);if(!scroll)throw Error('私信列表结构变化');return {names:Array.from(document.querySelectorAll(cfg.dmRow)).map(e=>e.querySelector(cfg.dmTitle)?.textContent?.trim()).filter(Boolean),bottom:scroll.scrollTop+scroll.clientHeight>=scroll.scrollHeight-4};},${JSON.stringify(source)})));`,
-      );
-      list.names.forEach((name) => names.add(name));
-      if (list.bottom) {
-        dmComplete = true;
-        break;
-      }
-      if (names.size >= config.maxConversations) break;
-      await session.scroll(source.dmScroll);
-    }
-    const targets = [...names].filter((n) => n !== source.dmStrangers).slice(0, config.maxConversations);
-    // Opening a conversation is read-only; the collector never touches its composer.
-    for (const [index, name] of targets.entries()) {
-      await session.navigate(source.url, 'body');
-      await session.inspect(platformId, 'html', '', source.url);
-      for (const step of source.dmSteps) await session.click(step);
-      let found = false;
-      for (let n = 0; n < config.maxScreens; n++) {
-        found = await session.run<boolean>(
-          `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(({selector,name})=>Array.from(document.querySelectorAll(selector)).some(e=>e.textContent.trim()===name),${JSON.stringify({ selector: source.dmTitle, name })})));`,
-        );
-        if (found) break;
-        await session.scroll(source.dmScroll);
-      }
-      if (!found) {
-        dmComplete = false;
-        continue;
-      }
-      await session.click(`${source.dmTitle}:text-is(${JSON.stringify(name)})`);
-      const filename = `data/inbox/${shanghaiDate()}/${platformId}-dm-${index}.png`;
-      await session.capture(filename);
-      paths.push(filename);
-      await session.inspect(platformId, 'html', '', source.url);
-      const snapshot = await session.run<string>(
-        `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.snapshot()));`,
-      );
-      const reading = await judgment.read(
-        inboxReadingSchema,
-        `仅识别已打开的${name}会话中的对方消息，忽略其他列表摘要和推荐内容。key必须是作者+完整原文；日期不完整则时间为null，不猜。未展示完整历史就contextComplete=false；最后一条没有明确证据就latestConfirmed=false。必须注明读取范围。不发消息。\n` +
-          snapshot,
-        [filename],
-      );
-      const now = new Date().toISOString();
-      reading.messages = reading.messages
-        .filter((m) => inboxTimestampInScope(m.sentAt, parameters.startDate, now))
-        .map((m) => ({
-          ...m,
-          context: m.context.filter((c) => inboxTimestampInScope(c.sentAt, parameters.startDate, now)),
-        }));
-      await storeInboxReading(db, platformId, 'dm', source.url, reading, judgment);
-    }
-    inboxSource(db, {
-      platformId,
-      channel: 'dm',
-      status: 'failed',
-      capturedAt: new Date().toISOString(),
-      reason: `已读取${targets.length}个会话的当前可见消息；${dmComplete ? '历史消息和陌生人消息尚未完整核验' : '会话列表未读完'}，不能视为全量成功`,
     });
     await refreshThemes(db, judgment);
   } catch (error) {

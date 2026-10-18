@@ -2,7 +2,7 @@
 export function inboxDate(value: string, today: string): string | null {
   const text = value.trim();
   let date: string | null = null;
-  if (/^(今天|刚刚|\d+\s*(秒|分钟|小时)前)/.test(text)) date = today;
+  if (/^(今天|刚刚|\d+\s*(秒|分钟|小时)前)/.test(text) || /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(text)) date = today;
   else if (/^(昨天|前天)/.test(text)) {
     const days = text.startsWith('前天') ? 2 : 1;
     date = new Date(Date.parse(today + 'T00:00:00+08:00') - days * 86400000 + 8 * 3600000).toISOString().slice(0, 10);

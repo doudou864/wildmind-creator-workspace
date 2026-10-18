@@ -1,0 +1,22 @@
+# 2026-10-18 核对实际个人私信与陌生人消息；群聊不属于私信输入。
+url: https://www.douyin.com/
+open: 'text="消息"'
+contact: '[data-e2e="conversation-item"]'
+name: .conversationConversationItemtitle
+time: .ConversationItemTagNextToTitletimeStr
+personal: .commonIMAvataravatarContainer
+pinned: .conversationConversationItemisStickOnTop
+listScroll: .conversationConversationListwrapper
+strangerRoot: .conversationStrangerBoxrowArea2
+strangerOpen: .conversationStrangerBoxtitle
+strangerTime: .conversationStrangerBoxstrangerTimeStr
+strangerScroll: .conversationStrangerConversationListlistWrapper
+back: .StackLayoutStackTitleBarbackBtn
+messageScroll: .messageMessageListlist
+message: .messageMessageBoxmessageBox
+messageTime: .MessageBoxTimetimeLayout
+messageText: .TextMessageTexttextInnerContent
+self: .messageMessageBoxisFromMe
+first: .messageMessageBoxisFirst
+maxScreens: 100
+maxConversations: 20
