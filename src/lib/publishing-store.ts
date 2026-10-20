@@ -1,3 +1,4 @@
+import { mediaStage } from './publishing-media-stage.ts';
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import type { WorkspaceDatabase } from '../db/database.ts';
@@ -80,6 +81,13 @@ export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: s
     const old = id ? tx.select().from(publishRecords).where(eq(publishRecords.id, id)).get() : null;
     if (id && !old) throw new Error('发布草稿不存在。');
     if (old && old.revision !== expectedRevision) throw new Error('发布草稿已被其他窗口修改，请刷新后再保存。');
+    if (old?.abandonedAt) throw Error('这次发布准备已放弃，请新建准备；原回执保留');
+    if (
+      old &&
+      mediaStage(old, tx.select().from(publishReceipts).all()) !== 'editable' &&
+      (old.draft.videoId !== input.videoId || JSON.stringify(old.draft.imageIds) !== JSON.stringify(input.imageIds))
+    )
+      throw Error('已上传或结果未确认，不能替换素材；请先核实或放弃上传');
     if (old && old.state !== 'draft') throw new Error('当前批次已进入执行阶段，不能覆盖草稿。');
     const now = new Date().toISOString(),
       record = {
@@ -131,6 +139,7 @@ export async function returnSnapshot(db: WorkspaceDatabase, batchId: string, sna
   const snapshot = db.db.select().from(publishSnapshots).where(eq(publishSnapshots.id, snapshotId)).get();
   if (
     !batch ||
+    batch.abandonedAt ||
     batch.state !== 'draft' ||
     !snapshot ||
     snapshot.contentId !== batch.contentId ||
@@ -182,5 +191,19 @@ export async function adoptCover(db: WorkspaceDatabase, id: string, raw: unknown
     const result = { ...content, videoCovers, updatedAt: new Date().toISOString() };
     tx.update(contents).set(result).where(eq(contents.id, id)).run();
     return result;
+  });
+}
+
+export function abandonPublishing(db: WorkspaceDatabase, id: string, expectedRevision: number) {
+  return db.db.transaction((tx) => {
+    const batch = tx.select().from(publishRecords).where(eq(publishRecords.id, id)).get();
+    if (!batch || batch.revision !== expectedRevision) throw Error('发布记录已改变，请刷新核对');
+    const stage = mediaStage(batch, tx.select().from(publishReceipts).all());
+    if (stage !== 'uploaded') throw Error('只有明确已上传且未发布的批次可放弃；进行中、结果未知和已发布记录必须先核实');
+    tx.update(publishRecords)
+      .set({ abandonedAt: new Date().toISOString(), revision: batch.revision + 1 })
+      .where(eq(publishRecords.id, id))
+      .run();
+    return tx.select().from(publishRecords).where(eq(publishRecords.id, id)).get()!;
   });
 }

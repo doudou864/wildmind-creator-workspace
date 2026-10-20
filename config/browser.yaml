@@ -1,6 +1,7 @@
 # 登录检测只读页面；标记来自 2026-10-17 实际后台。空数组不判断为已登录。
 platforms:
   - id: douyin
+    managementPage: https://creator.douyin.com/creator-micro/content/manage
     replyPages:
       comment: https://www.douyin.com/
       dm: https://www.douyin.com/
@@ -20,6 +21,7 @@ platforms:
     loggedOut: [短信登录, 手机号]
     loggedInPath: /new/home
   - id: bilibili
+    managementPage: https://member.bilibili.com/platform/upload-manager/article
     replyPages:
       comment: https://member.bilibili.com/platform/comment/article
       commentTemplate: "https://member.bilibili.com/platform/comment/article/{postId}/{title}?type=1"
@@ -43,6 +45,7 @@ platforms:
     loggedOut: [登录视频号助手]
     loggedInPath: /platform
   - id: youtube
+    managementPage: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/videos/upload
     replyPages:
       comment: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/comments/inbox
       commentTemplate: "https://studio.youtube.com/video/{postId}/comments/inbox"

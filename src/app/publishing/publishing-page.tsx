@@ -1,4 +1,6 @@
 'use client';
+import { LocalVideoPicker } from '@/ui/local-video-picker';
+import { mediaStage } from '@/lib/publishing-media-stage';
 import Link from 'next/link';
 import { uniqueVideoId } from '@/ui/work-flow';
 import { ContentPicker } from '@/ui/content-picker';
@@ -75,7 +77,9 @@ export default function PublishingPage({
   expiryHours,
   initialContent = null,
   initialKind = 'video',
+  managementPages = {},
 }: {
+  managementPages?: Record<string, string>;
   initialContent?: string | null;
   initialKind?: PublishKind;
   config: PublishingConfig;
@@ -147,9 +151,13 @@ export default function PublishingPage({
   );
   const liveBatch = data.batches.find((batch) => batch.id === meta?.id);
   const stale = !!meta && !!liveBatch && (liveBatch.revision !== meta.revision || liveBatch.state !== meta.state);
-  const locked = !!meta && ['uploading', 'queued', 'running', 'finished'].includes(meta.state);
+  const stage = mediaStage(liveBatch ?? meta, data.receipts);
+  const locked =
+    !!liveBatch?.abandonedAt || (!!meta && ['uploading', 'queued', 'running', 'finished'].includes(meta.state));
+  const mediaLocked = locked || stage !== 'editable';
   const liveRetry = data.receipts.find((receipt) => receipt.id === retry?.id);
   const retryAllowed =
+    !liveBatch?.abandonedAt &&
     !dirty &&
     !stale &&
     !!retry &&
@@ -227,7 +235,11 @@ export default function PublishingPage({
   useEffect(() => {
     if (meta || dirty || !draft.contentId) return;
     const active = data.batches.find(
-      (b) => b.draft.contentId === draft.contentId && b.draft.kind === draft.kind && b.state !== 'finished',
+      (b) =>
+        b.draft.contentId === draft.contentId &&
+        b.draft.kind === draft.kind &&
+        b.state !== 'finished' &&
+        !b.abandonedAt,
     );
     if (active) {
       setMeta(active);
@@ -569,15 +581,23 @@ export default function PublishingPage({
       <PageHeader
         title="发布中心"
         summary={
-          !draft.contentId
-            ? '先选一条作品'
-            : draft.kind === 'layout' && !snapshots.length
-              ? '先回排版确认稿件，再准备上传'
-              : issues.length
-                ? `还差 ${issues.length} 项就能上传`
-                : canUpload
-                  ? '准备完成，可以上传'
-                  : '查看当前发布进度，完成下一步确认'
+          stage === 'uploaded'
+            ? '核对平台草稿，或放弃这次上传'
+            : stage === 'published'
+              ? '已发布，去平台查看作品'
+              : stage === 'blocked'
+                ? '先核实平台结果，再继续操作'
+                : stage === 'abandoned'
+                  ? '已放弃这次上传，请到平台清理草稿'
+                  : !draft.contentId
+                    ? '先选一条作品'
+                    : draft.kind === 'layout' && !snapshots.length
+                      ? '先回排版确认稿件，再准备上传'
+                      : issues.length
+                        ? `还差 ${issues.length} 项就能上传`
+                        : canUpload
+                          ? '准备完成，可以上传'
+                          : '查看当前发布进度，完成下一步确认'
         }
         onRefresh={() => {
           setLoadedScreenshots([]);
@@ -666,6 +686,61 @@ export default function PublishingPage({
       <div className="publish-grid">
         <aside className="publish-source">
           <div id="publish-source" />
+          {stage !== 'editable' && (
+            <section className="card">
+              <h2>
+                {stage === 'published'
+                  ? '已发布，去平台管理'
+                  : stage === 'abandoned'
+                    ? '已放弃这次上传'
+                    : stage === 'uploaded'
+                      ? '已上传，尚未发布'
+                      : '先核实平台结果'}
+              </h2>
+              {stage === 'uploaded' && meta && (
+                <>
+                  <Button
+                    disabled={busy || dirty}
+                    disabledReason="请等待保存完成"
+                    onClick={async () => {
+                      setBusy(true);
+                      try {
+                        await request(`/api/publishing/drafts/${meta.id}/abandon`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ expectedRevision: meta.revision }),
+                        });
+                        await refresh();
+                        setNotice('已放弃本次上传。请到平台删除草稿，原回执仍保留。');
+                      } catch (e) {
+                        setNotice(e instanceof Error ? e.message : '放弃失败');
+                      } finally {
+                        setBusy(false);
+                      }
+                    }}
+                  >
+                    放弃这次上传
+                  </Button>
+                  <p>只改本地记录，保留回执；请到平台删除草稿。</p>
+                </>
+              )}
+              {stage === 'published' && <p>已发布内容不能在这里删除或替换。</p>}
+              {stage === 'blocked' && <p>进行中或结果未知，不能删除、替换或再次上传。</p>}
+              {draft.settings.map((item) =>
+                managementPages[item.platformId] ? (
+                  <a
+                    className="button button-text"
+                    key={item.platformId}
+                    href={managementPages[item.platformId]}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    去{name(item.platformId)}管理 →
+                  </a>
+                ) : null,
+              )}
+            </section>
+          )}
           <Card title={draft.kind === 'video' ? '选成片' : '选确认稿或图片'}>
             <div className="image-form">
               <ContentPicker
@@ -676,7 +751,11 @@ export default function PublishingPage({
                   protect(() => {
                     clearMedia();
                     const existing = data.batches.find(
-                      (b) => b.draft.contentId === id && b.draft.kind === draft.kind && b.state !== 'finished',
+                      (b) =>
+                        b.draft.contentId === id &&
+                        b.draft.kind === draft.kind &&
+                        b.state !== 'finished' &&
+                        !b.abandonedAt,
                     );
                     if (existing) {
                       loadBatch(existing);
@@ -708,7 +787,7 @@ export default function PublishingPage({
                     <select
                       aria-label="已保存成片"
                       value={draft.videoId ?? ''}
-                      disabled={!draft.contentId || locked || busy}
+                      disabled={!draft.contentId || mediaLocked || busy}
                       onChange={(e) => {
                         clearMedia();
                         change({ videoId: e.target.value || null });
@@ -724,20 +803,27 @@ export default function PublishingPage({
                         ))}
                     </select>
                   </label>
-                  <details className="publish-local">
-                    <summary>从本机选择成片 →</summary>
-                    <label className="publish-upload">
-                      选择本机成片
-                      <input
-                        aria-label="选择本机成片"
-                        type="file"
-                        accept={config.videoTypes.join(',')}
-                        disabled={busy || locked || mediaLoading}
-                        onChange={(e) => void chooseFiles(e)}
-                      />
-                      <span className="small">MP4 / MOV · 最大 {config.videoMaxMB} MB</span>
-                    </label>
-                  </details>
+                  <LocalVideoPicker
+                    contentId={draft.contentId}
+                    disabled={busy || mediaLocked}
+                    onSelected={(id) => {
+                      clearMedia();
+                      change({ videoId: id });
+                      void refresh();
+                    }}
+                  />
+                  {currentVideo && (
+                    <div>
+                      <Button
+                        disabled={busy || mediaLocked}
+                        disabledReason="已上传、已发布或状态未确认，不能移除成片"
+                        onClick={() => change({ videoId: null })}
+                      >
+                        移除这次选择
+                      </Button>
+                      <small>只移除本次发布的关联，不删除原文件。</small>
+                    </div>
+                  )}
                   {local[0] || currentVideo ? (
                     <div className="publish-video">
                       <video
@@ -822,7 +908,7 @@ export default function PublishingPage({
                       type="file"
                       accept={config.imageTypes.join(',')}
                       multiple
-                      disabled={busy || locked || mediaLoading}
+                      disabled={busy || mediaLocked || mediaLoading}
                       onChange={(e) => void chooseFiles(e)}
                     />
                     <span className="small">
@@ -830,7 +916,7 @@ export default function PublishingPage({
                     </span>
                   </label>
                   <Button
-                    disabled={busy || locked}
+                    disabled={busy || mediaLocked}
                     disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
                     onClick={() => {
                       setSearch('');
@@ -839,6 +925,7 @@ export default function PublishingPage({
                   >
                     从已上传素材选择
                   </Button>
+                  <p className="small">移除或替换只改变本次配图，素材库原图保留。</p>
                   <div className="publish-photos">
                     {draft.imageIds.map((id, i) => {
                       const a = data.assets.find((a) => a.id === id);
@@ -854,7 +941,7 @@ export default function PublishingPage({
                             </a>
                             <Button
                               aria-label={`第${i + 1}张前移`}
-                              disabled={i === 0 || busy || locked}
+                              disabled={i === 0 || busy || mediaLocked}
                               disabledReason="已在首位，或正在处理，暂不能前移。"
                               onClick={() => {
                                 const ids = [...draft.imageIds];
@@ -865,11 +952,11 @@ export default function PublishingPage({
                               ←
                             </Button>
                             <Button
-                              disabled={busy || locked}
+                              disabled={busy || mediaLocked}
                               disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
                               onClick={() => change({ imageIds: draft.imageIds.filter((value) => value !== id) })}
                             >
-                              移除
+                              移除本次配图
                             </Button>
                           </div>
                         </div>
@@ -1301,7 +1388,8 @@ export default function PublishingPage({
                         {data.contents.find((c) => c.id === batch.draft.contentId)?.title ?? '关联作品不可用'}
                       </strong>
                       <span className="small">
-                        {batchNames[batch.state]} · {batch.draft.settings.map((s) => name(s.platformId)).join(' / ')}
+                        {batch.abandonedAt ? '已放弃（回执保留）' : batchNames[batch.state]} ·{' '}
+                        {batch.draft.settings.map((s) => name(s.platformId)).join(' / ')}
                       </span>
                     </Button>
                   ))}
@@ -1467,7 +1555,7 @@ export default function PublishingPage({
       {history && (
         <Dialog title="发布记录 · 只读" onClose={() => setHistory(null)}>
           <p>
-            {batchNames[history.state]} · {history.createdAt}
+            {history.abandonedAt ? '已放弃（回执保留）' : batchNames[history.state]} · {history.createdAt}
           </p>
           {history.draft.settings.map((item) => (
             <section key={item.platformId}>

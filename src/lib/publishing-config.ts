@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { parse } from 'yaml';
-import { publishingConfigSchema } from './publishing-model';
+import { publishingConfigSchema } from './publishing-model.ts';
 import type { Platform } from './config';
 export async function loadPublishingConfig(platforms: Platform[]) {
   const config = publishingConfigSchema.parse(

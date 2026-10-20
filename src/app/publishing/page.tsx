@@ -1,3 +1,4 @@
+import { loadBrowserConfig } from '@/browser/config';
 import type { Metadata } from 'next';
 import { loadConfig } from '@/lib/config';
 import { loadPublishingConfig } from '@/lib/publishing-config';
@@ -25,6 +26,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ c
       key={`${query.content ?? ''}:${query.kind ?? ''}`}
       initialContent={query.content ?? null}
       initialKind={query.kind === 'layout' || query.kind === 'xhs' ? query.kind : 'video'}
+      managementPages={Object.fromEntries((await loadBrowserConfig()).map((p) => [p.id, p.managementPage ?? p.url]))}
       config={config}
       layoutConfig={layoutConfig}
       platforms={workspace.platforms}

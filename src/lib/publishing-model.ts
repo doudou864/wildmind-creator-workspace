@@ -81,6 +81,7 @@ export const publishDraftSchema = z
 export type PublishDraft = z.infer<typeof publishDraftSchema>;
 export type PublishSetting = z.infer<typeof publishSettingSchema>;
 export type PublishBatch = {
+  abandonedAt?: string | null;
   fixture?: boolean;
   id: string;
   revision: number;
@@ -117,6 +118,7 @@ export type PublishSnapshot = {
   state: 'ready' | 'queued' | 'published' | 'returned';
 };
 export type PublishVideo = {
+  fingerprint?: { bytes: number; mtimeMs: number; sha256: string } | null;
   id: string;
   contentId: string;
   name: string;

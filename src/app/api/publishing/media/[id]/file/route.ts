@@ -4,14 +4,14 @@ import { Readable } from 'node:stream';
 import { eq } from 'drizzle-orm';
 import { publishVideos } from '@/db/schema';
 import { usingDatabase } from '@/lib/media-store';
-import { assetFile } from '@/lib/image-files';
+import { verifiedVideoPath } from '@/lib/local-videos';
 import { serviceError } from '@/lib/api-response';
 export async function GET(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
     const video = await usingDatabase((db) => db.db.select().from(publishVideos).where(eq(publishVideos.id, id)).get());
     if (!video) return new Response(null, { status: 404 });
-    const file = await assetFile(video.path),
+    const file = await verifiedVideoPath(video),
       size = (await stat(file)).size;
     const range = request.headers.get('range');
     let start = 0,

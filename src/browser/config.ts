@@ -11,6 +11,7 @@ const platform = z
     loggedIn: z.array(z.string().min(1)),
     loggedOut: z.array(z.string().min(1)),
     loggedInPath: z.string().nullable(),
+    managementPage: z.url().optional(),
     replyPages: z
       .object({
         comment: z.url().optional(),

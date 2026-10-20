@@ -1,0 +1,21 @@
+{
+  "fixture": true,
+  "listed": [
+    {
+      "name": "fixture.mp4",
+      "bytes": 1667,
+      "duration": 1,
+      "width": 64,
+      "height": 64
+    }
+  ],
+  "keptOriginalPath": true,
+  "noDuplicateReference": true,
+  "verifiedBeforeChange": true,
+  "blockedAfterChange": true,
+  "fingerprint": {
+    "bytes": 1667,
+    "mtimeMs": 1792503482545.1355,
+    "sha256": "568094f6f51d48816d303bc2fcd937532ff5f80ed80fa38073d6d5f03a76ec9b"
+  }
+}

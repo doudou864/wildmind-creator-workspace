@@ -1,3 +1,7 @@
 # 使用本机已有 ffprobe，不新增依赖；更换安装位置时在这里调整。
 ffprobePath: /Users/a1234/miniconda3/bin/ffprobe
 probeTimeoutMs: 30000
+
+# 成片文件夹：只允许这些绝对路径中的 MP4/MOV；待用户填写，可配置多个。
+finishedVideoDirectories: []
+videoListLimit: 20

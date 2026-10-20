@@ -263,6 +263,7 @@ export const topicGenerationResults = sqliteTable('topic_generation_results', {
 });
 export const publishRecords = sqliteTable('publish_records', {
   id: id(),
+  abandonedAt: text('abandoned_at'),
   fixture: bool('fixture').notNull().default(false),
   revision: revision(),
   contentId: text('content_id')
@@ -314,6 +315,7 @@ export const publishSnapshots = sqliteTable('publish_snapshots', {
 });
 export const publishVideos = sqliteTable('publish_videos', {
   id: id(),
+  fingerprint: json<{ bytes: number; mtimeMs: number; sha256: string }>('fingerprint'),
   contentId: text('content_id')
     .notNull()
     .references(() => contents.id),
