@@ -1,3 +1,4 @@
+import { replyDestinations } from '@/ui/reply-destinations';
 import type { Metadata } from 'next';
 import { loadConfig } from '@/lib/config';
 import { loadDealConfig } from '@/lib/deal-config';
@@ -24,6 +25,7 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ d
     status = config.statuses.some((s) => s.id === query.status) ? query.status! : 'all';
   return (
     <DealsPage
+      destinations={await replyDestinations()}
       key={`${linkedId ?? ''}-${status}`}
       config={config}
       channels={inbox.channels}

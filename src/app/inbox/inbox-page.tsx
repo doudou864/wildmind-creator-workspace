@@ -1,9 +1,10 @@
 'use client';
+import { inboxSummary } from '@/ui/inbox-summary';
+import { ReplyActions, type ReplyDestinations } from '@/ui/reply-actions';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Platform } from '@/lib/config';
 import {
-  assessReplies,
   canSyncTopic,
   filterInbox,
   inboxPage,
@@ -31,6 +32,8 @@ const replyLabels = { waiting: '待回复', replied: '已回复', unknown: '待�
 const sourceLabels = { ready: '读取完成', pending: '等待读取', failed: '读取失败', unavailable: '当前无入口' };
 export default function InboxPage({
   config,
+  destinations,
+  initialPriority = false,
   platforms,
   initialData,
   initialMessageId,
@@ -39,6 +42,8 @@ export default function InboxPage({
   today,
   syncWindow,
 }: {
+  destinations: ReplyDestinations;
+  initialPriority?: boolean;
   initialThemeId?: string | null;
   initialFilters?: Partial<InboxFilters>;
   initialMessageId: string | null;
@@ -49,8 +54,15 @@ export default function InboxPage({
   syncWindow: string;
 }) {
   const { data, error, refresh } = useResource('/api/inbox', initialData);
+  const [priority, setPriority] = useState(initialPriority);
+  const [special, setSpecial] = useState<'all' | 'topics' | 'unclassified'>('all');
   const [showAllThemes, setShowAllThemes] = useState(false);
-  const [filters, setFilters] = useState<InboxFilters>({ ...blankFilters, ...initialFilters, themeId: initialThemeId });
+  const [filters, setFilters] = useState<InboxFilters>({
+    ...blankFilters,
+    ...initialFilters,
+    reply: initialPriority ? 'waiting' : (initialFilters.reply ?? 'all'),
+    themeId: initialThemeId,
+  });
   const [linkedMessageId, setLinkedMessageId] = useState(initialMessageId);
   const [requestedPage, setRequestedPage] = useState(1),
     [selectedId, setSelectedId] = useState<string | null>(initialMessageId);
@@ -63,7 +75,9 @@ export default function InboxPage({
   function messageCategory(item: InboxMessage) {
     const classification = item.classification;
     return classification.status === 'ready'
-      ? (config.categories.find((c) => c.id === classification.result.category)?.name ?? '分类不可用')
+      ? classification.result.category === 'idea'
+        ? '问题与观点'
+        : (config.categories.find((c) => c.id === classification.result.category)?.name ?? '分类不可用')
       : classification.status === 'pending'
         ? '待识别'
         : '识别失败';
@@ -82,17 +96,29 @@ export default function InboxPage({
   const visibleThemes = data.themes.filter(
     (t) => themeMessages(t, scoped).length > 0 || (filters.platform === 'all' && filters.channel === 'all'),
   );
-  const filtered = filterInbox(data.items, data.themes, filters).filter(
-    (item) => !linkedMessageId || item.id === linkedMessageId,
-  );
+  const summary = inboxSummary(data.items);
+  const valuableIds = new Set(summary.valuable.map((m) => m.id));
+  const filtered = filterInbox(data.items, data.themes, filters)
+    .filter(
+      (item) =>
+        (!linkedMessageId || item.id === linkedMessageId) &&
+        (!priority || valuableIds.has(item.id)) &&
+        (special !== 'topics' || (canSyncTopic(item) && !syncReceipts[item.id])) &&
+        (special !== 'unclassified' || item.classification.status !== 'ready'),
+    )
+    .sort((a, b) => {
+      const rank = (m: InboxMessage) =>
+        m.classification.status === 'ready' ? { deal: 0, idea: 1, other: 2 }[m.classification.result.category] : 3;
+      return rank(a) - rank(b);
+    });
   const page = inboxPage(filtered, requestedPage, config.pageSize);
-  const active = page.items.find((item) => item.id === selectedId) ?? null;
-  const assessments = assessReplies(data.items);
+  const active = page.items.find((item) => item.id === selectedId) ?? page.items[0] ?? null;
+  const assessments = summary.assessments;
   const assessment = active ? assessments.get(active.id) : null;
   const theme = filters.themeId ? data.themes.find((t) => t.id === filters.themeId) : null;
   const displayCount = (value: number) => (data.recordsReady ? value.toLocaleString('en-US') : '--');
-  const unclassified = scoped.filter((item) => item.classification.status !== 'ready').length;
-  const topics = scoped.filter(
+  const unclassified = data.items.filter((item) => item.classification.status !== 'ready').length;
+  const topics = data.items.filter(
     (item) =>
       item.classification.status === 'ready' &&
       item.classification.result.category === 'idea' &&
@@ -103,6 +129,9 @@ export default function InboxPage({
     if (page.page !== requestedPage) setRequestedPage(page.page);
   }, [page.page, requestedPage]);
   function filter(patch: Partial<InboxFilters>) {
+    setPriority(false);
+    setSpecial('all');
+    setLinkedMessageId(null);
     setFilters((current) => ({ ...current, ...patch }));
     setRequestedPage(1);
   }
@@ -145,24 +174,33 @@ export default function InboxPage({
       <PageHeader
         title="互动收件箱"
         summary={
-          waitingCount(data.items, data.items)
-            ? `${waitingCount(data.items, data.items)} 条待回复，其中商单 ${waitingCount(
-                data.items.filter(
-                  (m) => m.classification.status === 'ready' && m.classification.result.category === 'deal',
-                ),
-                data.items,
-              )} 条`
+          summary.valuableWaiting
+            ? `${summary.valuableWaiting} 条有价值消息待回复，其中商单 ${summary.dealWaiting} 条`
             : '查看消息，挑选值得送进选题的需求'
         }
         onRefresh={() => void reload()}
         refreshing={refreshing}
         action={
-          <Button variant="primary" onClick={() => filter({ reply: 'waiting' })}>
-            查看待回复
+          <Button
+            variant="primary"
+            onClick={() => {
+              filter({ ...blankFilters, reply: 'waiting' });
+              setPriority(true);
+            }}
+          >
+            查看值得回复的消息
           </Button>
         }
       />
-      <Card title="读取状态" meta={<span className="eyebrow">{syncWindow}</span>} className="inbox-sources">
+      <details className="card inbox-sources">
+        <summary>
+          {data.sources.length} 个来源 · {data.sources.filter((s) => s.status === 'ready').length} 个已读取
+          {data.sources
+            .filter((s) => s.status === 'failed')
+            .map((s) => ` · 读取失败（${platformName(s.platformId)}${channelName(s.channel)}）`)
+            .join('')}
+          {data.sources.some((s) => s.status === 'unavailable') ? ' · 部分来源暂无入口' : ''}
+        </summary>
         {data.sources.length ? (
           <div className="inbox-source-grid">
             {data.sources.map((source) => (
@@ -178,7 +216,9 @@ export default function InboxPage({
                   {inboxTime(source.capturedAt)}
                 </time>
                 {source.reason && (source.status === 'failed' || source.status === 'unavailable') && (
-                  <p>{source.reason}</p>
+                  <p>
+                    {source.status === 'failed' ? '这次没能完整读取，请到平台查看。' : '平台当前没有开放这个消息入口。'}
+                  </p>
                 )}
               </div>
             ))}
@@ -186,7 +226,41 @@ export default function InboxPage({
         ) : (
           <Empty>尚无评论或私信读取记录</Empty>
         )}
-      </Card>
+      </details>
+      <div className="inbox-overview" aria-label="消息统计">
+        <Button
+          aria-pressed={priority}
+          onClick={() => {
+            filter({ ...blankFilters, reply: 'waiting' });
+            setPriority(true);
+          }}
+        >
+          有价值消息待回复 <strong>{summary.valuableWaiting}</strong>
+        </Button>
+        <Button onClick={() => filter({ ...blankFilters, reply: 'waiting' })}>
+          全部待回复会话 / 评论 <strong>{summary.waiting}</strong>
+        </Button>
+        <Button
+          onClick={() => {
+            filter(blankFilters);
+            setSpecial('topics');
+          }}
+        >
+          可送入选题 <strong>{topics}</strong>
+        </Button>
+        <Button
+          onClick={() => {
+            filter(blankFilters);
+            setSpecial('unclassified');
+          }}
+        >
+          待识别 / 失败 <strong>{unclassified}</strong>
+        </Button>
+        <Button className="stored-count" onClick={() => filter(blankFilters)}>
+          全部已存消息 {data.items.length}
+        </Button>
+      </div>
+      <p className="inbox-view-name">{priority ? '待回复的有价值消息' : '按当前条件查看消息'}</p>
       <div className="inbox-filters">
         <label>
           平台
@@ -243,6 +317,8 @@ export default function InboxPage({
         <Button
           onClick={() => {
             setFilters(blankFilters);
+            setPriority(false);
+            setSpecial('all');
             setLinkedMessageId(null);
             setRequestedPage(1);
           }}
@@ -263,26 +339,6 @@ export default function InboxPage({
           </Button>
         </div>
       )}
-      <div className="inbox-overview" aria-label="当前平台与类型范围统计">
-        <div>
-          <span>已存消息</span>
-          <strong className="mono">{displayCount(scoped.length)}</strong>
-        </div>
-        <Button
-          onClick={() => filter({ reply: 'waiting', category: 'all', classification: 'all', query: '', themeId: null })}
-        >
-          <span>待回复会话 / 评论</span>
-          <strong className="mono">{displayCount(waitingCount(scoped, data.items))}</strong>
-        </Button>
-        <div>
-          <span>尚未同步的问题与观点</span>
-          <strong className="mono">{displayCount(topics)}</strong>
-        </div>
-        <div>
-          <span>待识别 / 识别失败</span>
-          <strong className="mono">{displayCount(unclassified)}</strong>
-        </div>
-      </div>
       {notice && (
         <p className="topic-feedback" role="status">
           {notice}
@@ -298,8 +354,8 @@ export default function InboxPage({
           <Card title="消息分类">
             <div className="inbox-category-list">
               <Button
-                aria-pressed={filters.category === 'all'}
-                className={filters.category === 'all' ? 'active' : ''}
+                aria-pressed={!priority && filters.category === 'all'}
+                className={`list-row ${!priority && filters.category === 'all' ? 'active' : ''}`}
                 onClick={() => filter({ category: 'all', themeId: null })}
               >
                 <strong>全部消息</strong>
@@ -309,11 +365,11 @@ export default function InboxPage({
                 <Button
                   key={category.id}
                   aria-pressed={filters.category === category.id}
-                  className={filters.category === category.id ? 'active' : ''}
+                  className={`list-row ${filters.category === category.id ? 'active' : ''}`}
                   onClick={() => filter({ category: category.id, themeId: null })}
                 >
                   <div>
-                    <strong>{category.name}</strong>
+                    <strong>{category.id === 'idea' ? '问题与观点' : category.name}</strong>
                   </div>
                   <span className="mono">
                     {displayCount(
@@ -377,35 +433,37 @@ export default function InboxPage({
               page.items.map((item) => {
                 const state = assessments.get(item.id)?.state ?? 'unknown';
                 return (
-                  <Button
-                    key={item.id}
-                    className={`inbox-message ${active?.id === item.id ? 'active' : ''}`}
-                    aria-pressed={active?.id === item.id}
-                    onClick={() => {
-                      setSelectedId(item.id);
-                      setNotice('');
-                    }}
-                  >
-                    <div className="inbox-message-meta">
-                      <span>
-                        {platformName(item.platformId)} · {channelName(item.channel)}
-                      </span>
-                      <time className="mono" dateTime={item.sentAt ?? undefined}>
-                        {inboxTime(item.sentAt)}
-                      </time>
-                    </div>
-                    <div className="inbox-message-title">
-                      <strong>{item.author || '发送者未识别'}</strong>
-                      <span className="inbox-reply-state">{replyLabels[state]}</span>
-                    </div>
-                    <p className="inbox-message-body">{item.body || '原文未读取完整'}</p>
-                    <div className="inbox-message-tags">
-                      <span>{messageCategory(item)}</span>
-                      {item.dealId && <span>已进入商单</span>}
-                      {(item.topicSignalId || syncReceipts[item.id]) && <span>已同步选题输入</span>}
-                      {item.contentTitle && <span className="inbox-message-work">{item.contentTitle}</span>}
-                    </div>
-                  </Button>
+                  <article className="message-item" key={item.id}>
+                    <Button
+                      className={`inbox-message list-row ${active?.id === item.id ? 'active' : ''}`}
+                      aria-pressed={active?.id === item.id}
+                      onClick={() => {
+                        setSelectedId(item.id);
+                        setNotice('');
+                      }}
+                    >
+                      <div className="inbox-message-meta">
+                        <span>
+                          {platformName(item.platformId)} · {channelName(item.channel)}
+                        </span>
+                        <time className="mono" dateTime={item.sentAt ?? undefined}>
+                          {inboxTime(item.sentAt)}
+                        </time>
+                      </div>
+                      <div className="inbox-message-title">
+                        <strong>{item.author || '发送者未识别'}</strong>
+                        <span className="inbox-reply-state">{replyLabels[state]} →</span>
+                      </div>
+                      <p className="inbox-message-body">{item.body || '原文未读取完整'}</p>
+                      <div className="inbox-message-tags">
+                        <span>{messageCategory(item)}</span>
+                        {item.dealId && <span>已进入商单</span>}
+                        {(item.topicSignalId || syncReceipts[item.id]) && <span>已同步选题输入</span>}
+                        {item.contentTitle && <span className="inbox-message-work">{item.contentTitle}</span>}
+                      </div>
+                    </Button>
+                    <ReplyActions message={item} destinations={destinations} />
+                  </article>
                 );
               })
             ) : (
@@ -420,31 +478,33 @@ export default function InboxPage({
               </Empty>
             )}
           </div>
-          <div className="inbox-pagination">
-            <span className="small">按消息时间倒序 · 每页 {config.pageSize} 条</span>
-            <Button
-              aria-label="上一页消息"
-              disabled={page.page === 1}
-              disabledReason="已经是第一页。"
-              onClick={() => setRequestedPage(page.page - 1)}
-            >
-              ←
-            </Button>
-            <span className="mono">{data.recordsReady ? `${page.page} / ${page.pages}` : '-- / --'}</span>
-            <Button
-              aria-label="下一页消息"
-              disabled={page.page === page.pages}
-              disabledReason="已经是最后一页。"
-              onClick={() => setRequestedPage(page.page + 1)}
-            >
-              →
-            </Button>
-          </div>
+          {page.pages > 1 && (
+            <div className="inbox-pagination">
+              <span className="small">按消息时间倒序 · 每页 {config.pageSize} 条</span>
+              <Button
+                aria-label="上一页消息"
+                disabled={page.page === 1}
+                disabledReason="已经是第一页。"
+                onClick={() => setRequestedPage(page.page - 1)}
+              >
+                ←
+              </Button>
+              <span className="mono">{data.recordsReady ? `${page.page} / ${page.pages}` : '-- / --'}</span>
+              <Button
+                aria-label="下一页消息"
+                disabled={page.page === page.pages}
+                disabledReason="已经是最后一页。"
+                onClick={() => setRequestedPage(page.page + 1)}
+              >
+                →
+              </Button>
+            </div>
+          )}
         </Card>
         <aside className="inbox-detail-column">
-          <Card title="原文与上下文" className="inbox-detail">
+          <Card title="消息详情" className="inbox-detail">
             {!active ? (
-              <Empty>选择一条消息查看原文与判定依据</Empty>
+              <Empty>没有符合条件的消息</Empty>
             ) : (
               <>
                 <div className="inbox-detail-heading">
@@ -453,6 +513,7 @@ export default function InboxPage({
                     {platformName(active.platformId)} · {channelName(active.channel)} · {inboxTime(active.sentAt)}
                   </span>
                 </div>
+                <ReplyActions message={active} destinations={destinations} />
                 <p className="inbox-original">{active.body || '原文尚未读取完整'}</p>
                 <dl className="inbox-evidence">
                   <div>
@@ -472,15 +533,18 @@ export default function InboxPage({
                     <dd className="mono">{inboxTime(assessment?.observed.capturedAt ?? null)}</dd>
                   </div>
                 </dl>
-                <p className="inbox-reply-explanation">
-                  {assessment?.state === 'unknown'
-                    ? '回复证据不足或不一致，暂不能判定是否待回复。'
-                    : evidence?.kind === 'dm'
-                      ? `本会话最后一条由${evidence.lastSender === 'self' ? '我方' : '对方'}发送；以最近一次已核实的会话读取为准。`
-                      : evidence?.kind === 'comment' && evidence.ownReplyFound
-                        ? '已在该评论下识别到我方回复。'
-                        : '已完整读取评论回复范围，尚未发现我方回复。'}
-                </p>
+                <details>
+                  <summary>查看回复依据 →</summary>
+                  <p className="inbox-reply-explanation">
+                    {assessment?.state === 'unknown'
+                      ? '回复证据不足或不一致，暂不能判定是否待回复。'
+                      : evidence?.kind === 'dm'
+                        ? `本会话最后一条由${evidence.lastSender === 'self' ? '我方' : '对方'}发送；以最近一次已核实的会话读取为准。`
+                        : evidence?.kind === 'comment' && evidence.ownReplyFound
+                          ? '已在该评论下识别到我方回复。'
+                          : '已完整读取评论回复范围，尚未发现我方回复。'}
+                  </p>
+                </details>
                 {evidence?.kind === 'dm' && (
                   <p className="small">
                     会话末条时间：<span className="mono">{inboxTime(evidence.lastMessageAt)}</span>
@@ -489,7 +553,7 @@ export default function InboxPage({
                 {active.reply.kind === 'comment' && (
                   <p className="small">
                     评论互动：点赞 <span className="mono">{active.reply.likes ?? '--'}</span> · 回复{' '}
-                    <span className="mono">{active.reply.replyCount ?? '--'}</span>；未读到数字时不判断热度。
+                    <span className="mono">{active.reply.replyCount ?? '--'}</span>
                   </p>
                 )}
                 <div className="inbox-classification">
@@ -500,7 +564,7 @@ export default function InboxPage({
                       : (active.classification.reason ?? '等待分类服务处理')}
                   </p>
                 </div>
-                <details className="inbox-context" open>
+                <details className="inbox-context">
                   <summary>
                     {active.channel === 'dm' ? '会话上下文' : '评论上下文'} ·{' '}
                     {active.contextComplete ? '已读完整' : '可能不完整'}
@@ -545,9 +609,7 @@ export default function InboxPage({
                           ? '商单入库失败'
                           : '等待自动进入商单列表'}
                     </strong>
-                    <p>
-                      {active.dealSyncReason ?? '商单线索由服务自动入库，并推送到总控台今日行动，无需逐条手工添加。'}
-                    </p>
+                    <p>{active.dealSyncReason ?? ''}</p>
                     <Link href={active.dealId ? `/deals?deal=${encodeURIComponent(active.dealId)}` : '/deals'}>
                       {active.dealId ? '查看关联商单 →' : '查看商单列表 →'}
                     </Link>

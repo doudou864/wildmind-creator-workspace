@@ -1,3 +1,4 @@
+import { replyDestinations } from '@/ui/reply-destinations';
 import type { Metadata } from 'next';
 import { loadConfig } from '@/lib/config';
 import { loadInboxConfig } from '@/lib/inbox-config';
@@ -21,6 +22,8 @@ export default async function Page({
   }).format(new Date());
   return (
     <InboxPage
+      destinations={await replyDestinations()}
+      initialPriority={Object.keys(query).length === 0}
       initialThemeId={query.theme ?? null}
       initialFilters={{
         category: ['deal', 'idea', 'other'].includes(query.category ?? '') ? query.category! : 'all',

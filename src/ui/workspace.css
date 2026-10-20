@@ -1346,3 +1346,89 @@ dialog::backdrop {
 .dashboard-v2 .health-warning .button {
   margin: 0;
 }
+
+/* U3: reply work starts with actionable messages, compact state switches. */
+.inbox-sources > summary,
+.deal-filter-disclosure > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-weight: 700;
+}
+.inbox-sources {
+  padding-block: 4px;
+  margin-bottom: 12px;
+}
+.inbox-source-grid {
+  padding-block: 12px;
+}
+.workspace .inbox-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+.workspace .inbox-overview > button {
+  min-height: 40px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+.workspace .inbox-overview strong {
+  font-size: 18px;
+}
+.workspace .inbox-overview .stored-count {
+  margin-left: auto;
+  color: var(--muted);
+}
+.inbox-view-name {
+  margin: 8px 0;
+  font-weight: 700;
+}
+.reply-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-block: 8px;
+}
+.reply-actions small {
+  flex-basis: 100%;
+}
+.message-item {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 8px;
+}
+.workspace .message-item .inbox-message {
+  width: 100%;
+  white-space: normal;
+  border: 0;
+}
+.workspace .deal-summary {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.workspace .deal-summary > button {
+  min-height: 40px;
+  padding: 8px 14px;
+  flex: 0 0 auto;
+}
+.workspace .deal-summary > button > div {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.workspace .deal-summary strong {
+  font-size: 18px;
+}
+.deal-filter-disclosure {
+  margin-bottom: 12px;
+}
+.deal-detail-column h3 {
+  margin-top: 20px;
+  margin-bottom: 8px;
+}
+.workspace .deal-row {
+  white-space: normal;
+}

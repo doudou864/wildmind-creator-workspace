@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { ReplyActions, type ReplyDestinations } from '@/ui/reply-actions';
 import { useEditSession } from '@/ui/use-edit-session';
 import { useEffect, useState } from 'react';
 import type { Platform } from '@/lib/config';
@@ -26,6 +27,7 @@ const replyLabels = { waiting: '待回复', replied: '已回复', unknown: '待�
 type Editor = { base: Deal; brand: string; requirement: string; status: DealStatus };
 export default function DealsPage({
   config,
+  destinations,
   channels,
   platforms,
   initialData,
@@ -34,6 +36,7 @@ export default function DealsPage({
   today,
   syncWindow,
 }: {
+  destinations: ReplyDestinations;
   config: DealConfig;
   channels: InboxConfig['channels'];
   platforms: Platform[];
@@ -67,7 +70,7 @@ export default function DealsPage({
   const counts = dealCounts(scoped),
     visible = filterDeals(items, data.messages, filters),
     page = inboxPage(visible, requestedPage, config.pageSize);
-  const active = page.items.find((d) => d.id === selectedId) ?? null;
+  const active = page.items.find((d) => d.id === selectedId) ?? page.items[0] ?? null;
   const source = active ? dealSource(active, data.messages) : null;
   const replies = assessReplies(data.messages),
     assessment = source ? replies.get(source.id) : null;
@@ -227,51 +230,58 @@ export default function DealsPage({
         ))}
       </div>
 
-      <div className="deal-filters">
-        <label>
-          平台
-          <select
-            aria-label="筛选商单平台"
-            value={filters.platform}
-            onChange={(e) => filter({ platform: e.target.value })}
-          >
-            <option value="all">全部平台</option>
-            {allPlatforms.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Segmented
-          label="商单来源类型"
-          value={filters.channel}
-          options={[{ value: 'all', label: '全部来源' }, ...channels.map((c) => ({ value: c.id, label: c.name }))]}
-          onChange={(channel) => filter({ channel })}
-        />
-        <label>
-          进度
-          <select aria-label="筛选商单状态" value={filters.status} onChange={(e) => filter({ status: e.target.value })}>
-            <option value="all">全部状态</option>
-            {config.statuses.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="deal-search">
-          搜索
-          <input
-            aria-label="搜索商单"
-            type="search"
-            placeholder="品牌、合作需求、发送者"
-            value={filters.query}
-            onChange={(e) => filter({ query: e.target.value })}
+      <details className="deal-filter-disclosure" open={items.length >= 10}>
+        <summary>筛选商单 →</summary>
+        <div className="deal-filters">
+          <label>
+            平台
+            <select
+              aria-label="筛选商单平台"
+              value={filters.platform}
+              onChange={(e) => filter({ platform: e.target.value })}
+            >
+              <option value="all">全部平台</option>
+              {allPlatforms.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Segmented
+            label="商单来源类型"
+            value={filters.channel}
+            options={[{ value: 'all', label: '全部来源' }, ...channels.map((c) => ({ value: c.id, label: c.name }))]}
+            onChange={(channel) => filter({ channel })}
           />
-        </label>
-        <Button onClick={() => filter(blankFilters)}>重置筛选</Button>
-      </div>
+          <label>
+            进度
+            <select
+              aria-label="筛选商单状态"
+              value={filters.status}
+              onChange={(e) => filter({ status: e.target.value })}
+            >
+              <option value="all">全部状态</option>
+              {config.statuses.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="deal-search">
+            搜索
+            <input
+              aria-label="搜索商单"
+              type="search"
+              placeholder="品牌、合作需求、发送者"
+              value={filters.query}
+              onChange={(e) => filter({ query: e.target.value })}
+            />
+          </label>
+          <Button onClick={() => filter(blankFilters)}>重置筛选</Button>
+        </div>
+      </details>
       {filters.linkedId && (
         <div className="deal-linked">
           <span>正在查看链接指定的商单</span>
@@ -307,7 +317,7 @@ export default function DealsPage({
                 return (
                   <Button
                     key={deal.id}
-                    className={`deal-row ${active?.id === deal.id ? 'active' : ''}`}
+                    className={`deal-row list-row ${active?.id === deal.id ? 'active' : ''}`}
                     aria-pressed={active?.id === deal.id}
                     onClick={() => {
                       setSelectedId(deal.id);
@@ -343,34 +353,36 @@ export default function DealsPage({
               </Empty>
             )}
           </div>
-          <div className="deal-pagination">
-            <span className="small">
-              按更新时间倒序 · 每页 <span className="mono">{config.pageSize}</span> 条
-            </span>
-            <Button
-              aria-label="上一页商单"
-              disabled={page.page === 1}
-              disabledReason="已经是第一页。"
-              onClick={() => {
-                setRequestedPage(page.page - 1);
-                setSelectedId(null);
-              }}
-            >
-              ←
-            </Button>
-            <span className="mono">{data.recordsReady ? `${page.page} / ${page.pages}` : '-- / --'}</span>
-            <Button
-              aria-label="下一页商单"
-              disabled={page.page === page.pages}
-              disabledReason="已经是最后一页。"
-              onClick={() => {
-                setRequestedPage(page.page + 1);
-                setSelectedId(null);
-              }}
-            >
-              →
-            </Button>
-          </div>
+          {page.pages > 1 && (
+            <div className="deal-pagination">
+              <span className="small">
+                按更新时间倒序 · 每页 <span className="mono">{config.pageSize}</span> 条
+              </span>
+              <Button
+                aria-label="上一页商单"
+                disabled={page.page === 1}
+                disabledReason="已经是第一页。"
+                onClick={() => {
+                  setRequestedPage(page.page - 1);
+                  setSelectedId(null);
+                }}
+              >
+                ←
+              </Button>
+              <span className="mono">{data.recordsReady ? `${page.page} / ${page.pages}` : '-- / --'}</span>
+              <Button
+                aria-label="下一页商单"
+                disabled={page.page === page.pages}
+                disabledReason="已经是最后一页。"
+                onClick={() => {
+                  setRequestedPage(page.page + 1);
+                  setSelectedId(null);
+                }}
+              >
+                →
+              </Button>
+            </div>
+          )}
         </Card>
         <aside className="deal-detail-column">
           <Card title="商单详情">
@@ -382,6 +394,7 @@ export default function DealsPage({
                   <h3>{active.brand || '品牌待核实'}</h3>
                   <span className="deal-state">{stateName(active.status)}</span>
                 </div>
+                {source && <ReplyActions message={source} destinations={destinations} />}
                 <p className="deal-requirement">{active.requirement || '合作需求尚未提取，请以原始消息为准。'}</p>
                 <dl className="deal-metadata">
                   <div>
@@ -418,8 +431,7 @@ export default function DealsPage({
                 </div>
               </>
             )}
-          </Card>
-          <Card title="原始消息">
+            <h3>原始消息</h3>
             {!active ? (
               <Empty>选择商单后查看关联消息</Empty>
             ) : (
@@ -439,17 +451,11 @@ export default function DealsPage({
                   <Empty>关联消息暂不可用，不补填原文</Empty>
                 )}
                 <div className="deal-source-links">
-                  <Link href={`/inbox?message=${encodeURIComponent(active.source.messageId)}`}>查看消息与上下文 →</Link>
-                  {source?.sourceUrl && /^https?:\/\//.test(source.sourceUrl) && (
-                    <a href={source.sourceUrl} target="_blank" rel="noreferrer">
-                      原始平台页面 →
-                    </a>
-                  )}
+                  <Link href={`/inbox?message=${encodeURIComponent(active.source.messageId)}`}>看原消息 →</Link>
                 </div>
               </>
             )}
-          </Card>
-          <Card title="状态建议">
+            <h3>状态建议</h3>
             {!active ? (
               <Empty>选择商单后查看已有建议</Empty>
             ) : !suggestion ? (

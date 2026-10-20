@@ -1,24 +1,37 @@
 # 登录检测只读页面；标记来自 2026-10-17 实际后台。空数组不判断为已登录。
 platforms:
   - id: douyin
+    replyPages:
+      comment: https://www.douyin.com/
+      dm: https://www.douyin.com/
+      hint: 在平台左侧打开通知或消息
     url: https://creator.douyin.com/
     domains: [douyin.com]
     loggedIn: [抖音号, 粉丝指数]
     loggedOut: [扫码登录, 手机号登录]
     loggedInPath: /creator-micro/
   - id: xiaohongshu
+    replyPages:
+      comment: https://www.xiaohongshu.com/notification
+      dm: https://www.xiaohongshu.com/chat?channel_id=&channel_type=explore_feed
     url: https://creator.xiaohongshu.com/
     domains: [xiaohongshu.com]
     loggedIn: [小红书账号, 粉丝数]
     loggedOut: [短信登录, 手机号]
     loggedInPath: /new/home
   - id: bilibili
+    replyPages:
+      comment: https://member.bilibili.com/platform/comment/article
+      dm: https://message.bilibili.com/
     url: https://member.bilibili.com/platform/home
     domains: [bilibili.com]
     loggedIn: [成为UP主的第, 粉丝概览]
     loggedOut: [扫码登录, 密码登录]
     loggedInPath: /platform/home
   - id: channels
+    replyPages:
+      comment: https://channels.weixin.qq.com/platform/interaction/comment
+      dm: https://channels.weixin.qq.com/platform/private_msg
     confirmation:
       button: 'text="微信快捷登录"'
       message: 请在微信里确认登录
@@ -29,6 +42,8 @@ platforms:
     loggedOut: [登录视频号助手]
     loggedInPath: /platform
   - id: youtube
+    replyPages:
+      comment: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/comments/inbox
     url: https://studio.youtube.com/
     domains: [youtube.com, google.com]
     loggedIn: [我的频道, 频道分析, 当前订阅人数]
