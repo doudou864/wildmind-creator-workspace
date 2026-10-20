@@ -2,6 +2,8 @@
 ffprobePath: /Users/a1234/miniconda3/bin/ffprobe
 probeTimeoutMs: 30000
 
-# 成片文件夹：只允许这些绝对路径中的 MP4/MOV；待用户填写，可配置多个。
-finishedVideoDirectories: []
+# 成片文件夹：只允许这些绝对路径中的 MP4/MOV；用户于 2026-10-21 确认，可配置多个。
+finishedVideoDirectories:
+  - /Volumes/U1/成片库
+  - /Users/a1234/Downloads
 videoListLimit: 20
