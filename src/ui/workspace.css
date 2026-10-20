@@ -1685,3 +1685,23 @@ dialog.asset-drawer {
   justify-content: flex-start;
   white-space: normal;
 }
+
+.dashboard-metrics-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+.dashboard-metrics-row .trend-reading {
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.dashboard-v2 .health-warning {
+  grid-template-columns: 1fr;
+}
+.dashboard-v2 .health-warning > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}

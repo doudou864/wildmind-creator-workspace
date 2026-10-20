@@ -1,5 +1,9 @@
 'use client';
 import Link from 'next/link';
+import type { AnalysisRead } from '@/ui/analysis-read';
+import type { DataCenterConfig } from '@/lib/data-center-config';
+import { analysisRows, analysisValue } from '@/ui/analysis-presentation';
+import type { Comparison } from '@/core/data-center';
 import type { DashboardRead } from '@/ui/dashboard-read';
 import { freshness, workTitle } from '@/ui/data-freshness';
 import { visibleRecords } from '@/ui/visible-records';
@@ -13,11 +17,15 @@ import { DataCenterChart, MetricNeedle } from '@/ui/data-center-chart';
 import { request } from '@/ui/use-resource';
 export default function DataCenterPage({
   data: initialData,
+  metricPresentation,
+  rawReadings,
   readings,
   today,
   syncWindow,
 }: {
   data: DataCenterData;
+  metricPresentation: DataCenterConfig['presentation'];
+  rawReadings: AnalysisRead;
   readings: DashboardRead['readings'];
   today: string;
   syncWindow: string;
@@ -31,6 +39,8 @@ export default function DataCenterPage({
   const [error, setError] = useState('');
   const selected = data.selected;
   const rows = data.comparisons[day] ?? [];
+  const shownRows = analysisRows(rows, metricPresentation);
+  const keyRows = shownRows.filter((r) => metricPresentation.keyNames.includes(r.name));
   const current = selected ? readings[selected.id] : null;
   const curve = data.curve.slice(0, data.age);
   const missingDays = curve.flatMap((r, i) => (r.value == null ? [`D${i + 1}`] : []));
@@ -66,6 +76,55 @@ export default function DataCenterPage({
     } finally {
       setBusy(false);
     }
+  }
+  function metricTable(groupRows: Comparison[]) {
+    return (
+      <table className="analysis-table">
+        <thead>
+          <tr>
+            <th>指标</th>
+            <th>本条值</th>
+            {enough && (
+              <>
+                <th>同龄中位数</th>
+                <th>正常范围</th>
+                <th>结论</th>
+              </>
+            )}
+          </tr>
+        </thead>
+        <tbody>
+          {groupRows.map((row) => (
+            <tr key={row.id}>
+              <td>
+                {row.name}
+                {backfillNote(row, day) && <small title={backfillNote(row, day)}>采样于 D{row.actualDay}</small>}
+              </td>
+              <td className="mono">{analysisValue(row, rawReadings)}</td>
+              {enough && (
+                <>
+                  <td>
+                    {display(row.median)}
+                    {row.median == null ? '' : row.unit}
+                  </td>
+                  <td>
+                    <MetricNeedle row={row} />
+                    <small>
+                      {row.p25 == null
+                        ? `样本 ${row.count}/${data.minimum}`
+                        : `${display(row.p25)}–${display(row.p75)}${row.unit}`}
+                    </small>
+                  </td>
+                  <td>
+                    {row.status === 'missing' ? '没抓到' : row.status === 'insufficient' ? '样本不足' : row.conclusion}
+                  </td>
+                </>
+              )}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
   }
   return (
     <main className="workspace data-center">
@@ -140,6 +199,73 @@ export default function DataCenterPage({
               ))}
             </details>
           </section>
+          <Card
+            title={enough ? '同龄数据对比' : '本条数据'}
+            className="analysis-comparison"
+            meta={
+              <div className="segments" role="group" aria-label="检查点">
+                {data.checkpoints.map((d) => (
+                  <Button
+                    key={d}
+                    disabled={d > data.age}
+                    disabledReason={`作品尚未满 ${d} 天。`}
+                    className={day === d ? 'selected' : ''}
+                    aria-pressed={day === d}
+                    onClick={() => setDay(d)}
+                  >
+                    D{d}
+                  </Button>
+                ))}
+              </div>
+            }
+          >
+            {!enough && <p>同类作品够 {data.minimum} 条后显示对比</p>}
+            <div className="analysis-key-metrics">
+              {metricPresentation.keyNames.map((name) => {
+                const row = keyRows.find((r) => r.name === name);
+                return (
+                  row && (
+                    <div key={name}>
+                      <span>{name}</span>
+                      <strong>{analysisValue(row, rawReadings)}</strong>
+                    </div>
+                  )
+                );
+              })}
+            </div>
+            <div className="analysis-table-scroll">
+              {enough && metricTable(keyRows)}
+              {Object.entries(metricPresentation.groups).map(([group, names]) => {
+                const members = shownRows.filter(
+                  (r) => names.includes(r.name) && !metricPresentation.keyNames.includes(r.name),
+                );
+                return (
+                  members.length > 0 && (
+                    <details className="analysis-metric-group" key={group}>
+                      <summary>{group}</summary>
+                      {metricTable(members)}
+                    </details>
+                  )
+                );
+              })}
+              {(() => {
+                const remaining = shownRows.filter(
+                  (r) =>
+                    !metricPresentation.keyNames.includes(r.name) &&
+                    !Object.values(metricPresentation.groups).some((names) => names.includes(r.name)),
+                );
+                return (
+                  remaining.length > 0 && (
+                    <details className="analysis-metric-group">
+                      <summary>其他已采集指标</summary>
+                      {metricTable(remaining)}
+                    </details>
+                  )
+                );
+              })()}
+              {!rows.length && <Empty>{data.age < day ? '尚未到检查点' : '没有已存的指标数据'}</Empty>}
+            </div>
+          </Card>
           <Card title="AI 解读" className="analysis-interpretation">
             {saved ? (
               <>
@@ -195,87 +321,6 @@ export default function DataCenterPage({
               <summary>为什么和最新累计值不同 →</summary>
               <p>曲线保留每天第一次有效采样，用于同龄比较；页头显示最后保存的累计值。同一天稍晚采集的数值可能更高。</p>
             </details>
-          </Card>
-          <Card
-            title={enough ? '同龄数据对比' : '本条数据'}
-            className="analysis-comparison"
-            meta={
-              <div className="segments" role="group" aria-label="检查点">
-                {data.checkpoints.map((d) => (
-                  <Button
-                    key={d}
-                    disabled={d > data.age}
-                    disabledReason={`作品尚未满 ${d} 天。`}
-                    className={day === d ? 'selected' : ''}
-                    aria-pressed={day === d}
-                    onClick={() => setDay(d)}
-                  >
-                    D{d}
-                  </Button>
-                ))}
-              </div>
-            }
-          >
-            {!enough && <p>同类作品够 {data.minimum} 条后显示对比</p>}
-            <div className="analysis-table-scroll">
-              <table className="analysis-table">
-                <thead>
-                  <tr>
-                    <th>指标</th>
-                    <th>本条值</th>
-                    {enough && (
-                      <>
-                        <th>中位数</th>
-                        <th>正常范围 / 本条位置</th>
-                        <th>结论</th>
-                      </>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row) => (
-                    <tr key={row.id}>
-                      <td>
-                        {row.name}
-                        <small>
-                          {row.unit} · {row.direction === 'lower' ? '越小越好' : '越大越好'}
-                        </small>
-                        {backfillNote(row, day) && (
-                          <small className="analysis-provenance" title={backfillNote(row, day)}>
-                            采样于 D{row.actualDay}，{row.capturedAt ? freshness(row.capturedAt, today) : '时间未记录'}
-                          </small>
-                        )}
-                      </td>
-                      <td className="mono">
-                        {row.approximate && row.value != null ? '约 ' : ''}
-                        {display(row.value)}
-                      </td>
-                      {enough && (
-                        <>
-                          <td className="mono">{display(row.median)}</td>
-                          <td>
-                            <MetricNeedle row={row} />
-                            <small className="mono">
-                              {row.p25 != null
-                                ? `${display(row.p25)}–${display(row.p75)}`
-                                : `样本 ${row.count}/${data.minimum}`}
-                            </small>
-                          </td>
-                          <td>
-                            {row.status === 'missing'
-                              ? '没抓到'
-                              : row.status === 'insufficient'
-                                ? '样本不足'
-                                : row.conclusion}
-                          </td>
-                        </>
-                      )}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              {!rows.length && <Empty>{data.age < day ? '尚未到检查点' : '没有已存的指标数据'}</Empty>}
-            </div>
           </Card>
         </>
       )}

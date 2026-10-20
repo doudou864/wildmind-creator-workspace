@@ -1,3 +1,4 @@
+import { analysisRead } from '@/ui/analysis-read';
 import { dashboardRead } from '@/ui/dashboard-read';
 import { loadConfig } from '@/lib/config';
 import { loadDataCenterConfig } from '@/lib/data-center-config';
@@ -17,6 +18,8 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ p
     <DataCenterPage
       key={data.selected?.id ?? 'empty'}
       data={data}
+      metricPresentation={settings.presentation}
+      rawReadings={await usingDatabase((db) => analysisRead(db, data.selected?.id, config.metrics))}
       readings={await usingDatabase((db) => dashboardRead(db, config).readings)}
       today={shanghaiDate()}
       syncWindow={config.parameters.syncWindow}

@@ -129,6 +129,11 @@ export default function Dashboard({
   const selectedRange = ranges.includes(range) ? range : ranges[0];
   const recentStart = new Date(Date.parse(today) - parameters.recentWindow * 86400000).toISOString().slice(0, 10);
   const works = (data?.works ?? []).filter((w) => w.published >= recentStart && w.published <= today);
+  const recentUpdate = works
+    .map((w) => presentation.readings[w.id]?.capturedAt)
+    .filter((v): v is string => !!v)
+    .sort()
+    .at(-1);
   const columns = parameters.checkpoints.filter((d) => works.some((w) => w.checkpoints[String(d)]?.ratio != null));
   const yesterday = new Date(Date.parse(today) - 86400000).toISOString().slice(0, 10);
   const yesterdayNet = dates.find((d) => d.date === yesterday)?.values.net_followers;
@@ -208,7 +213,11 @@ export default function Dashboard({
           <Link className="card compact-deals list-row" href="/deals">
             商单　待处理 {counts.pending} · 跟进中 {counts.following} · 已完成 {counts.completed} →
           </Link>
-          <Card title="数据健康" className="health-compact">
+          <Card
+            title="数据健康"
+            meta={<span className="small">数据{freshness(latestUpdate, today)}</span>}
+            className="health-compact"
+          >
             <div id="data-health">
               {!unhealthy.length ? (
                 <p>
@@ -219,22 +228,25 @@ export default function Dashboard({
                   <div className="health-warning" key={p.id}>
                     <div>
                       <strong>{p.name}</strong>
-                      <span className="accent">数据{freshness(workspace.platforms[p.id]?.lastSuccess, today)}</span>
+                      <span className="small">
+                        最近成功{' '}
+                        {workspace.platforms[p.id]?.lastSuccess
+                          ? dataDate(workspace.platforms[p.id].lastSuccess!).slice(5)
+                          : '尚无'}
+                      </span>
                     </div>
                     {workspace.platforms[p.id]?.status === 'failed' && (
-                      <p>
+                      <p className="accent">
                         本次采集失败，没有读到完整数据。
                         <Button variant="text" onClick={() => setDetail(`source:${p.id}`)}>
                           查看原因
                         </Button>
                       </p>
                     )}
-                    <Button disabled disabledReason="暂时不能从页面重抓；当前仍由定时采集任务执行。">
-                      立即重抓
-                    </Button>
                   </div>
                 ))
               )}
+              <p className="small">手动重抓：在项目终端运行 npm run collect。</p>
               {summary.incomplete.length > 0 && (
                 <Link className="list-row health-incomplete" href="/inbox?reply=unknown">
                   {summary.incomplete.length} 条有价值消息的回复状态没读全，去平台核对有无回复 →
@@ -285,80 +297,86 @@ export default function Dashboard({
           )}
         </div>
         <div className="dashboard-right">
-          {chartDays.length ? (
-            <Card title={`${platform.name}趋势`} className="trend-compact">
-              <div className="trend-reading">
-                <strong className="mono">
-                  {latest?.precision?.[metric.id] === 'display' ? '约 ' : ''}
-                  {number(value)}
-                </strong>
-                <span>
-                  {metric.name}
-                  <br />
-                  <time className={latest?.date !== today ? 'accent' : ''}>数据{freshness(latest?.date, today)}</time>
-                </span>
-                <span>
-                  较前一日
-                  <br />
-                  {difference == null ? '—' : `${signed(difference)}%`}
-                </span>
-              </div>
-              {chartDays.length < 7 ? (
-                <p className="small">再积累 {7 - chartDays.length} 天显示趋势</p>
-              ) : (
-                <>
-                  <Segmented
-                    label="时间范围"
-                    value={selectedRange}
-                    onChange={setRange}
-                    options={ranges.map((n) => ({ value: n, label: `${n}D` }))}
-                  />
-                  <Chart
-                    days={chartDays.slice(-selectedRange)}
-                    metric={metric.id}
-                    label={metric.name}
-                    kind="blocks"
-                    rows={parameters.chartRows}
-                  />
-                </>
-              )}
-            </Card>
-          ) : (
-            <div className="card collapsed-note">暂无趋势数据，采集后开始积累</div>
-          )}
-          {latest?.values.followers != null ? (
-            <Card title={`粉丝 · ${platform.name}`} className="fans-compact">
-              <div className="fan-numbers">
-                <span>
-                  总数
-                  <strong>
-                    {latest?.precision?.followers === 'display' ? '约 ' : ''}
-                    {number(latest?.values.followers)}
+          <div className="dashboard-metrics-row">
+            {chartDays.length ? (
+              <Card title={`${platform.name}趋势`} className="trend-compact">
+                <div className="trend-reading">
+                  <strong className="mono">
+                    {latest?.precision?.[metric.id] === 'display' ? '约 ' : ''}
+                    {number(value)}
                   </strong>
-                </span>
-                <span>
-                  昨日净增<strong className={(yesterdayNet ?? 0) < 0 ? 'accent' : ''}>{signed(yesterdayNet)}</strong>
-                </span>
-                <span>
-                  30 天净增<strong>{signed(net30)}</strong>
-                </span>
-              </div>
-              {dates.filter((d) => d.values.followers != null).length >= 7 && (
-                <div className="fan-charts">
-                  <Chart days={dates.slice(-30)} metric="followers" label="粉丝总数" kind="line" />
-                  <Chart days={dates.slice(-30)} metric="net_followers" label="每日净增" kind="needles" />
+                  <span>
+                    {metric.name}
+                    <br />
+                    <time className="small">趋势统计到 {latest?.date.slice(5)}</time>
+                  </span>
+                  <span>
+                    较前一日
+                    <br />
+                    {difference == null ? '—' : `${signed(difference)}%`}
+                  </span>
                 </div>
-              )}
-            </Card>
-          ) : (
-            <div className="card collapsed-note">暂无粉丝数据，采集后显示</div>
-          )}
+                {chartDays.length < 7 ? (
+                  <p className="small">再积累 {7 - chartDays.length} 天显示趋势</p>
+                ) : (
+                  <>
+                    <Segmented
+                      label="时间范围"
+                      value={selectedRange}
+                      onChange={setRange}
+                      options={ranges.map((n) => ({ value: n, label: `${n}D` }))}
+                    />
+                    <Chart
+                      days={chartDays.slice(-selectedRange)}
+                      metric={metric.id}
+                      label={metric.name}
+                      kind="blocks"
+                      rows={parameters.chartRows}
+                    />
+                  </>
+                )}
+              </Card>
+            ) : (
+              <div className="card collapsed-note">暂无趋势数据，采集后开始积累</div>
+            )}
+            {latest?.values.followers != null ? (
+              <Card title={`粉丝 · ${platform.name}`} className="fans-compact">
+                <div className="fan-numbers">
+                  <span>
+                    总数
+                    <strong>
+                      {latest?.precision?.followers === 'display' ? '约 ' : ''}
+                      {number(latest?.values.followers)}
+                    </strong>
+                  </span>
+                  {yesterdayNet != null && (
+                    <span>
+                      昨日净增<strong>{signed(yesterdayNet)}</strong>
+                    </span>
+                  )}
+                  {net30 != null && (
+                    <span>
+                      30 天净增<strong>{signed(net30)}</strong>
+                    </span>
+                  )}
+                </div>
+                {dates.filter((d) => d.values.followers != null).length >= 7 && (
+                  <div className="fan-charts">
+                    <Chart days={dates.slice(-30)} metric="followers" label="粉丝总数" kind="line" />
+                    <Chart days={dates.slice(-30)} metric="net_followers" label="每日净增" kind="needles" />
+                  </div>
+                )}
+              </Card>
+            ) : (
+              <div className="card collapsed-note">暂无粉丝数据，采集后显示</div>
+            )}
+          </div>
           {works.length ? (
             <Card
               title="近期作品"
               meta={
                 <span>
-                  {works.length} 条 · 近 {parameters.recentWindow} 天
+                  {works.length} 条 · 数据{freshness(recentUpdate, today)}
                 </span>
               }
               className="recent-compact"
@@ -423,11 +441,6 @@ export default function Dashboard({
                         <td>
                           {r?.precision === 'display' ? '约 ' : ''}
                           {number(r?.value)} {r?.name ?? '累计值'} · 第 {age ?? '—'} 天
-                          {r?.capturedAt && (
-                            <small className={dataDate(r.capturedAt) !== today ? 'accent' : ''}>
-                              数据{freshness(r.capturedAt, today)}
-                            </small>
-                          )}
                         </td>
                         <td>→</td>
                       </tr>
@@ -441,9 +454,7 @@ export default function Dashboard({
             <div className="card collapsed-note">暂无近期作品，采集到发布作品后显示</div>
           )}
           {mature < parameters.conclusionMinimum ? (
-            <div className="card collapsed-note">
-              还差 {parameters.conclusionMinimum - mature} 条可计入的 D21 结果，满了开始算命中率
-            </div>
+            <div className="card collapsed-note">命中率：还差 {parameters.conclusionMinimum - mature} 条 D21 结果</div>
           ) : (
             <HitRates data={workspace} config={config} today={today} />
           )}

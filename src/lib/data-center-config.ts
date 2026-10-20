@@ -8,6 +8,11 @@ export const dataCenterConfigSchema = z.object({
   viewsName: z.string(),
   interactionNames: z.array(z.string()),
   interactionRateNames: z.array(z.string()),
+  presentation: z.object({
+    keyNames: z.array(z.string()),
+    groups: z.record(z.string(), z.array(z.string())),
+    equivalentRates: z.record(z.string(), z.string()),
+  }),
   ai: z.object({ maxCharacters: z.number().int().positive(), prompt: z.string() }),
 });
 export type DataCenterConfig = z.infer<typeof dataCenterConfigSchema>;

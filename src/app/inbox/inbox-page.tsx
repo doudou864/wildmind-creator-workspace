@@ -173,11 +173,7 @@ export default function InboxPage({
       <WorkspaceHeader current="/inbox" date={today} syncWindow={syncWindow} />
       <PageHeader
         title="互动收件箱"
-        summary={
-          summary.valuableWaiting
-            ? `${summary.valuableWaiting} 条有价值消息待回复，其中商单 ${summary.dealWaiting} 条`
-            : '查看消息，挑选值得送进选题的需求'
-        }
+        summary={summary.valuableWaiting ? '先回复商单，再看问题与观点' : '查看消息，挑选值得送进选题的需求'}
         onRefresh={() => void reload()}
         refreshing={refreshing}
         action={
@@ -261,71 +257,108 @@ export default function InboxPage({
         </Button>
       </div>
       <p className="inbox-view-name">{priority ? '待回复的有价值消息' : '按当前条件查看消息'}</p>
-      <div className="inbox-filters">
-        <label>
-          平台
-          <select aria-label="筛选平台" value={filters.platform} onChange={(e) => filter({ platform: e.target.value })}>
-            <option value="all">全部平台</option>
-            {allPlatforms.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Segmented
-          label="消息类型"
-          value={filters.channel}
-          options={[
-            { value: 'all', label: '全部类型' },
-            ...config.channels.map((c) => ({ value: c.id, label: c.name })),
-          ]}
-          onChange={(channel) => filter({ channel })}
-        />
-        <label>
-          回复状态
-          <select aria-label="筛选回复状态" value={filters.reply} onChange={(e) => filter({ reply: e.target.value })}>
-            <option value="all">全部回复状态</option>
-            <option value="waiting">待回复</option>
-            <option value="replied">已回复</option>
-            <option value="unknown">待核对</option>
-          </select>
-        </label>
-        <label>
-          识别状态
-          <select
-            aria-label="筛选识别状态"
-            value={filters.classification}
-            onChange={(e) => filter({ classification: e.target.value })}
-          >
-            <option value="all">全部识别状态</option>
-            <option value="ready">已识别</option>
-            <option value="pending">待识别</option>
-            <option value="failed">识别失败</option>
-          </select>
-        </label>
-        <label className="inbox-search">
-          搜索
-          <input
-            type="search"
-            aria-label="搜索消息"
-            value={filters.query}
-            onChange={(e) => filter({ query: e.target.value })}
-            placeholder="发送者、消息原文、关联作品"
+      <details
+        className="inbox-filter-disclosure"
+        open={
+          filters.platform !== 'all' ||
+          filters.channel !== 'all' ||
+          !!filters.query ||
+          filters.classification !== 'all' ||
+          (!priority && filters.reply !== 'all')
+        }
+      >
+        <summary>
+          筛选{filters.platform !== 'all' ? ` · ${platformName(filters.platform)}` : ''}
+          {filters.channel !== 'all' ? ` · ${channelName(filters.channel)}` : ''}
+          {!priority && filters.reply !== 'all' ? ` · ${replyLabels[filters.reply as keyof typeof replyLabels]}` : ''}
+          {filters.classification !== 'all' ? ' · 已选识别状态' : ''}
+          {filters.query ? ` · ${filters.query}` : ''}
+        </summary>
+        <div className="inbox-filters">
+          <label>
+            分类
+            <select
+              aria-label="筛选分类"
+              value={filters.category}
+              onChange={(e) => filter({ category: e.target.value })}
+            >
+              <option value="all">全部分类</option>
+              {config.categories.map((c) => (
+                <option value={c.id} key={c.id}>
+                  {c.id === 'idea' ? '问题与观点' : c.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            平台
+            <select
+              aria-label="筛选平台"
+              value={filters.platform}
+              onChange={(e) => filter({ platform: e.target.value })}
+            >
+              <option value="all">全部平台</option>
+              {allPlatforms.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Segmented
+            label="消息类型"
+            value={filters.channel}
+            options={[
+              { value: 'all', label: '全部类型' },
+              ...config.channels.map((c) => ({ value: c.id, label: c.name })),
+            ]}
+            onChange={(channel) => filter({ channel })}
           />
-        </label>
-        <Button
-          onClick={() => {
-            setFilters(blankFilters);
-            setPriority(false);
-            setSpecial('all');
-            setLinkedMessageId(null);
-            setRequestedPage(1);
-          }}
-        >
-          重置筛选
-        </Button>
-      </div>
+          <label>
+            回复状态
+            <select aria-label="筛选回复状态" value={filters.reply} onChange={(e) => filter({ reply: e.target.value })}>
+              <option value="all">全部回复状态</option>
+              <option value="waiting">待回复</option>
+              <option value="replied">已回复</option>
+              <option value="unknown">待核对</option>
+            </select>
+          </label>
+          <label>
+            识别状态
+            <select
+              aria-label="筛选识别状态"
+              value={filters.classification}
+              onChange={(e) => filter({ classification: e.target.value })}
+            >
+              <option value="all">全部识别状态</option>
+              <option value="ready">已识别</option>
+              <option value="pending">待识别</option>
+              <option value="failed">识别失败</option>
+            </select>
+          </label>
+          <label className="inbox-search">
+            搜索
+            <input
+              type="search"
+              aria-label="搜索消息"
+              value={filters.query}
+              onChange={(e) => filter({ query: e.target.value })}
+              placeholder="发送者、消息原文、关联作品"
+            />
+          </label>
+          <Button
+            onClick={() => {
+              setFilters(blankFilters);
+              setPriority(false);
+              setSpecial('all');
+              setLinkedMessageId(null);
+              setRequestedPage(1);
+            }}
+          >
+            重置筛选
+          </Button>
+        </div>
+      </details>
       {linkedMessageId && (
         <div className="deal-linked">
           <span>正在查看关联的原始消息</span>
@@ -350,75 +383,39 @@ export default function InboxPage({
         </p>
       )}
       <div className="inbox-grid">
-        <aside className="inbox-sidebar">
-          <Card title="消息分类">
-            <div className="inbox-category-list">
+        <details className="card inbox-themes-disclosure" open={!!filters.themeId}>
+          <summary>需求主题</summary>
+
+          <div className="inbox-themes">
+            {visibleThemes.slice(0, showAllThemes ? undefined : 8).map((t) => (
               <Button
-                aria-pressed={!priority && filters.category === 'all'}
-                className={`list-row ${!priority && filters.category === 'all' ? 'active' : ''}`}
-                onClick={() => filter({ category: 'all', themeId: null })}
+                key={t.id}
+                className={`list-row ${filters.themeId === t.id ? 'active' : ''}`}
+                aria-pressed={filters.themeId === t.id}
+                onClick={() =>
+                  filter({ themeId: t.id, category: 'all', reply: 'all', classification: 'all', query: '' })
+                }
               >
-                <strong>全部消息</strong>
-                <span className="mono">{displayCount(scoped.length)}</span>
+                <strong>{t.title}</strong>
+                <span className="small">{themeMessages(t, scoped).length} 条</span>
+                <span aria-hidden="true">→</span>
               </Button>
-              {config.categories.map((category) => (
-                <Button
-                  key={category.id}
-                  aria-pressed={filters.category === category.id}
-                  className={`list-row ${filters.category === category.id ? 'active' : ''}`}
-                  onClick={() => filter({ category: category.id, themeId: null })}
-                >
-                  <div>
-                    <strong>{category.id === 'idea' ? '问题与观点' : category.name}</strong>
-                  </div>
-                  <span className="mono">
-                    {displayCount(
-                      scoped.filter(
-                        (item) =>
-                          item.classification.status === 'ready' && item.classification.result.category === category.id,
-                      ).length,
-                    )}
-                  </span>
-                </Button>
-              ))}
-            </div>
-          </Card>
-          <Card title="需求主题">
-            <div className="inbox-themes">
-              {visibleThemes.slice(0, showAllThemes ? undefined : 8).map((t) => (
-                <Button
-                  key={t.id}
-                  className={`list-row ${filters.themeId === t.id ? 'active' : ''}`}
-                  aria-pressed={filters.themeId === t.id}
-                  onClick={() =>
-                    filter({ themeId: t.id, category: 'all', reply: 'all', classification: 'all', query: '' })
-                  }
-                >
-                  <strong>{t.title}</strong>
-                  <span className="small">{themeMessages(t, scoped).length} 条</span>
-                  <span aria-hidden="true">→</span>
-                </Button>
-              ))}
-              {visibleThemes.length > 8 && (
-                <Button variant="text" onClick={() => setShowAllThemes(!showAllThemes)}>
-                  {showAllThemes ? '收起' : `还有 ${visibleThemes.length - 8} 个`}
-                </Button>
-              )}
-            </div>
-            {!data.themes.length ? (
-              <Empty>暂无已汇总的需求主题</Empty>
-            ) : !data.themes.some((t) => themeMessages(t, scoped).length) &&
-              !(filters.platform === 'all' && filters.channel === 'all') ? (
-              <Empty>当前范围没有需求主题来源</Empty>
-            ) : null}
-            {filters.themeId && <Button onClick={() => filter({ themeId: null })}>清除主题筛选</Button>}
-          </Card>
-        </aside>
-        <Card
-          title="消息列表"
-          meta={<span className="eyebrow">{data.recordsReady ? filtered.length : '--'} 条</span>}
-          className="inbox-list-card"
-        >
+            ))}
+            {visibleThemes.length > 8 && (
+              <Button variant="text" onClick={() => setShowAllThemes(!showAllThemes)}>
+                {showAllThemes ? '收起' : `还有 ${visibleThemes.length - 8} 个`}
+              </Button>
+            )}
+          </div>
+          {!data.themes.length ? (
+            <Empty>暂无已汇总的需求主题</Empty>
+          ) : !data.themes.some((t) => themeMessages(t, scoped).length) &&
+            !(filters.platform === 'all' && filters.channel === 'all') ? (
+            <Empty>当前范围没有需求主题来源</Empty>
+          ) : null}
+          {filters.themeId && <Button onClick={() => filter({ themeId: null })}>清除主题筛选</Button>}
+        </details>
+        <Card title="消息列表" className="inbox-list-card">
           {theme && (
             <div className="inbox-theme-summary">
               <strong>{theme.title}</strong>
@@ -452,7 +449,7 @@ export default function InboxPage({
                       </div>
                       <div className="inbox-message-title">
                         <strong>{item.author || '发送者未识别'}</strong>
-                        <span className="inbox-reply-state">{replyLabels[state]} →</span>
+                        <span className="inbox-reply-state">{replyLabels[state]}</span>
                       </div>
                       <p className="inbox-message-body">{item.body || '原文未读取完整'}</p>
                       <div className="inbox-message-tags">
@@ -462,7 +459,7 @@ export default function InboxPage({
                         {item.contentTitle && <span className="inbox-message-work">{item.contentTitle}</span>}
                       </div>
                     </Button>
-                    <ReplyActions message={item} destinations={destinations} />
+                    {active?.id === item.id && <ReplyActions message={item} destinations={destinations} />}
                   </article>
                 );
               })

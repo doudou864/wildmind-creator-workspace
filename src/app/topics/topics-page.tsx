@@ -257,7 +257,7 @@ export default function TopicsPage({
           <div className="card collapsed-note">
             {fireEnabled
               ? '历史表现推荐已开启'
-              : `还差 ${Math.max(0, parameters.topicFireMinimum - (data.d21Samples ?? 0))} 条 D21 结果，积累后开启历史表现推荐`}
+              : `历史推荐：还差 ${Math.max(0, parameters.topicFireMinimum - (data.d21Samples ?? 0))} 条 D21 结果`}
           </div>
         </aside>
       </div>

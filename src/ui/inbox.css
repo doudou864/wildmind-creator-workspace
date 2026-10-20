@@ -401,3 +401,23 @@
   line-height: 1.9;
   color: var(--ink-2);
 }
+
+.inbox-grid {
+  grid-template-columns: minmax(420px, 1.35fr) minmax(400px, 1fr);
+}
+.inbox-themes-disclosure {
+  grid-column: 1 / -1;
+}
+.inbox-detail-column {
+  position: sticky;
+  top: 12px;
+  max-height: calc(100vh - 24px);
+  overflow-y: auto;
+}
+.inbox-filter-disclosure {
+  margin: 12px 0;
+}
+.inbox-filter-disclosure > summary,
+.inbox-themes-disclosure > summary {
+  cursor: pointer;
+}

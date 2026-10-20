@@ -175,3 +175,28 @@
 .analysis-table-scroll {
   max-height: none;
 }
+
+.analysis-key-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+  margin: 18px 0;
+  max-width: 960px;
+}
+.analysis-key-metrics span,
+.analysis-key-metrics strong {
+  display: block;
+}
+.analysis-key-metrics strong {
+  font-size: 18px;
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+.analysis-metric-group {
+  margin: 12px 0;
+}
+.analysis-metric-group summary {
+  cursor: pointer;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--line-soft);
+}
