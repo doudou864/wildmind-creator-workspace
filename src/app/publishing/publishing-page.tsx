@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { uniqueVideoId } from '@/ui/work-flow';
 import { ContentPicker } from '@/ui/content-picker';
 import { AutosaveStatus } from '@/ui/autosave-status';
 import type { SaveContext } from '@/ui/autosave-queue';
@@ -89,6 +90,8 @@ export default function PublishingPage({
   const [draft, setDraft] = useState<PublishDraft>(() => ({
     ...newPublishDraft(initialKind),
     contentId: initialContent,
+    videoId: initialKind === 'video' ? uniqueVideoId(data.videos, initialContent) : null,
+    commonCopy: { title: data.contents.find((c) => c.id === initialContent)?.title ?? '', description: '', tags: [] },
   }));
   const [meta, setMeta] = useState<PublishBatch | null>(null);
   const savedRecord = useRef<string | null>(null);
@@ -555,11 +558,13 @@ export default function PublishingPage({
         summary={
           !draft.contentId
             ? '先选一条作品'
-            : issues.length
-              ? `还差 ${issues.length} 项就能上传`
-              : canUpload
-                ? '准备完成，可以上传'
-                : '查看当前发布进度，完成下一步确认'
+            : draft.kind === 'layout' && !snapshots.length
+              ? '先回排版确认稿件，再准备上传'
+              : issues.length
+                ? `还差 ${issues.length} 项就能上传`
+                : canUpload
+                  ? '准备完成，可以上传'
+                  : '查看当前发布进度，完成下一步确认'
         }
         onRefresh={() => {
           setLoadedScreenshots([]);
@@ -574,18 +579,28 @@ export default function PublishingPage({
             disabledReason={
               !data.uploadReady
                 ? '平台上传尚不可用，当前可准备发布材料。'
-                : busy
-                  ? '正在处理，请稍候。'
-                  : issues.length
-                    ? issues.join('；')
-                    : '请等待保存完成，并核对发布状态。'
+                : draft.kind === 'layout' && !snapshots.length
+                  ? '请先在排版页检查并确认稿件。'
+                  : busy
+                    ? '正在处理，请稍候。'
+                    : issues.length
+                      ? issues.join('；')
+                      : '请等待保存完成，并核对发布状态。'
             }
             onClick={() => void action('upload')}
           >
-            上传到各平台
+            检查并上传
           </Button>
         }
       />
+      <nav className="creation-steps" aria-label="发布准备步骤">
+        <a href="#publish-source">选成片 / 确认稿 →</a>
+        <a href="#publish-platforms">选平台 →</a>
+        <a href={draft.kind === 'layout' ? '#publish-platforms' : '#publish-copy'}>
+          {draft.kind === 'layout' ? '核对确认稿 →' : '写文案 →'}
+        </a>
+        <a href="#publish-check">检查并上传 →</a>
+      </nav>
       <div className="publish-mode" role="group" aria-label="发布来源">
         {modes.map((mode, i) => (
           <Button
@@ -626,7 +641,8 @@ export default function PublishingPage({
       )}
       <div className="publish-grid">
         <aside className="publish-source">
-          <Card title="内容来源">
+          <div id="publish-source" />
+          <Card title={draft.kind === 'video' ? '选成片' : '选确认稿或图片'}>
             <div className="image-form">
               <ContentPicker
                 value={draft.contentId}
@@ -646,6 +662,7 @@ export default function PublishingPage({
                     setDraft({
                       ...newPublishDraft(draft.kind),
                       contentId: id,
+                      videoId: draft.kind === 'video' ? uniqueVideoId(data.videos, id) : null,
                       commonCopy: {
                         title: data.contents.find((c) => c.id === id)?.title ?? '',
                         description: '',
@@ -683,17 +700,20 @@ export default function PublishingPage({
                         ))}
                     </select>
                   </label>
-                  <label className="publish-upload">
-                    选择本机成片
-                    <input
-                      aria-label="选择本机成片"
-                      type="file"
-                      accept={config.videoTypes.join(',')}
-                      disabled={busy || locked || mediaLoading}
-                      onChange={(e) => void chooseFiles(e)}
-                    />
-                    <span className="small">MP4 / MOV · 最大 {config.videoMaxMB} MB</span>
-                  </label>
+                  <details className="publish-local">
+                    <summary>从本机选择成片 →</summary>
+                    <label className="publish-upload">
+                      选择本机成片
+                      <input
+                        aria-label="选择本机成片"
+                        type="file"
+                        accept={config.videoTypes.join(',')}
+                        disabled={busy || locked || mediaLoading}
+                        onChange={(e) => void chooseFiles(e)}
+                      />
+                      <span className="small">MP4 / MOV · 最大 {config.videoMaxMB} MB</span>
+                    </label>
+                  </details>
                   {local[0] || currentVideo ? (
                     <div className="publish-video">
                       <video
@@ -869,7 +889,7 @@ export default function PublishingPage({
               {draft.kind !== 'layout' && <></>}
             </div>
           </Card>
-          {draft.kind === 'video' && (
+          {draft.kind === 'video' && draft.settings.length > 0 && (
             <Card title="作品封面">
               <div className="publish-covers">
                 {covers.map((cover) => (
@@ -900,8 +920,53 @@ export default function PublishingPage({
           )}
         </aside>
         <section className="publish-settings">
+          <div id="publish-platforms" />{' '}
+          <Card title="选平台" meta={<span className="eyebrow">{draft.settings.length} 个已选</span>}>
+            <div className="publish-platforms">
+              {eligibleTemplates.map((template) => {
+                const p = platforms.find((p) => p.id === template.platformId)!;
+                const matches = snapshots.filter((s) => s.platform === p.id);
+                const disabled =
+                  busy ||
+                  locked ||
+                  (draft.kind === 'layout' &&
+                    matches.length !== 1 &&
+                    !draft.settings.some((s) => s.platformId === p.id));
+                return (
+                  <label
+                    key={p.id}
+                    title={
+                      !p.active
+                        ? '平台尚未启用，可先准备手动发布材料'
+                        : draft.kind === 'layout' && matches.length !== 1
+                          ? '需要唯一待发布确认稿'
+                          : undefined
+                    }
+                  >
+                    <input
+                      type="checkbox"
+                      checked={draft.settings.some((s) => s.platformId === p.id)}
+                      disabled={disabled}
+                      onChange={() => toggle(p.id)}
+                    />
+                    {p.name}
+                    {!p.active && <small>未启用</small>}
+                  </label>
+                );
+              })}
+            </div>
+          </Card>
           {draft.kind !== 'layout' && (
-            <Card title="通用文案">
+            <Card title="写文案">
+              <div id="publish-copy" />
+              <p className="copy-limits">
+                {draft.settings
+                  .map((s) => {
+                    const t = config.templates.find((t) => t.platformId === s.platformId);
+                    return `${name(s.platformId)}：标题 ${t?.titleMax ?? '待核验'} 字，正文 ${t?.descriptionMax ?? '待核验'} 字`;
+                  })
+                  .join(' · ') || '先选平台，显示对应字数限制'}
+              </p>
               <fieldset className="image-form" disabled={locked || busy}>
                 <label>
                   标题
@@ -998,46 +1063,8 @@ export default function PublishingPage({
               </fieldset>
             </Card>
           )}
-          <Card title="平台与发布模板" meta={<span className="eyebrow">{draft.settings.length} 个已选</span>}>
-            <div className="publish-platforms">
-              {eligibleTemplates.map((template) => {
-                const p = platforms.find((p) => p.id === template.platformId)!;
-                const matches = snapshots.filter((s) => s.platform === p.id);
-                const disabled =
-                  busy ||
-                  locked ||
-                  (draft.kind === 'layout' &&
-                    matches.length !== 1 &&
-                    !draft.settings.some((s) => s.platformId === p.id));
-                return (
-                  <label
-                    key={p.id}
-                    title={
-                      !p.active
-                        ? '平台尚未启用，可先准备手动发布材料'
-                        : draft.kind === 'layout' && matches.length !== 1
-                          ? '需要唯一待发布确认稿'
-                          : undefined
-                    }
-                  >
-                    <input
-                      type="checkbox"
-                      checked={draft.settings.some((s) => s.platformId === p.id)}
-                      disabled={disabled}
-                      onChange={() => toggle(p.id)}
-                    />
-                    <span className="mono">{p.code}</span>
-                    {p.name}
-                    {!p.active && <small>未启用</small>}
-                  </label>
-                );
-              })}
-            </div>
-          </Card>
           {!draft.settings.length ? (
-            <Card title="平台版本">
-              <Empty>选择平台后自动生成版本，无需重复填写文案</Empty>
-            </Card>
+            <div className="card collapsed-note">选择平台后显示对应文案版本</div>
           ) : (
             draft.settings.map((item) => {
               const template = config.templates.find((t) => t.platformId === item.platformId);
@@ -1049,6 +1076,7 @@ export default function PublishingPage({
               return (
                 <section
                   key={item.platformId}
+                  id={`publish-setting-${item.platformId}`}
                   className={`publish-platform-card card ${problems.length ? 'publish-warning' : ''}`}
                 >
                   <Button
@@ -1196,151 +1224,183 @@ export default function PublishingPage({
             })
           )}
         </section>
-        <aside className="publish-check">
-          <Card title="发布前检查">
-            <div className="publish-check-summary">
-              <strong className="mono">{String(draft.settings.length).padStart(2, '0')}</strong>
-              <span>个目标平台</span>
-            </div>
+        <aside className="publish-check" id="publish-check">
+          <Card title="检查并上传">
             <div className="publish-check-list">
               {issues.length ? (
-                issues.map((issue, i) => <p key={`${i}-${issue}`}>{issue}</p>)
+                issues.map((issue, i) => {
+                  const platform = draft.settings.find((s) =>
+                    publishSettingIssues(draft, s, data, config, platforms, now).includes(issue),
+                  );
+                  const target = platform
+                    ? `publish-setting-${platform.platformId}`
+                    : issue === '请选择发布平台'
+                      ? 'publish-platforms'
+                      : 'publish-source';
+                  return (
+                    <a
+                      className="list-row"
+                      key={`${i}-${issue}`}
+                      href={`#${target}`}
+                      onClick={() => {
+                        if (platform)
+                          setExpanded((current) => ({
+                            ...current,
+                            [platform.platformId]: {
+                              key: JSON.stringify(publishSettingIssues(draft, platform, data, config, platforms, now)),
+                              open: true,
+                            },
+                          }));
+                      }}
+                    >
+                      {issue} →
+                    </a>
+                  );
+                })
               ) : (
-                <p>内容检查通过，仍需人工核对并确认。</p>
+                <p>待补项已完成，可在页头检查并上传。</p>
               )}
             </div>
           </Card>
-          <Card title="最近的发布记录" meta={<span className="eyebrow">{data.batches.length} 条</span>}>
-            {data.batches.length ? (
-              <div className="publish-batches">
-                {data.batches.map((batch) => (
-                  <Button
-                    key={batch.id}
-                    disabled={busy}
-                    disabledReason="正在处理，请稍候。"
-                    onClick={() => setHistory(batch)}
-                  >
-                    <strong>
-                      {data.contents.find((c) => c.id === batch.draft.contentId)?.title ?? '关联作品不可用'}
-                    </strong>
-                    <span className="small">
-                      {batchNames[batch.state]} · {batch.draft.settings.map((s) => name(s.platformId)).join(' / ')}
-                    </span>
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <Empty>暂无发布记录</Empty>
-            )}
-          </Card>
+          {data.batches.length ? (
+            <Card title="最近的发布记录" meta={<span className="eyebrow">{data.batches.length} 条</span>}>
+              {data.batches.length ? (
+                <div className="publish-batches">
+                  {data.batches.map((batch) => (
+                    <Button
+                      key={batch.id}
+                      disabled={busy}
+                      disabledReason="正在处理，请稍候。"
+                      onClick={() => setHistory(batch)}
+                    >
+                      <strong>
+                        {data.contents.find((c) => c.id === batch.draft.contentId)?.title ?? '关联作品不可用'}
+                      </strong>
+                      <span className="small">
+                        {batchNames[batch.state]} · {batch.draft.settings.map((s) => name(s.platformId)).join(' / ')}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              ) : (
+                <Empty>暂无发布记录</Empty>
+              )}
+            </Card>
+          ) : (
+            <div className="card collapsed-note">暂无发布记录，保存发布准备后显示</div>
+          )}
         </aside>
       </div>
-      <Card title="截图审核与发布回执">
-        <div className="publish-review-heading">
-          <Button
-            disabled={!canPublish}
-            disabledReason={
-              !data.publishReady ? '实际发布尚不可用。' : '请先上传并查看有效截图，等待保存完成，核对发布状态。'
-            }
-            onClick={() => {
-              setNow(Date.now());
-              setReview({ draft: structuredClone(draft), requestId: crypto.randomUUID(), materials, receiptKey });
-              setChecked(false);
-            }}
-          >
-            全部发布（{readyReceipts.length}）
-          </Button>
-        </div>
-        {meta && data.receipts.some((r) => r.batchId === meta.id) ? (
-          <div className="publish-review-grid">
-            {data.receipts
-              .filter((r) => r.batchId === meta.id)
-              .map((receipt) => {
-                const status = receiptStatus(receipt, draft, data, config, now, expiryHours);
-                const retryReady = canRetryPublishReceipt(receipt, draft, data, config, now, expiryHours, platforms);
-                return (
-                  <section key={receipt.id} className="publish-screenshot-card">
-                    <div>
-                      <strong>{name(receipt.platformId)}</strong>
-                      <span>{statusNames[status]}</span>
-                    </div>
-                    {receipt.screenshotAssetId ? (
-                      <a href={assetUrl(receipt.screenshotAssetId)} target="_blank" rel="noreferrer">
-                        <img
-                          key={`${receipt.screenshotAssetId}:${screenshotAttempt}`}
-                          src={assetUrl(receipt.screenshotAssetId)}
-                          alt={`${name(receipt.platformId)}填好后的后台截图`}
-                          onLoad={() => screenshotLoaded(receipt.screenshotAssetId!)}
-                          onError={() => screenshotFailed(receipt.screenshotAssetId!)}
-                        />
-                      </a>
-                    ) : (
-                      <Empty>{status === 'uploading' ? '上传中，等待后台截图' : '尚无后台截图'}</Empty>
-                    )}
-                    <p className="small">{receipt.title || '--'}</p>
-                    <p className="small">
-                      {status === 'expired' ? '上传已过期或材料已变化，请重新上传。' : (receipt.reason ?? '--')}
-                    </p>
-                    <p className="small mono">
-                      上传完成：
-                      {receipt.uploadedAt
-                        ? new Date(receipt.uploadedAt).toLocaleString('zh-CN', {
-                            timeZone: 'Asia/Shanghai',
-                            hour12: false,
-                          })
-                        : '--'}
-                    </p>
-                    <p className="small">
-                      平台作品 ID：{receipt.platformPostId ?? '--'} · {receipt.publishedAt ?? '尚未发布'}
-                    </p>
-                    {receipt.url && /^https?:\/\//.test(receipt.url) && (
-                      <a href={receipt.url} target="_blank" rel="noreferrer">
-                        查看作品 →
-                      </a>
-                    )}
-                    <div className="publish-ai-actions">
-                      <Button
-                        disabled={!canUpload || !uploadTargets.includes(receipt.platformId)}
-                        disabledReason={
-                          !data.uploadReady
-                            ? '平台上传尚不可用。'
-                            : '请核对材料与平台状态，仅可重新上传允许重传的目标。'
-                        }
-                        onClick={() => void action('upload', undefined, receipt.platformId)}
-                      >
-                        重新上传该平台
-                      </Button>
-                      <Button
-                        disabled={
-                          !data.publishReady ||
-                          !retryReady ||
-                          !receipt.screenshotAssetId ||
-                          !loadedScreenshots.includes(receipt.screenshotAssetId) ||
-                          busy ||
-                          dirty ||
-                          stale
-                        }
-                        disabledReason={
-                          !data.publishReady
-                            ? '实际发布尚不可用。'
-                            : '仅能重试已核实未发布且截图有效的失败项，请等待保存完成。'
-                        }
-                        onClick={() => {
-                          retryRequest.current = crypto.randomUUID();
-                          setRetry(receipt);
-                        }}
-                      >
-                        重试该平台发布
-                      </Button>
-                    </div>
-                  </section>
-                );
-              })}
+      {meta && data.receipts.some((r) => r.batchId === meta.id) ? (
+        <Card title="截图审核与发布回执">
+          <div className="publish-review-heading">
+            <Button
+              disabled={!canPublish}
+              disabledReason={
+                !data.publishReady ? '实际发布尚不可用。' : '请先上传并查看有效截图，等待保存完成，核对发布状态。'
+              }
+              onClick={() => {
+                setNow(Date.now());
+                setReview({ draft: structuredClone(draft), requestId: crypto.randomUUID(), materials, receiptKey });
+                setChecked(false);
+              }}
+            >
+              全部发布（{readyReceipts.length}）
+            </Button>
           </div>
-        ) : (
-          <Empty>{meta ? '尚未上传到平台，暂无后台截图' : '上传完成后，在这里核对平台截图'}</Empty>
-        )}
-      </Card>
+          {meta && data.receipts.some((r) => r.batchId === meta.id) ? (
+            <div className="publish-review-grid">
+              {data.receipts
+                .filter((r) => r.batchId === meta.id)
+                .map((receipt) => {
+                  const status = receiptStatus(receipt, draft, data, config, now, expiryHours);
+                  const retryReady = canRetryPublishReceipt(receipt, draft, data, config, now, expiryHours, platforms);
+                  return (
+                    <section key={receipt.id} className="publish-screenshot-card">
+                      <div>
+                        <strong>{name(receipt.platformId)}</strong>
+                        <span>{statusNames[status]}</span>
+                      </div>
+                      {receipt.screenshotAssetId ? (
+                        <a href={assetUrl(receipt.screenshotAssetId)} target="_blank" rel="noreferrer">
+                          <img
+                            key={`${receipt.screenshotAssetId}:${screenshotAttempt}`}
+                            src={assetUrl(receipt.screenshotAssetId)}
+                            alt={`${name(receipt.platformId)}填好后的后台截图`}
+                            onLoad={() => screenshotLoaded(receipt.screenshotAssetId!)}
+                            onError={() => screenshotFailed(receipt.screenshotAssetId!)}
+                          />
+                        </a>
+                      ) : (
+                        <Empty>{status === 'uploading' ? '上传中，等待后台截图' : '尚无后台截图'}</Empty>
+                      )}
+                      <p className="small">{receipt.title || '--'}</p>
+                      <p className="small">
+                        {status === 'expired' ? '上传已过期或材料已变化，请重新上传。' : (receipt.reason ?? '--')}
+                      </p>
+                      <p className="small mono">
+                        上传完成：
+                        {receipt.uploadedAt
+                          ? new Date(receipt.uploadedAt).toLocaleString('zh-CN', {
+                              timeZone: 'Asia/Shanghai',
+                              hour12: false,
+                            })
+                          : '--'}
+                      </p>
+                      <p className="small">
+                        平台作品 ID：{receipt.platformPostId ?? '--'} · {receipt.publishedAt ?? '尚未发布'}
+                      </p>
+                      {receipt.url && /^https?:\/\//.test(receipt.url) && (
+                        <a href={receipt.url} target="_blank" rel="noreferrer">
+                          查看作品 →
+                        </a>
+                      )}
+                      <div className="publish-ai-actions">
+                        <Button
+                          disabled={!canUpload || !uploadTargets.includes(receipt.platformId)}
+                          disabledReason={
+                            !data.uploadReady
+                              ? '平台上传尚不可用。'
+                              : '请核对材料与平台状态，仅可重新上传允许重传的目标。'
+                          }
+                          onClick={() => void action('upload', undefined, receipt.platformId)}
+                        >
+                          重新上传该平台
+                        </Button>
+                        <Button
+                          disabled={
+                            !data.publishReady ||
+                            !retryReady ||
+                            !receipt.screenshotAssetId ||
+                            !loadedScreenshots.includes(receipt.screenshotAssetId) ||
+                            busy ||
+                            dirty ||
+                            stale
+                          }
+                          disabledReason={
+                            !data.publishReady
+                              ? '实际发布尚不可用。'
+                              : '仅能重试已核实未发布且截图有效的失败项，请等待保存完成。'
+                          }
+                          onClick={() => {
+                            retryRequest.current = crypto.randomUUID();
+                            setRetry(receipt);
+                          }}
+                        >
+                          重试该平台发布
+                        </Button>
+                      </div>
+                    </section>
+                  );
+                })}
+            </div>
+          ) : (
+            <Empty>{meta ? '尚未上传到平台，暂无后台截图' : '上传完成后，在这里核对平台截图'}</Empty>
+          )}
+        </Card>
+      ) : (
+        <div className="card collapsed-note">尚未上传，上传后在这里核对平台截图与回执</div>
+      )}
 
       {picker && (
         <Dialog title="选择自己上传的图片" onClose={() => setPicker(false)}>

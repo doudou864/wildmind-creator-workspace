@@ -1,4 +1,6 @@
 'use client';
+import Link from 'next/link';
+import { inboxTime } from '@/lib/inbox-model';
 import { ContentPicker } from '@/ui/content-picker';
 import { AutosaveStatus } from '@/ui/autosave-status';
 import type { SaveContext } from '@/ui/autosave-queue';
@@ -40,7 +42,11 @@ export default function ImagesPage({
   const { data, error, refresh } = useResource('/api/images', initialData);
   const blank = (): ImageDraftInput => ({
     uploadPurposeId: config.purposes.find((p) => p.contentMode === 'free')!.id,
-    title: '',
+    title:
+      `${data.contents.find((c) => c.id === initialContent)?.title ?? data.topics.find((t) => t.id === initialTopic)?.title ?? '新图片'} · ${today}`.slice(
+        0,
+        200,
+      ),
     purposeId: config.purposes[0].id,
     styleId: config.styles[0].id,
     prompt: '',
@@ -268,7 +274,7 @@ export default function ImagesPage({
     if (!data.storageReady || associationIssue) return;
     const result = imageDraftSchema.safeParse(draft);
     if (!result.success) {
-      setNotice('请先填写任务名称。');
+      setNotice('图片草稿格式有误，请刷新后重试。');
       return;
     }
     const submittedSession = editSession.current;
@@ -435,15 +441,10 @@ export default function ImagesPage({
       <WorkspaceHeader current="/images" date={today} syncWindow={syncWindow} />
       <PageHeader
         title="生图中心"
-        summary={'新建任务，选择作品并准备配图'}
+        summary={draft.contentId ? '填写画面要求，生成这条作品的配图' : '选择作品，填写画面要求'}
         onRefresh={() => void refresh()}
         action={
-          <Button
-            variant="primary"
-            disabled={busy}
-            disabledReason="正在处理图片，请稍候。"
-            onClick={() => requestLoad('new')}
-          >
+          <Button disabled={busy} disabledReason="正在处理图片，请稍候。" onClick={() => requestLoad('new')}>
             新建任务
           </Button>
         }
@@ -475,47 +476,54 @@ export default function ImagesPage({
       <div className="topic-feedback" role="status" aria-live="polite">
         {error || associationIssue || notice}
       </div>
+      <section className="card creation-association">
+        {' '}
+        <div className="image-form-pair">
+          <label htmlFor="image-topic">
+            关联选题
+            <select
+              id="image-topic"
+              disabled={!!draft.contentId || !!draft.parentAssetId || busy}
+              value={draft.topicId ?? ''}
+              onChange={(e) => update({ topicId: e.target.value || null })}
+            >
+              <option value="">不关联</option>
+              {data.topics.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          <ContentPicker
+            value={draft.contentId}
+            topicId={draft.topicId}
+            disabled={busy || !!draft.parentAssetId}
+            onChange={(id, content) => {
+              update({ contentId: id, topicId: content?.topicId ?? draft.topicId });
+              void refresh();
+            }}
+          />
+        </div>
+        {draft.contentId && (
+          <div className="creation-next">
+            <Link
+              href={`/layouts?content=${encodeURIComponent(draft.contentId)}${draft.topicId ? `&topic=${encodeURIComponent(draft.topicId)}` : ''}`}
+            >
+              去排版 →
+            </Link>
+            <Link
+              href={`/publishing?content=${encodeURIComponent(draft.contentId)}&kind=${linkedContent?.form === '视频' ? 'video' : 'layout'}`}
+            >
+              准备发布 →
+            </Link>
+          </div>
+        )}
+      </section>
       <div className="image-studio-grid">
         <aside className="image-brief-column">
           <Card title="内容与要求">
             <div className="image-form">
-              <label htmlFor="image-title">
-                任务名称
-                <input
-                  id="image-title"
-                  value={draft.title}
-                  maxLength={200}
-                  placeholder="给这组图片一个名称"
-                  onChange={(e) => update({ title: e.target.value })}
-                />
-              </label>
-              <div className="image-form-pair">
-                <label htmlFor="image-topic">
-                  关联选题
-                  <select
-                    id="image-topic"
-                    disabled={!!draft.contentId || !!draft.parentAssetId || busy}
-                    value={draft.topicId ?? ''}
-                    onChange={(e) => update({ topicId: e.target.value || null })}
-                  >
-                    <option value="">不关联</option>
-                    {data.topics.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <ContentPicker
-                  value={draft.contentId}
-                  topicId={draft.topicId}
-                  disabled={busy || !!draft.parentAssetId}
-                  onChange={(id, content) => {
-                    update({ contentId: id, topicId: content?.topicId ?? draft.topicId });
-                    void refresh();
-                  }}
-                />
-              </div>
               {purpose.contentMode === 'paragraphs' && (
                 <label htmlFor="image-content-text">
                   {purpose.id === 'douyin_images' ? '公众号同稿正文' : '文章正文'}
@@ -538,6 +546,24 @@ export default function ImagesPage({
                   rows={5}
                 />
               </label>
+              <div className="image-submit">
+                <Button
+                  variant="primary"
+                  disabled={!canGenerate}
+                  disabledReason={
+                    !data.generationReady
+                      ? '生图服务暂不可用。'
+                      : !data.storageReady
+                        ? '素材保存暂不可用。'
+                        : busy
+                          ? '正在生成，请稍候。'
+                          : associationIssue || '请填写内容与要求，选择输出比例；已有图片可直接复用。'
+                  }
+                  onClick={() => void generate()}
+                >
+                  生成{slots.length ? ` ${slots.length - reused.length} 张图片` : '图片'}
+                </Button>
+              </div>
               {!isUpload && (
                 <>
                   <label htmlFor="image-style">
@@ -577,57 +603,6 @@ export default function ImagesPage({
                 </>
               )}
             </div>
-            <div className="image-submit">
-              <Button
-                disabled={!canGenerate}
-                disabledReason={
-                  !data.generationReady
-                    ? '生图服务暂不可用。'
-                    : !data.storageReady
-                      ? '素材保存暂不可用。'
-                      : busy
-                        ? '正在生成，请稍候。'
-                        : associationIssue || '请填写内容与要求，选择输出比例；已有图片可直接复用。'
-                }
-                onClick={() => void generate()}
-              >
-                生成{slots.length ? ` ${slots.length - reused.length} 张图片` : '图片'}
-              </Button>
-            </div>
-          </Card>
-          <Card title="自动参考">
-            {purpose.references.length ? (
-              <>
-                <ul className="image-reference-rules">
-                  {purpose.references.map((rule) => (
-                    <li key={rule}>{rule}</li>
-                  ))}
-                </ul>
-              </>
-            ) : (
-              <Empty>此用途不使用历史封面表现</Empty>
-            )}
-          </Card>
-          <Card title="任务草稿" meta={<span className="eyebrow">{data.drafts.length} 份</span>}>
-            {data.drafts.length ? (
-              <div className="image-drafts">
-                {data.drafts.map((saved) => (
-                  <Button
-                    key={saved.id}
-                    disabled={busy}
-                    disabledReason="正在处理，请稍候。"
-                    onClick={() => requestLoad(saved)}
-                  >
-                    <strong>{saved.title}</strong>
-                    <span>
-                      {purposeName(saved.purposeId)} · {saved.updatedAt.slice(0, 10)}
-                    </span>
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <Empty>{data.storageReady ? '暂无已保存草稿' : '暂无已保存草稿'}</Empty>
-            )}
           </Card>
         </aside>
         <section className="image-main-column">
@@ -724,18 +699,9 @@ export default function ImagesPage({
                             {asset ? (
                               <AssetImage src={assetUrl(asset)} alt={asset.title} />
                             ) : (
-                              <div
-                                className={`aspect-outline ${activeTask ? 'image-scanning' : ''}`}
-                                style={{
-                                  aspectRatio: slot.ratio.replace(':', '/'),
-                                  width: `${Math.min(185, (220 * Number(slot.ratio.split(':')[0])) / Number(slot.ratio.split(':')[1]))}px`,
-                                }}
-                              >
-                                <span className="mono">{slot.ratio}</span>
-                                <small role={activeTask ? 'status' : undefined}>
-                                  {activeTask ? '后台生成中' : '等待生成'}
-                                </small>
-                              </div>
+                              <span role={activeTask ? 'status' : undefined}>
+                                {activeTask ? '正在生成图片…' : '尚未生成，可选择已有图'}
+                              </span>
                             )}
                           </div>
                           {slot.key.startsWith('paragraph') && <p className="slot-paragraph">{slot.text}</p>}
@@ -799,68 +765,107 @@ export default function ImagesPage({
                 </div>
                 <div className="asset-grid">
                   {assets.map((asset) => (
-                    <Button
-                      className={`asset-tile ${assetId === asset.id ? 'active' : ''}`}
-                      key={asset.id}
-                      onClick={() => setAssetId(asset.id)}
-                    >
-                      <AssetImage src={assetUrl(asset)} alt={asset.title} />
-                      <strong>{asset.title}</strong>
-                      <span className="small">
-                        {purposeName(asset.purposeId)} · {asset.ratio} · V{asset.version}
-                      </span>
-                      <span className="asset-selection">{asset.selected ? '已选定' : '未选定'}</span>
-                    </Button>
+                    <article className="asset-result" key={asset.id}>
+                      <Button
+                        title={asset.title}
+                        className={`asset-tile ${assetId === asset.id ? 'active' : ''}`}
+                        key={asset.id}
+                        onClick={() => setAssetId(asset.id)}
+                      >
+                        <AssetImage src={assetUrl(asset)} alt={asset.title} />
+                        <strong>{asset.title}</strong>
+                        <span className="small">
+                          {purposeName(asset.purposeId)} · {asset.ratio} · V{asset.version}
+                        </span>
+                        <span className="asset-selection">{asset.selected ? '已选定' : '未选定'}</span>
+                      </Button>
+                      <Button
+                        className="asset-edit-overlay"
+                        onClick={() => {
+                          prepareEdit(asset);
+                          setAssetId('');
+                        }}
+                      >
+                        改这张
+                      </Button>
+                    </article>
                   ))}
                 </div>
                 {!assets.length && (
-                  <Empty>{data.assets.length ? '没有符合筛选条件的素材' : '暂无素材，等待存储服务接入'}</Empty>
+                  <Empty>{data.assets.length ? '没有符合筛选条件的素材' : '暂无素材，生成或上传后出现'}</Empty>
                 )}
               </>
             )}
           </Card>
-          <Card title="修改图片">
-            <div className="image-revision">
-              <div className="revision-original">
-                {parentAsset ? (
-                  <>
-                    <AssetImage src={assetUrl(parentAsset)} alt={`修改原图：${parentAsset.title}`} />
-                    <span className="small">
-                      原图 V{parentAsset.version} · {parentAsset.ratio}
-                    </span>
-                  </>
-                ) : (
-                  <Empty>在素材库选一张图片作为修改原图</Empty>
-                )}
-              </div>
-              <div className="revision-input">
-                <label htmlFor="image-edit">
-                  用自然语言描述这次修改
-                  <textarea
-                    id="image-edit"
-                    value={draft.editInstruction}
-                    onChange={(e) => update({ editInstruction: e.target.value })}
-                    rows={3}
-                    placeholder="例如：保留主体，把标题放到上方，增加留白"
-                  />
-                </label>
-                <div>
-                  <Button
-                    disabled={!parentAsset || !draft.editInstruction.trim() || !canGenerate}
-                    disabledReason={
-                      !data.generationReady ? '改图服务暂不可用。' : '请先选择原图并填写修改要求，等待当前操作完成。'
-                    }
-                    onClick={() => void generate()}
-                  >
-                    生成修改版
-                  </Button>
+          {parentAsset && (
+            <Card title="修改图片">
+              <div className="image-revision">
+                <div className="revision-original">
+                  {parentAsset ? (
+                    <>
+                      <AssetImage src={assetUrl(parentAsset)} alt={`修改原图：${parentAsset.title}`} />
+                      <span className="small">
+                        原图 V{parentAsset.version} · {parentAsset.ratio}
+                      </span>
+                    </>
+                  ) : (
+                    <Empty>在素材库选一张图片改这张</Empty>
+                  )}
+                </div>
+                <div className="revision-input">
+                  <label htmlFor="image-edit">
+                    用自然语言描述这次修改
+                    <textarea
+                      id="image-edit"
+                      value={draft.editInstruction}
+                      onChange={(e) => update({ editInstruction: e.target.value })}
+                      rows={3}
+                      placeholder="例如：保留主体，把标题放到上方，增加留白"
+                    />
+                  </label>
+                  <div>
+                    <Button
+                      disabled={!parentAsset || !draft.editInstruction.trim() || !canGenerate}
+                      disabledReason={
+                        !data.generationReady ? '改图服务暂不可用。' : '请先选择原图并填写修改要求，等待当前操作完成。'
+                      }
+                      onClick={() => void generate()}
+                    >
+                      生成修改版
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </Card>
+            </Card>
+          )}
+          <details className="card">
+            <summary>继续已存草稿 →</summary>{' '}
+            <Card title="任务草稿" meta={<span className="eyebrow">{data.drafts.length} 份</span>}>
+              {data.drafts.length ? (
+                <div className="image-drafts">
+                  {data.drafts.map((saved) => (
+                    <Button
+                      key={saved.id}
+                      className="list-row"
+                      disabled={busy}
+                      disabledReason="正在处理，请稍候。"
+                      onClick={() => requestLoad(saved)}
+                    >
+                      <strong>{saved.title}</strong>
+                      <span>
+                        {purposeName(saved.purposeId)} · {saved.updatedAt.slice(0, 10)}
+                      </span>
+                    </Button>
+                  ))}
+                </div>
+              ) : (
+                <Empty>{data.storageReady ? '暂无已保存草稿' : '暂无已保存草稿'}</Empty>
+              )}
+            </Card>
+          </details>
         </section>
-        <aside className="image-detail-column">
-          <Card title="素材详情">
+        {focusedAsset && (
+          <Dialog className="asset-drawer" title="素材详情" onClose={() => setAssetId('')}>
             {focusedAsset ? (
               <>
                 <AssetImage className="asset-detail-image" src={assetUrl(focusedAsset)} alt={focusedAsset.title} />
@@ -873,7 +878,7 @@ export default function ImagesPage({
                     ['来源', focusedAsset.source === 'ai' ? 'AI 生成' : '用户上传'],
                     ['关联选题', data.topics.find((t) => t.id === focusedAsset.topicId)?.title ?? '未关联'],
                     ['关联作品', data.contents.find((c) => c.id === focusedAsset.contentId)?.title ?? '未关联'],
-                    ['创建时间', focusedAsset.createdAt],
+                    ['创建时间', inboxTime(focusedAsset.createdAt)],
                   ].map(([label, value]) => (
                     <div key={label}>
                       <dt>{label}</dt>
@@ -900,10 +905,17 @@ export default function ImagesPage({
                       })
                     }
                   >
-                    编辑用途与关联
+                    改名、用途与关联
                   </Button>
-                  <Button disabled={busy} disabledReason="正在处理，请稍候。" onClick={() => prepareEdit(focusedAsset)}>
-                    作为修改原图
+                  <Button
+                    disabled={busy}
+                    disabledReason="正在处理，请稍候。"
+                    onClick={() => {
+                      prepareEdit(focusedAsset);
+                      setAssetId('');
+                    }}
+                  >
+                    改这张
                   </Button>
                   <Button
                     disabled={busy}
@@ -981,8 +993,8 @@ export default function ImagesPage({
                 </dl>
               </div>
             )}
-          </Card>
-        </aside>
+          </Dialog>
+        )}
       </div>
       <input
         className="sr-only"
@@ -1039,7 +1051,8 @@ export default function ImagesPage({
           </div>
         </Dialog>
       )}
-      <Card title="最近生图记录" meta="套餐次数 / 耗时">
+      <details className="card">
+        <summary>最近生图记录 →</summary>
         {(data.tasks ?? []).slice(0, 5).map((task) => (
           <p key={task.id} className="small">
             {task.input.title} ·{' '}
@@ -1067,7 +1080,7 @@ export default function ImagesPage({
         ) : (
           <Empty>还没有生图记录</Empty>
         )}
-      </Card>
+      </details>
       {pickSlot !== null && (
         <Dialog title="选择已有素材" onClose={() => setPickSlot(null)}>
           <p className="dialog-intro">优先使用已有图片；保留原尺寸，不自动裁剪。</p>

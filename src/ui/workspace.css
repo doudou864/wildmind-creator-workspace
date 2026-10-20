@@ -1379,7 +1379,7 @@ dialog::backdrop {
 }
 .workspace .inbox-overview .stored-count {
   margin-left: auto;
-  color: var(--muted);
+  color: var(--ink-2);
 }
 .inbox-view-name {
   margin: 8px 0;
@@ -1505,4 +1505,183 @@ dialog::backdrop {
   font-weight: 400;
   line-height: 1.7;
   margin: 10px 0;
+}
+
+/* U6: one work travels through preparation; security checks remain unchanged. */
+.creation-association {
+  margin: 12px 0;
+  padding: 12px 18px;
+}
+.creation-association .image-form-pair {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr);
+  max-width: 760px;
+  gap: 18px;
+  align-items: start;
+}
+.creation-association .image-form {
+  margin: 0;
+}
+.creation-association label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+.creation-association select {
+  min-width: 0;
+  width: 100%;
+  height: 38px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 8px;
+  background: transparent;
+}
+.creation-next {
+  display: flex;
+  gap: 18px;
+  margin-top: 10px;
+}
+.images-workspace .image-purpose-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  border: 0;
+  background: transparent;
+}
+.images-workspace .image-purpose-bar button {
+  flex-direction: row;
+  align-items: center;
+  padding: 7px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.images-workspace .image-purpose-bar .small {
+  display: none;
+}
+.images-workspace .image-studio-grid {
+  grid-template-columns: minmax(300px, 0.8fr) minmax(0, 2fr);
+}
+.images-workspace .image-submit {
+  margin: 0;
+}
+.image-output-preview:not(:has(img)) {
+  min-height: 0;
+  height: auto;
+  padding: 12px;
+}
+.image-output-preview:not(:has(img)) > span {
+  display: block;
+  width: 100%;
+  text-align: left;
+}
+.image-output-grid:not(:has(img)) {
+  display: block;
+}
+.image-output-grid:not(:has(img)) .image-output {
+  margin-bottom: 8px;
+}
+.asset-result {
+  position: relative;
+  min-width: 0;
+}
+.asset-result .asset-tile {
+  width: 100%;
+}
+.asset-edit-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--card);
+}
+dialog.asset-drawer {
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: 480px;
+  max-width: 90vw;
+  height: 100dvh;
+  max-height: 100dvh;
+  border-radius: 0;
+}
+.layout-source > .image-form {
+  max-width: 420px;
+}
+.layout-resume-actions {
+  display: flex;
+  gap: 8px;
+}
+.creation-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin: 12px 0;
+}
+.publishing-workspace .publish-grid {
+  grid-template-columns: minmax(280px, 0.85fr) minmax(0, 2fr);
+}
+.publishing-workspace .publish-check {
+  grid-column: 2;
+}
+.publish-check-list a {
+  display: block;
+  padding: 8px 0;
+}
+.publish-local summary {
+  cursor: pointer;
+}
+.copy-limits {
+  margin-bottom: 12px;
+}
+.image-output-grid:not(:has(img)) .image-output {
+  display: grid;
+  grid-template-columns: 65px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+}
+.image-output-grid:not(:has(img)) .image-output-preview {
+  padding: 0;
+  border: 0;
+}
+.image-output-grid:not(:has(img)) .image-output-head .small,
+.image-output-grid:not(:has(img)) .image-slot-actions > .small {
+  display: none;
+}
+.image-output-grid:not(:has(img)) .image-slot-actions {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.publishing-workspace .publish-mode {
+  display: flex;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+}
+.publishing-workspace .publish-mode > button {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  min-height: 0;
+}
+.workspace .asset-tile {
+  text-align: left;
+  align-items: stretch;
+  white-space: normal;
+}
+.workspace .asset-tile strong {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.workspace .asset-tile .small,
+.workspace .asset-selection {
+  text-align: left;
+}
+.workspace .image-drafts > button {
+  text-align: left;
+  align-items: flex-start;
+  justify-content: flex-start;
+  white-space: normal;
 }

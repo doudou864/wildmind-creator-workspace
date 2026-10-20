@@ -18,10 +18,11 @@ export default async function Page({ searchParams }: { searchParams: Promise<{ t
     month: '2-digit',
     day: '2-digit',
   }).format(new Date());
+  const linked = query.content ?? data.contents.find((c) => !c.fixture && c.topicId === query.topic)?.id ?? null;
   return (
     <ImagesPage
       key={`${query.topic ?? ''}:${query.content ?? ''}`}
-      initialContent={query.content ?? null}
+      initialContent={linked}
       config={imageConfig}
       initialData={data}
       today={today}

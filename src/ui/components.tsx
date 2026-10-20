@@ -182,7 +182,17 @@ export function Tag({ children, dot = false }: { children: ReactNode; dot?: bool
     </span>
   );
 }
-export function Dialog({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+export function Dialog({
+  title,
+  children,
+  onClose,
+  className,
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+  className?: string;
+}) {
   const ref = useRef<HTMLDialogElement>(null);
   useLayoutEffect(() => {
     const dialog = ref.current;
@@ -195,6 +205,7 @@ export function Dialog({ title, children, onClose }: { title: string; children: 
   }, []);
   return (
     <dialog
+      className={className}
       ref={ref}
       onCancel={(event) => {
         event.preventDefault();

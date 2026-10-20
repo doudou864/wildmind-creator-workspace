@@ -1,0 +1,16 @@
+{
+  "topicId": "3c1b569f-68ce-499b-a56e-ea8f53264a1a",
+  "contentId": "c051b651-924b-4aac-ac52-2886857e5b81",
+  "assetId": "a4b3e572-4c30-4a4f-af2c-41a77c57da7e",
+  "layoutId": "f27560c2-30bc-45eb-b4f7-03efc6291c4d",
+  "imageTask": "62e5d4c7-1e95-47ef-8b8a-5db22a2607e0",
+  "imageSize": [1254, 1254],
+  "imageStatus": "success",
+  "layoutStates": ["draft", "draft", "draft"],
+  "wechatCover": {"1:1": "a4b3e572-4c30-4a4f-af2c-41a77c57da7e"},
+  "contentIdIdenticalAcrossPages": true,
+  "platformUploadAttempted": false,
+  "platformPublishAttempted": false,
+  "failedWideCoverTask": "fed58975-898d-49a2-80b5-d1e837ee4cd2",
+  "failedWideCoverReason": "生成图片与要求比例偏差过大，不能轻裁；本次未保存素材，请调整提示词后重试。"
+}
