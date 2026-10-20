@@ -1,0 +1,2921 @@
+{
+  "same": true,
+  "before": {
+    "platforms": {
+      "douyin": {
+        "count": 5,
+        "baselines": {
+          "视频": null,
+          "图文": null
+        },
+        "points": [
+          {
+            "id": "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:49:53.932Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "8b0ad9dc-4a43-4f50-a6a6-08f238a2c995",
+                "baselinePostIds": []
+              },
+              "3": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:49:53.932Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "8b0ad9dc-4a43-4f50-a6a6-08f238a2c995",
+                "baselinePostIds": []
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "db382e7539a3e71a3f628b0d651eff7b048072e3afb39cd012242c5c115af604",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "a04cc62b-0372-4dcc-8005-02f450806efd",
+                "baselinePostIds": []
+              },
+              "3": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "a04cc62b-0372-4dcc-8005-02f450806efd",
+                "baselinePostIds": []
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "a04cc62b-0372-4dcc-8005-02f450806efd",
+                "baselinePostIds": []
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 1172,
+                "samples": 1,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0db82624-09d7-4bd8-af83-77eb35cb1f5e",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 1172,
+                "samples": 1,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0db82624-09d7-4bd8-af83-77eb35cb1f5e",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0db82624-09d7-4bd8-af83-77eb35cb1f5e",
+                "baselinePostIds": []
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "76e5e56da3502f92d0501d4048d719bcc69d3719ddb775127c1c899a7cff3376",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 1312,
+                "samples": 3,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "12af6c54-aab0-48eb-95ff-6e4dbb630d40",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "798f68b0866a8a85b3b29c2c8a6d8504631826ab62e005f813a57e50a2a30cb5"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 1312,
+                "samples": 3,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "12af6c54-aab0-48eb-95ff-6e4dbb630d40",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "798f68b0866a8a85b3b29c2c8a6d8504631826ab62e005f813a57e50a2a30cb5"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 1333.5,
+                "samples": 2,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "12af6c54-aab0-48eb-95ff-6e4dbb630d40",
+                "baselinePostIds": [
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "798f68b0866a8a85b3b29c2c8a6d8504631826ab62e005f813a57e50a2a30cb5"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "798f68b0866a8a85b3b29c2c8a6d8504631826ab62e005f813a57e50a2a30cb5",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 1355,
+                "samples": 3,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "9312ded9-7d31-401f-97bd-77be2445055a",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "76e5e56da3502f92d0501d4048d719bcc69d3719ddb775127c1c899a7cff3376"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 1355,
+                "samples": 3,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "9312ded9-7d31-401f-97bd-77be2445055a",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "76e5e56da3502f92d0501d4048d719bcc69d3719ddb775127c1c899a7cff3376"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 1586.5,
+                "samples": 2,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "9312ded9-7d31-401f-97bd-77be2445055a",
+                "baselinePostIds": [
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "76e5e56da3502f92d0501d4048d719bcc69d3719ddb775127c1c899a7cff3376"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "xiaohongshu": {
+        "count": 5,
+        "baselines": {
+          "视频": null,
+          "图文": null
+        },
+        "points": [
+          {
+            "id": "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "ef2427c0-bb69-4385-8737-0c8ea8375101",
+                "baselinePostIds": [
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "ef2427c0-bb69-4385-8737-0c8ea8375101",
+                "baselinePostIds": [
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "6b90d15d-b9e0-4ecc-957c-d3a9929f5a9f",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "6b90d15d-b9e0-4ecc-957c-d3a9929f5a9f",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 249.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "7495da69-2a33-49b9-87f8-76b3a3c85b7c",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 249.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "7495da69-2a33-49b9-87f8-76b3a3c85b7c",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 178,
+                "samples": 2,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "7495da69-2a33-49b9-87f8-76b3a3c85b7c",
+                "baselinePostIds": [
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 249.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5e52071f-f481-4e7e-87af-93217accd069",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 249.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5e52071f-f481-4e7e-87af-93217accd069",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 2,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5e52071f-f481-4e7e-87af-93217accd069",
+                "baselinePostIds": [
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 226.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0f866223-9bb1-43c8-abe1-4f2075d27227",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 226.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0f866223-9bb1-43c8-abe1-4f2075d27227",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 155,
+                "samples": 2,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0f866223-9bb1-43c8-abe1-4f2075d27227",
+                "baselinePostIds": [
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "bilibili": {
+        "count": 5,
+        "baselines": {
+          "视频": null
+        },
+        "points": [
+          {
+            "id": "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "415d4a44-31b5-4c9f-98f3-304818be8571",
+                "baselinePostIds": [
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "415d4a44-31b5-4c9f-98f3-304818be8571",
+                "baselinePostIds": [
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5446aeb0-fd65-4dc4-aee6-555f8c6f864c",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5446aeb0-fd65-4dc4-aee6-555f8c6f864c",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 833.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5ee3f30b-a8b0-4fc7-a732-a74164ad778c",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 833.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5ee3f30b-a8b0-4fc7-a732-a74164ad778c",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 31,
+                "samples": 2,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5ee3f30b-a8b0-4fc7-a732-a74164ad778c",
+                "baselinePostIds": [
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 847.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c20522dc-0d7f-45ad-91fd-586a2fa01887",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 847.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c20522dc-0d7f-45ad-91fd-586a2fa01887",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 2,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c20522dc-0d7f-45ad-91fd-586a2fa01887",
+                "baselinePostIds": [
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 847.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "4ce161e4-680d-4c58-b85f-69716025fc59",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 847.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "4ce161e4-680d-4c58-b85f-69716025fc59",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 45,
+                "samples": 2,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "4ce161e4-680d-4c58-b85f-69716025fc59",
+                "baselinePostIds": [
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "channels": {
+        "count": 5,
+        "baselines": {
+          "视频": null,
+          "图文": null
+        },
+        "points": [
+          {
+            "id": "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 727,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c71cd411-5d67-41dd-8b91-a8e34869c728",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 727,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c71cd411-5d67-41dd-8b91-a8e34869c728",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 727,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "b2eb3318-e503-461f-85a6-62a1bb506d7d",
+                "baselinePostIds": [
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 727,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "b2eb3318-e503-461f-85a6-62a1bb506d7d",
+                "baselinePostIds": [
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 4004.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "fa24e92a-9c18-477d-9de7-f330f2c75618",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 4004.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "fa24e92a-9c18-477d-9de7-f330f2c75618",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "missing",
+                "provenance": "exact",
+                "reason": "检查点尚无有效采集值"
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 4020.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "d5c06917-1e59-466b-a3d6-24d0de8e9cad",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 4020.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "d5c06917-1e59-466b-a3d6-24d0de8e9cad",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 711,
+                "samples": 1,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "d5c06917-1e59-466b-a3d6-24d0de8e9cad",
+                "baselinePostIds": [
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 4020.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "38d56058-d873-4c85-9d71-7efffc6b1dc9",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 4020.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "38d56058-d873-4c85-9d71-7efffc6b1dc9",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 167,
+                "samples": 1,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "38d56058-d873-4c85-9d71-7efffc6b1dc9",
+                "baselinePostIds": [
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "youtube": {
+        "count": 5,
+        "baselines": {
+          "视频": null
+        },
+        "points": [
+          {
+            "id": "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 5,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "eeb15eb8-431f-4f7c-b9ee-3a1a5542649f",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 5,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "eeb15eb8-431f-4f7c-b9ee-3a1a5542649f",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 8,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "2bf20be2-3ac7-4d8e-93ab-0c815ad7eed5",
+                "baselinePostIds": [
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 8,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "2bf20be2-3ac7-4d8e-93ab-0c815ad7eed5",
+                "baselinePostIds": [
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 5,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "e87b1586-78a7-4576-87b7-a2e14c75b07b",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 5,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "e87b1586-78a7-4576-87b7-a2e14c75b07b",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 4,
+                "samples": 1,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "e87b1586-78a7-4576-87b7-a2e14c75b07b",
+                "baselinePostIds": [
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 8,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "cf56f304-aed2-4349-91cb-72ae4328fb53",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 8,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "cf56f304-aed2-4349-91cb-72ae4328fb53",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 59,
+                "samples": 1,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "cf56f304-aed2-4349-91cb-72ae4328fb53",
+                "baselinePostIds": [
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "9fdec57a1ecf370d857c2b03c8cbc299a3f8237f453abd6b93f0b6254b8c9104",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "missing",
+                "provenance": "exact",
+                "reason": "检查点尚无有效采集值"
+              },
+              "3": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "missing",
+                "provenance": "exact",
+                "reason": "检查点尚无有效采集值"
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "missing",
+                "provenance": "exact",
+                "reason": "检查点尚无有效采集值"
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "wechat": {
+        "count": 0,
+        "baselines": {
+          "图文": null
+        },
+        "points": []
+      },
+      "kuaishou": {
+        "count": 0,
+        "baselines": {
+          "视频": null
+        },
+        "points": []
+      },
+      "tiktok": {
+        "count": 0,
+        "baselines": {
+          "视频": null
+        },
+        "points": []
+      },
+      "x": {
+        "count": 0,
+        "baselines": {
+          "图文": null
+        },
+        "points": []
+      }
+    },
+    "hitRates": []
+  },
+  "after": {
+    "platforms": {
+      "douyin": {
+        "count": 5,
+        "baselines": {
+          "视频": null,
+          "图文": null
+        },
+        "points": [
+          {
+            "id": "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:49:53.932Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "8b0ad9dc-4a43-4f50-a6a6-08f238a2c995",
+                "baselinePostIds": []
+              },
+              "3": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:49:53.932Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "8b0ad9dc-4a43-4f50-a6a6-08f238a2c995",
+                "baselinePostIds": []
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "db382e7539a3e71a3f628b0d651eff7b048072e3afb39cd012242c5c115af604",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "a04cc62b-0372-4dcc-8005-02f450806efd",
+                "baselinePostIds": []
+              },
+              "3": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "a04cc62b-0372-4dcc-8005-02f450806efd",
+                "baselinePostIds": []
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "a04cc62b-0372-4dcc-8005-02f450806efd",
+                "baselinePostIds": []
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 1172,
+                "samples": 1,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0db82624-09d7-4bd8-af83-77eb35cb1f5e",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 1172,
+                "samples": 1,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0db82624-09d7-4bd8-af83-77eb35cb1f5e",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": "2026-10-17T11:50:18.980Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0db82624-09d7-4bd8-af83-77eb35cb1f5e",
+                "baselinePostIds": []
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "76e5e56da3502f92d0501d4048d719bcc69d3719ddb775127c1c899a7cff3376",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 1312,
+                "samples": 3,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "12af6c54-aab0-48eb-95ff-6e4dbb630d40",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "798f68b0866a8a85b3b29c2c8a6d8504631826ab62e005f813a57e50a2a30cb5"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 1312,
+                "samples": 3,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "12af6c54-aab0-48eb-95ff-6e4dbb630d40",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "798f68b0866a8a85b3b29c2c8a6d8504631826ab62e005f813a57e50a2a30cb5"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 1333.5,
+                "samples": 2,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "12af6c54-aab0-48eb-95ff-6e4dbb630d40",
+                "baselinePostIds": [
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "798f68b0866a8a85b3b29c2c8a6d8504631826ab62e005f813a57e50a2a30cb5"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "798f68b0866a8a85b3b29c2c8a6d8504631826ab62e005f813a57e50a2a30cb5",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 1355,
+                "samples": 3,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "9312ded9-7d31-401f-97bd-77be2445055a",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "76e5e56da3502f92d0501d4048d719bcc69d3719ddb775127c1c899a7cff3376"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 1355,
+                "samples": 3,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "9312ded9-7d31-401f-97bd-77be2445055a",
+                "baselinePostIds": [
+                  "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "76e5e56da3502f92d0501d4048d719bcc69d3719ddb775127c1c899a7cff3376"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 1586.5,
+                "samples": 2,
+                "capturedAt": "2026-10-17T11:50:41.075Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "9312ded9-7d31-401f-97bd-77be2445055a",
+                "baselinePostIds": [
+                  "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+                  "76e5e56da3502f92d0501d4048d719bcc69d3719ddb775127c1c899a7cff3376"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "xiaohongshu": {
+        "count": 5,
+        "baselines": {
+          "视频": null,
+          "图文": null
+        },
+        "points": [
+          {
+            "id": "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "ef2427c0-bb69-4385-8737-0c8ea8375101",
+                "baselinePostIds": [
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "ef2427c0-bb69-4385-8737-0c8ea8375101",
+                "baselinePostIds": [
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "6b90d15d-b9e0-4ecc-957c-d3a9929f5a9f",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "6b90d15d-b9e0-4ecc-957c-d3a9929f5a9f",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 249.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "7495da69-2a33-49b9-87f8-76b3a3c85b7c",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 249.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "7495da69-2a33-49b9-87f8-76b3a3c85b7c",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 178,
+                "samples": 2,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "7495da69-2a33-49b9-87f8-76b3a3c85b7c",
+                "baselinePostIds": [
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 249.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5e52071f-f481-4e7e-87af-93217accd069",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 249.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5e52071f-f481-4e7e-87af-93217accd069",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 190,
+                "samples": 2,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5e52071f-f481-4e7e-87af-93217accd069",
+                "baselinePostIds": [
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "0581c36e9e6cd4549b97f303780c16dce614c92414ff556c19f1f2b5963fe1ba",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 226.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0f866223-9bb1-43c8-abe1-4f2075d27227",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 226.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0f866223-9bb1-43c8-abe1-4f2075d27227",
+                "baselinePostIds": [
+                  "6c1cc3f52c92920abb75a0ea186637e34f6db40b4636a6e46ca873b023ed25f4",
+                  "bec0fb6eca5507117d52008ca73bee49965a69162cf7b56976f90e7ac4ed22f2",
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 155,
+                "samples": 2,
+                "capturedAt": "2026-10-17T14:03:48.431Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "0f866223-9bb1-43c8-abe1-4f2075d27227",
+                "baselinePostIds": [
+                  "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+                  "a402dc587bf37c4a84970992c1706aec2649b2b8a441f96e8f16ab0acdc75fef"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "bilibili": {
+        "count": 5,
+        "baselines": {
+          "视频": null
+        },
+        "points": [
+          {
+            "id": "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "415d4a44-31b5-4c9f-98f3-304818be8571",
+                "baselinePostIds": [
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "415d4a44-31b5-4c9f-98f3-304818be8571",
+                "baselinePostIds": [
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5446aeb0-fd65-4dc4-aee6-555f8c6f864c",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5446aeb0-fd65-4dc4-aee6-555f8c6f864c",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 833.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5ee3f30b-a8b0-4fc7-a732-a74164ad778c",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 833.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5ee3f30b-a8b0-4fc7-a732-a74164ad778c",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 31,
+                "samples": 2,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "5ee3f30b-a8b0-4fc7-a732-a74164ad778c",
+                "baselinePostIds": [
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 847.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c20522dc-0d7f-45ad-91fd-586a2fa01887",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 847.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c20522dc-0d7f-45ad-91fd-586a2fa01887",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 61,
+                "samples": 2,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c20522dc-0d7f-45ad-91fd-586a2fa01887",
+                "baselinePostIds": [
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "b53ecd55d93f222b75da3c970f017bfca9222db9f4293745b7028c58e2637fa9",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 847.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "4ce161e4-680d-4c58-b85f-69716025fc59",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 847.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "4ce161e4-680d-4c58-b85f-69716025fc59",
+                "baselinePostIds": [
+                  "52fa496619213024fbc157fa6b44f5aa5bddee7fbca95d7980747487b827fd1a",
+                  "a33ccd53c7354f9746720bc9068f78277c40d2722ca38ed397ac87447464de29",
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 45,
+                "samples": 2,
+                "capturedAt": "2026-10-17T13:39:51.452Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "4ce161e4-680d-4c58-b85f-69716025fc59",
+                "baselinePostIds": [
+                  "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+                  "c9c83839b9364b1bbdcd3a6f77277f116e6dabc839a2f7ba8afef0344c6707b8"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "channels": {
+        "count": 5,
+        "baselines": {
+          "视频": null,
+          "图文": null
+        },
+        "points": [
+          {
+            "id": "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 727,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c71cd411-5d67-41dd-8b91-a8e34869c728",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 727,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "c71cd411-5d67-41dd-8b91-a8e34869c728",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 727,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "b2eb3318-e503-461f-85a6-62a1bb506d7d",
+                "baselinePostIds": [
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 727,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "b2eb3318-e503-461f-85a6-62a1bb506d7d",
+                "baselinePostIds": [
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 4004.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "fa24e92a-9c18-477d-9de7-f330f2c75618",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 4004.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "fa24e92a-9c18-477d-9de7-f330f2c75618",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "missing",
+                "provenance": "exact",
+                "reason": "检查点尚无有效采集值"
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 4020.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "d5c06917-1e59-466b-a3d6-24d0de8e9cad",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 4020.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "d5c06917-1e59-466b-a3d6-24d0de8e9cad",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 711,
+                "samples": 1,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "d5c06917-1e59-466b-a3d6-24d0de8e9cad",
+                "baselinePostIds": [
+                  "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "35469df46cc5259735ecfe6ca539fda75cc49c83499784481868a0179c5568a7",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 4020.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "38d56058-d873-4c85-9d71-7efffc6b1dc9",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 4020.5,
+                "samples": 4,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "38d56058-d873-4c85-9d71-7efffc6b1dc9",
+                "baselinePostIds": [
+                  "503efabf551541f9c2d61feca488848dad92da00c753672c1159b422b087501a",
+                  "f079e972c18cd52e180925a00a80283bed1ebf2cc72848aef99a06c75e5f498d",
+                  "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 167,
+                "samples": 1,
+                "capturedAt": "2026-10-17T14:16:56.598Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "38d56058-d873-4c85-9d71-7efffc6b1dc9",
+                "baselinePostIds": [
+                  "51621884f67457324e50c44cfe576a672d4d37a039d935f4840447752c0229d0"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "youtube": {
+        "count": 5,
+        "baselines": {
+          "视频": null
+        },
+        "points": [
+          {
+            "id": "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 5,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "eeb15eb8-431f-4f7c-b9ee-3a1a5542649f",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 5,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "eeb15eb8-431f-4f7c-b9ee-3a1a5542649f",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 8,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "2bf20be2-3ac7-4d8e-93ab-0c815ad7eed5",
+                "baselinePostIds": [
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 8,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "exact",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "2bf20be2-3ac7-4d8e-93ab-0c815ad7eed5",
+                "baselinePostIds": [
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 5,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "e87b1586-78a7-4576-87b7-a2e14c75b07b",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 5,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "e87b1586-78a7-4576-87b7-a2e14c75b07b",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 4,
+                "samples": 1,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "e87b1586-78a7-4576-87b7-a2e14c75b07b",
+                "baselinePostIds": [
+                  "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "c8928e63c911acf2a38eb2512f88572c7f582fb74445ac8eaeedb99997b9d26b",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": 8,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "cf56f304-aed2-4349-91cb-72ae4328fb53",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c"
+                ]
+              },
+              "3": {
+                "ratio": null,
+                "baseline": 8,
+                "samples": 3,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "cf56f304-aed2-4349-91cb-72ae4328fb53",
+                "baselinePostIds": [
+                  "9a0b0c696be2ffbd5cf76e764a86696552c749ca76f45b027ff7e967517ed079",
+                  "a69bbb5495b5558e8a416268bfd9543da62b8a8b55f6cd8d8dd80394a112f730",
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c"
+                ]
+              },
+              "7": {
+                "ratio": null,
+                "baseline": 59,
+                "samples": 1,
+                "capturedAt": "2026-10-17T15:20:10.426Z",
+                "status": "insufficient",
+                "provenance": "backfill",
+                "reason": "同龄样本不足5条",
+                "snapshotId": "cf56f304-aed2-4349-91cb-72ae4328fb53",
+                "baselinePostIds": [
+                  "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c"
+                ]
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          },
+          {
+            "id": "9fdec57a1ecf370d857c2b03c8cbc299a3f8237f453abd6b93f0b6254b8c9104",
+            "checkpoints": {
+              "1": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "missing",
+                "provenance": "exact",
+                "reason": "检查点尚无有效采集值"
+              },
+              "3": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "missing",
+                "provenance": "exact",
+                "reason": "检查点尚无有效采集值"
+              },
+              "7": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "missing",
+                "provenance": "exact",
+                "reason": "检查点尚无有效采集值"
+              },
+              "21": {
+                "ratio": null,
+                "baseline": null,
+                "samples": 0,
+                "capturedAt": null,
+                "status": "pending",
+                "provenance": "exact",
+                "reason": null
+              }
+            }
+          }
+        ]
+      },
+      "wechat": {
+        "count": 0,
+        "baselines": {
+          "图文": null
+        },
+        "points": []
+      },
+      "kuaishou": {
+        "count": 0,
+        "baselines": {
+          "视频": null
+        },
+        "points": []
+      },
+      "tiktok": {
+        "count": 0,
+        "baselines": {
+          "视频": null
+        },
+        "points": []
+      },
+      "x": {
+        "count": 0,
+        "baselines": {
+          "图文": null
+        },
+        "points": []
+      }
+    },
+    "hitRates": []
+  }
+}

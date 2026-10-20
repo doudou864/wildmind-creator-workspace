@@ -1,0 +1,311 @@
+{
+  "backup": "data/backups/u8-a/workspace-2026-10-20T12-44-37-766Z-00000561572233742416-2a195b79-b69b-4ab7-8550-51d25147f5d7.db",
+  "approved": {
+    "source": "efb564b8-8403-48fe-b12c-7d127953f48a",
+    "target": "32368148-3fd2-437f-b2c2-33f00d254356"
+  },
+  "result": {
+    "alreadyMerged": false,
+    "movedPosts": 1
+  },
+  "before": {
+    "contents": [
+      {
+        "id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "topic_id": "88eebc28-8fbc-4524-9d26-610a7c051982",
+        "form": "视频",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。 #摆烂的逗逗#opus55#AI自动剪辑",
+        "planned_date": null,
+        "video_covers": "{}",
+        "updated_at": "2026-10-17T12:43:03.300Z",
+        "fixture": 0,
+        "merged_into": null
+      },
+      {
+        "id": "efb564b8-8403-48fe-b12c-7d127953f48a",
+        "topic_id": "2703f8fc-1a2e-476e-b5af-be2648bc61a0",
+        "form": "视频",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。#摆烂的逗逗#opus55#AI自动剪辑",
+        "planned_date": null,
+        "video_covers": "{}",
+        "updated_at": "2026-10-17T14:16:56.598Z",
+        "fixture": 0,
+        "merged_into": null
+      }
+    ],
+    "platformPosts": [
+      {
+        "platform_id": "bilibili",
+        "count": 5
+      },
+      {
+        "platform_id": "channels",
+        "count": 5
+      },
+      {
+        "platform_id": "douyin",
+        "count": 5
+      },
+      {
+        "platform_id": "xiaohongshu",
+        "count": 5
+      },
+      {
+        "platform_id": "youtube",
+        "count": 5
+      }
+    ],
+    "opusPosts": [
+      {
+        "id": "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+        "content_id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "platform_id": "bilibili",
+        "platform_post_id": null,
+        "published_at": "2026-10-09T17:27:27+08:00",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-18T02:41:00.729Z"
+      },
+      {
+        "id": "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+        "content_id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "platform_id": "xiaohongshu",
+        "platform_post_id": null,
+        "published_at": "2026-10-09T17:27:00+08:00",
+        "title": "Opus5.5实战工作中最真实的一次测试",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-17T15:49:47.016Z"
+      },
+      {
+        "id": "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+        "content_id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "platform_id": "youtube",
+        "platform_post_id": "tIFhD10g9js",
+        "published_at": "2026-10-09",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-18T03:00:31.142Z"
+      },
+      {
+        "id": "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+        "content_id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "platform_id": "douyin",
+        "platform_post_id": null,
+        "published_at": "2026-10-09T17:25:00+08:00",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。 #摆烂的逗逗#opus55#AI自动剪辑",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-18T02:36:26.212Z"
+      },
+      {
+        "id": "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+        "content_id": "efb564b8-8403-48fe-b12c-7d127953f48a",
+        "platform_id": "channels",
+        "platform_post_id": "export/UzFfBgAAxMuLQBdsPWSok8zT4DCaL4bljXIniy22WOg-KMMTOA",
+        "published_at": "2026-10-13",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。#摆烂的逗逗#opus55#AI自动剪辑",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-18T04:13:29.044Z"
+      }
+    ],
+    "postsWithoutContentHash": "95123e8fef9e07d819dfbb24afc7ea47e0bca177e5e31281b17ae2afee8e4a20",
+    "snapshotsHash": "cda71f7bd4d03f2e820cce912442d7d70fb38adb95d106f8540a45f109322e6c",
+    "checkpointsHash": "de3e7477b63cd06ad3e697deff48141386b6745d05501c0de4d1d0840a5bd682",
+    "topicsHash": "c4f4d4b9d49aae890b46c41eca2b4776c239dbc36a0ae7bb3b43ed2ba0666653",
+    "messagesHash": "ec004a510983e498f15246df74d551ac0e6da469db36b0603c298cbff646f792",
+    "messages": {
+      "total": 387,
+      "linkedContent": 0,
+      "linkedPost": 0
+    },
+    "opusTopics": [
+      {
+        "id": "2703f8fc-1a2e-476e-b5af-be2648bc61a0",
+        "automatic": 1,
+        "frozen_fire": null,
+        "status": "published"
+      },
+      {
+        "id": "88eebc28-8fbc-4524-9d26-610a7c051982",
+        "automatic": 1,
+        "frozen_fire": null,
+        "status": "published"
+      }
+    ],
+    "foreignKeyErrors": []
+  },
+  "after": {
+    "contents": [
+      {
+        "id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "topic_id": "88eebc28-8fbc-4524-9d26-610a7c051982",
+        "form": "视频",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。 #摆烂的逗逗#opus55#AI自动剪辑",
+        "planned_date": null,
+        "video_covers": "{}",
+        "updated_at": "2026-10-17T12:43:03.300Z",
+        "fixture": 0,
+        "merged_into": null
+      },
+      {
+        "id": "efb564b8-8403-48fe-b12c-7d127953f48a",
+        "topic_id": "2703f8fc-1a2e-476e-b5af-be2648bc61a0",
+        "form": "视频",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。#摆烂的逗逗#opus55#AI自动剪辑",
+        "planned_date": null,
+        "video_covers": "{}",
+        "updated_at": "2026-10-17T14:16:56.598Z",
+        "fixture": 0,
+        "merged_into": "32368148-3fd2-437f-b2c2-33f00d254356"
+      }
+    ],
+    "platformPosts": [
+      {
+        "platform_id": "bilibili",
+        "count": 5
+      },
+      {
+        "platform_id": "channels",
+        "count": 5
+      },
+      {
+        "platform_id": "douyin",
+        "count": 5
+      },
+      {
+        "platform_id": "xiaohongshu",
+        "count": 5
+      },
+      {
+        "platform_id": "youtube",
+        "count": 5
+      }
+    ],
+    "opusPosts": [
+      {
+        "id": "0c59d174c3c4cb4ba55e95254c29d2fb50c26979814df25c9aca278c3e379377",
+        "content_id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "platform_id": "bilibili",
+        "platform_post_id": null,
+        "published_at": "2026-10-09T17:27:27+08:00",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-18T02:41:00.729Z"
+      },
+      {
+        "id": "700a258e1c0275eb3db9c25c195c66dc4e5285443220b2f54c3356ef72b69d24",
+        "content_id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "platform_id": "xiaohongshu",
+        "platform_post_id": null,
+        "published_at": "2026-10-09T17:27:00+08:00",
+        "title": "Opus5.5实战工作中最真实的一次测试",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-17T15:49:47.016Z"
+      },
+      {
+        "id": "aa843dbd678a107bb8437301b39fe659ec5a5c6671e09427ae76cc8e6e2ab81c",
+        "content_id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "platform_id": "youtube",
+        "platform_post_id": "tIFhD10g9js",
+        "published_at": "2026-10-09",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-18T03:00:31.142Z"
+      },
+      {
+        "id": "dfc26ec9e338ced694bcc6555a5a4f725efc30f01cb859b779961ce94a28c420",
+        "content_id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "platform_id": "douyin",
+        "platform_post_id": null,
+        "published_at": "2026-10-09T17:25:00+08:00",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。 #摆烂的逗逗#opus55#AI自动剪辑",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-18T02:36:26.212Z"
+      },
+      {
+        "id": "e8aaf56a6c0afd69565dc41516ece8912d367b974e27c7f68285f6f8b3718571",
+        "content_id": "32368148-3fd2-437f-b2c2-33f00d254356",
+        "platform_id": "channels",
+        "platform_post_id": "export/UzFfBgAAxMuLQBdsPWSok8zT4DCaL4bljXIniy22WOg-KMMTOA",
+        "published_at": "2026-10-13",
+        "title": "Opus5.5实战工作中最真实的一次测试，详情见评论区。#摆烂的逗逗#opus55#AI自动剪辑",
+        "url": null,
+        "checkpoint_ratios": "{\"1\":null,\"3\":null,\"7\":null,\"21\":null}",
+        "trend": "待定",
+        "hit": null,
+        "first_publication": 1,
+        "removed": 0,
+        "updated_at": "2026-10-18T04:13:29.044Z"
+      }
+    ],
+    "postsWithoutContentHash": "95123e8fef9e07d819dfbb24afc7ea47e0bca177e5e31281b17ae2afee8e4a20",
+    "snapshotsHash": "cda71f7bd4d03f2e820cce912442d7d70fb38adb95d106f8540a45f109322e6c",
+    "checkpointsHash": "de3e7477b63cd06ad3e697deff48141386b6745d05501c0de4d1d0840a5bd682",
+    "topicsHash": "c4f4d4b9d49aae890b46c41eca2b4776c239dbc36a0ae7bb3b43ed2ba0666653",
+    "messagesHash": "ec004a510983e498f15246df74d551ac0e6da469db36b0603c298cbff646f792",
+    "messages": {
+      "total": 387,
+      "linkedContent": 0,
+      "linkedPost": 0
+    },
+    "opusTopics": [
+      {
+        "id": "2703f8fc-1a2e-476e-b5af-be2648bc61a0",
+        "automatic": 1,
+        "frozen_fire": null,
+        "status": "published"
+      },
+      {
+        "id": "88eebc28-8fbc-4524-9d26-610a7c051982",
+        "automatic": 1,
+        "frozen_fire": null,
+        "status": "published"
+      }
+    ],
+    "foreignKeyErrors": []
+  }
+}

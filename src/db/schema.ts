@@ -32,6 +32,7 @@ export const topics = sqliteTable('topics', {
 });
 export const contents = sqliteTable('contents', {
   id: id(),
+  mergedInto: text('merged_into'),
   fixture: bool('fixture').notNull().default(false),
   topicId: text('topic_id').references(() => topics.id),
   form: text('form', { enum: ['视频', '图文'] }).notNull(),
