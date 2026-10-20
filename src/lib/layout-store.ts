@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { blocksFromDocument } from './rich-document.ts';
+import { blocksFromDocument, documentFromBlocks } from './rich-document.ts';
 import { and, eq } from 'drizzle-orm';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import { layouts, contents, assets, publishSnapshots } from '../db/schema.ts';
@@ -69,9 +69,11 @@ export async function actOnLayout(
       covers: variant.covers,
       ...(await judgment.read(
         layoutContentSchema.omit({ covers: true }),
-        `只修改指定平台版本，保留事实，不添加不存在的图片 id；允许的图片 id：${JSON.stringify(db.db.select({ id: assets.id }).from(assets).all())}。平台：${input.platform}；修改要求：${input.instruction}；原稿：${JSON.stringify(revised)}`,
+        `只修改指定平台版本，保留事实。原稿有 document 时必须在 document 中修改正文，blocks 由程序同步。不添加不存在的图片 id；允许的图片 id：${JSON.stringify(db.db.select({ id: assets.id }).from(assets).all())}。平台：${input.platform}；修改要求：${input.instruction}；原稿：${JSON.stringify(revised)}`,
       )),
     };
+    revised.document ??= documentFromBlocks(revised.blocks);
+    revised.blocks = blocksFromDocument(revised.document);
     const ids = new Set(
       db.db
         .select({ id: assets.id })

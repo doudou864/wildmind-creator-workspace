@@ -1,3 +1,5 @@
+import { withArchives } from '@/lib/record-archives';
+import { ArchiveButton } from '@/ui/archive-controls';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { loadConfig } from '@/lib/config';
@@ -20,11 +22,13 @@ export default async function Page({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [query, config, settings] = await Promise.all([searchParams, loadConfig(), loadDataCenterConfig()]);
-  const all = await usingDatabase((db) => ({
-    contents: db.db.select().from(contents).all(),
-    posts: db.db.select().from(posts).all(),
-    samples: db.db.select().from(postSnapshots).all(),
-  }));
+  const all = await usingDatabase((db) =>
+    withArchives(db, {
+      contents: db.db.select().from(contents).all(),
+      posts: db.db.select().from(posts).all(),
+      samples: db.db.select().from(postSnapshots).all(),
+    }),
+  );
   const items = all.contents.filter(isVisibleRecord).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const requested = typeof query.content === 'string' ? all.contents.find((c) => c.id === query.content) : undefined;
   const requestedId = requested?.mergedInto ?? requested?.id;
@@ -83,6 +87,7 @@ export default async function Page({
         <section className="works-detail">
           {selected ? (
             <>
+              <ArchiveButton kind="content" id={selected.id} afterArchive="/works" />
               <nav className="group-navigation" aria-label="作品平台">
                 {published.map((p) => (
                   <Link

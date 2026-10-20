@@ -115,14 +115,7 @@ export async function listLocalVideos(settings = undefined as MediaSettings | un
   }
   return { directories: settings.finishedVideoDirectories, items: rows, errors };
 }
-export async function referenceVideo(
-  db: WorkspaceDatabase,
-  contentId: string,
-  file: string,
-  settings = undefined as MediaSettings | undefined,
-) {
-  const content = db.db.select().from(contents).where(eq(contents.id, contentId)).get();
-  if (!content || content.form !== '视频') throw Error('请先选择视频作品');
+export async function inspectLocalVideo(file: string, settings?: MediaSettings) {
   settings ??= await mediaSettings();
   const full = await allowedVideo(file, settings);
   const limit = (await loadPublishingConfig((await loadConfig()).platforms)).videoMaxMB;
@@ -131,6 +124,20 @@ export async function referenceVideo(
     info = await probe(full, settings);
   const checked = await fingerprint(full);
   if (JSON.stringify(mark) !== JSON.stringify(checked)) throw Error('读取期间文件变化，请重新选择');
+  return { path: full, bytes: mark.bytes, fingerprint: mark, ...info };
+}
+export async function referenceVideo(
+  db: WorkspaceDatabase,
+  contentId: string,
+  file: string,
+  settings = undefined as MediaSettings | undefined,
+) {
+  const content = db.db.select().from(contents).where(eq(contents.id, contentId)).get();
+  if (!content || content.form !== '视频') throw Error('请先选择视频作品');
+  const inspected = await inspectLocalVideo(file, settings);
+  const full = inspected.path,
+    mark = inspected.fingerprint,
+    info = { duration: inspected.duration, width: inspected.width, height: inspected.height };
   const old = db.db
     .select()
     .from(publishVideos)

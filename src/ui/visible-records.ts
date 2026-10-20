@@ -27,6 +27,7 @@ const object = (value: unknown): RecordView | null =>
 export function isVisibleRecord(value: unknown): boolean {
   const row = object(value);
   if (!row) return true;
+  if (typeof row.archivedAt === 'string' && row.archivedAt) return false;
   if (typeof row.mergedInto === 'string' && row.mergedInto.length > 0) return false;
   if (
     row.fixture === true ||

@@ -1825,3 +1825,33 @@ dialog.asset-drawer {
 .creation-steps a:hover {
   background: var(--line-soft);
 }
+
+.archive-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+.today-notice {
+  margin: 12px 0;
+  padding: 14px 18px;
+}
+.today-notice p {
+  margin: 6px 0;
+  color: var(--ink-2);
+}
+.reply-draft {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.reply-draft textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  font: inherit;
+}

@@ -1,4 +1,5 @@
 'use client';
+import { ReplyDraft } from '@/ui/reply-draft';
 import { MessageNavigation } from '@/ui/message-navigation';
 import { inboxSummary } from '@/ui/inbox-summary';
 import { ReplyActions, ReplyToast, type ReplyDestinations } from '@/ui/reply-actions';
@@ -530,6 +531,9 @@ export default function InboxPage({
                   </span>
                 </div>
                 <ReplyActions message={active} destinations={destinations} />
+                {active.classification.status === 'ready' && active.classification.result.category !== 'other' && (
+                  <ReplyDraft key={active.id} id={active.id} />
+                )}
                 <p className="inbox-original">{active.body || '原文尚未读取完整'}</p>
                 <dl className="inbox-evidence">
                   <div>

@@ -1,4 +1,5 @@
 'use client';
+import { TodayAttention } from '@/ui/today-attention';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -178,6 +179,7 @@ export default function Dashboard({
         onRefresh={() => {
           void refresh();
           void refreshDeals();
+          window.dispatchEvent(new Event('workspace-refresh'));
           router.refresh();
         }}
         action={
@@ -186,6 +188,7 @@ export default function Dashboard({
           </Link>
         }
       />
+      <TodayAttention />
       {(error || dealError || notice) && <p role="status">{error || dealError || notice}</p>}
       <div className="dashboard-two-columns">
         <div className="dashboard-left">

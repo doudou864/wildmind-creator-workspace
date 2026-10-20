@@ -1,3 +1,4 @@
+import { withArchives } from './record-archives.ts';
 import { topicData } from './topic-store.ts';
 import { inboxData, dealData } from './inbox-store.ts';
 import { loadConfig } from './config.ts';
@@ -20,60 +21,64 @@ import type { ImageData } from './image-model';
 // 服务接入边界：只返回业务记录。接入采集、复盘、数据库后替换这些读取器，不在页面填充示例。
 export async function readDashboard(): Promise<DashboardData> {
   const config = await loadConfig();
-  return usingDatabase((db) => dashboardData(db, config));
+  return usingDatabase((db) => withArchives(db, dashboardData(db, config)));
 }
 export async function readTopics(): Promise<TopicData> {
   const config = await loadConfig();
-  return usingDatabase((db) => topicData(db, config));
+  return usingDatabase((db) => withArchives(db, topicData(db, config)));
 }
 export async function readImages(): Promise<ImageData> {
   const config = await loadGenerationConfig();
-  return usingDatabase((db) => ({
-    tasks: readImageTasks(db),
-    pendingCrops: db.db
-      .select()
-      .from(imageCrops)
-      .all()
-      .filter((c) => !c.assetId)
-      .map((c) => ({
-        ...c,
-        fixture:
-          db.db
-            .select()
-            .from(contents)
-            .all()
-            .find((item) => item.id === c.contentId)?.fixture ?? false,
-      })),
-    assets: db.db.select().from(assets).all(),
-    drafts: db.db
-      .select()
-      .from(imageDrafts)
-      .all()
-      .map((r) => ({ ...r.input, id: r.id, updatedAt: r.updatedAt, fixture: r.fixture })),
-    topics: db.db.select({ id: topics.id, title: topics.title, fixture: topics.fixture }).from(topics).all(),
-    contents: db.db.select().from(contents).all(),
-    contentWriteReady: true,
-    generationReady: true,
-    storageReady: true,
-    generationMessage: `使用本机ChatGPT套餐；今天已用${usedImages(db, shanghaiDate())}/${config.dailyLimit}次，一次只生成一张。`,
-    generations: db.db.select().from(imageGenerations).orderBy(desc(imageGenerations.startedAt)).limit(30).all(),
-  }));
+  return usingDatabase((db) =>
+    withArchives(db, {
+      tasks: readImageTasks(db),
+      pendingCrops: db.db
+        .select()
+        .from(imageCrops)
+        .all()
+        .filter((c) => !c.assetId)
+        .map((c) => ({
+          ...c,
+          fixture:
+            db.db
+              .select()
+              .from(contents)
+              .all()
+              .find((item) => item.id === c.contentId)?.fixture ?? false,
+        })),
+      assets: db.db.select().from(assets).all(),
+      drafts: db.db
+        .select()
+        .from(imageDrafts)
+        .all()
+        .map((r) => ({ ...r.input, id: r.id, updatedAt: r.updatedAt, fixture: r.fixture })),
+      topics: db.db.select({ id: topics.id, title: topics.title, fixture: topics.fixture }).from(topics).all(),
+      contents: db.db.select().from(contents).all(),
+      contentWriteReady: true,
+      generationReady: true,
+      storageReady: true,
+      generationMessage: `使用本机ChatGPT套餐；今天已用${usedImages(db, shanghaiDate())}/${config.dailyLimit}次，一次只生成一张。`,
+      generations: db.db.select().from(imageGenerations).orderBy(desc(imageGenerations.startedAt)).limit(30).all(),
+    }),
+  );
 }
 
 export async function readLayouts(): Promise<LayoutData> {
-  return usingDatabase((db) => ({
-    documents: db.db.select().from(layouts).all(),
-    contents: db.db.select().from(contents).all(),
-    assets: db.db.select().from(assets).all(),
-    storageReady: true,
-    aiReady: true,
-    handoffReady: true,
-    message: '三个版本独立编辑；每次确认保存快照，送入发布准备。',
-  }));
+  return usingDatabase((db) =>
+    withArchives(db, {
+      documents: db.db.select().from(layouts).all(),
+      contents: db.db.select().from(contents).all(),
+      assets: db.db.select().from(assets).all(),
+      storageReady: true,
+      aiReady: true,
+      handoffReady: true,
+      message: '三个版本独立编辑；每次确认保存快照，送入发布准备。',
+    }),
+  );
 }
 
 export async function readPublishing(): Promise<PublishingData> {
-  return usingDatabase(publishingData);
+  return usingDatabase((db) => withArchives(db, publishingData(db)));
 }
 
 export async function readInbox(): Promise<InboxData> {
@@ -85,11 +90,13 @@ export async function readDeals(): Promise<DealData> {
 }
 
 export async function readContents(): Promise<ContentData> {
-  return usingDatabase((db) => ({
-    items: db.db.select().from(contents).all(),
-    topics: db.db.select({ id: topics.id, title: topics.title, fixture: topics.fixture }).from(topics).all(),
-    recordsReady: true,
-    writeReady: true,
-    message: '',
-  }));
+  return usingDatabase((db) =>
+    withArchives(db, {
+      items: withArchives(db, { contents: db.db.select().from(contents).all() }).contents,
+      topics: db.db.select({ id: topics.id, title: topics.title, fixture: topics.fixture }).from(topics).all(),
+      recordsReady: true,
+      writeReady: true,
+      message: '',
+    }),
+  );
 }

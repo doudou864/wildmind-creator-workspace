@@ -31,6 +31,24 @@ test('rich content is frozen in confirmed snapshot; editing another platform can
     const doc = createLayout('测试标题\n测试正文', 'fixture');
     doc.variants.x.document = documentFromBlocks(doc.variants.x.blocks);
     const saved = saveLayout(db, layoutPayload(doc));
+    const rewritten = await actOnLayout(
+      db,
+      saved.id!,
+      { platform: 'x', action: 'ai', instruction: 'fixture edit' },
+      {
+        async read(schema) {
+          return schema.parse({
+            title: doc.variants.x.title,
+            blocks: doc.variants.x.blocks,
+            document: {
+              type: 'doc',
+              content: [{ type: 'paragraph', content: [{ type: 'text', text: '新的测试正文' }] }],
+            },
+          });
+        },
+      },
+    );
+    expect(rewritten.variants.x.blocks[0].text).toBe('新的测试正文');
     await actOnLayout(db, saved.id!, { platform: 'x', action: 'confirm-send' });
     const snapshot = db.db.select().from(publishSnapshots).all()[0];
     expect(snapshot.content.document).toBeTruthy();

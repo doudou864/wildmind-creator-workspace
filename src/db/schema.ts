@@ -500,3 +500,11 @@ export const imageCrops = sqliteTable('image_crops', {
   createdAt: text('created_at').notNull(),
   updatedAt: updatedAt(),
 });
+
+export const recordArchives = sqliteTable('record_archives', {
+  key: text('key').primaryKey(),
+  kind: text('kind', { enum: ['content', 'layout', 'image_draft', 'asset', 'topic'] }).notNull(),
+  recordId: text('record_id').notNull(),
+  archivedAt: text('archived_at'),
+  updatedAt: updatedAt(),
+});

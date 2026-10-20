@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { ArchiveButton } from '@/ui/archive-controls';
 import { ImageReferencePicker } from '@/ui/image-reference-picker';
 import { ImageChatPanel } from '@/ui/image-chat-panel';
 import { ManualCropDialog } from '@/ui/manual-crop-dialog';
@@ -629,7 +630,11 @@ export default function ImagesPage({
             contentId={draft.contentId}
             purposeId={draft.purposeId}
             referenceIds={draft.referenceIds ?? []}
-            onDone={() => void refresh()}
+            onDone={() => {
+              setTab('library');
+              setPurposeFilter('all');
+              void refresh();
+            }}
           />
         </aside>
         <section className="image-main-column">
@@ -887,18 +892,20 @@ export default function ImagesPage({
               {data.drafts.length ? (
                 <div className="image-drafts">
                   {data.drafts.map((saved) => (
-                    <Button
-                      key={saved.id}
-                      className="list-row"
-                      disabled={busy}
-                      disabledReason="正在处理，请稍候。"
-                      onClick={() => requestLoad(saved)}
-                    >
-                      <strong>{saved.title}</strong>
-                      <span>
-                        {purposeName(saved.purposeId)} · {saved.updatedAt.slice(0, 10)}
-                      </span>
-                    </Button>
+                    <div key={saved.id}>
+                      <Button
+                        className="list-row"
+                        disabled={busy}
+                        disabledReason="正在处理，请稍候。"
+                        onClick={() => requestLoad(saved)}
+                      >
+                        <strong>{saved.title}</strong>
+                        <span>
+                          {purposeName(saved.purposeId)} · {saved.updatedAt.slice(0, 10)}
+                        </span>
+                      </Button>
+                      <ArchiveButton kind="image_draft" id={saved.id} />
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -980,6 +987,7 @@ export default function ImagesPage({
                   </Button>
                 </div>
 
+                <ArchiveButton kind="asset" id={focusedAsset.id} onArchived={() => setAssetId('')} />
                 <p className="section-label">版本记录</p>
                 <div className="asset-versions">
                   {versions.map((asset) => (
@@ -1153,7 +1161,11 @@ export default function ImagesPage({
         <ManualCropDialog
           crop={pendingCrops.find((c) => c.id === cropId)!}
           onClose={() => setCropId(null)}
-          onSaved={() => void refresh()}
+          onSaved={() => {
+            setTab('library');
+            setPurposeFilter('all');
+            void refresh();
+          }}
         />
       )}
     </main>

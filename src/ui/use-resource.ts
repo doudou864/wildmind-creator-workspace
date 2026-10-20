@@ -48,10 +48,14 @@ export function useResource<T>(url: string, initial: T, fetchOnMount = false) {
     };
     window.addEventListener('focus', onFocus);
     window.addEventListener('inbox-handled', onFocus);
+    window.addEventListener('workspace-archive', onFocus);
+    window.addEventListener('workspace-refresh', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.removeEventListener('focus', onFocus);
       window.removeEventListener('inbox-handled', onFocus);
+      window.removeEventListener('workspace-archive', onFocus);
+      window.removeEventListener('workspace-refresh', onFocus);
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [refresh]);

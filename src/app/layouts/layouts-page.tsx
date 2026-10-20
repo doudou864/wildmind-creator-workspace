@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { ArchiveButton } from '@/ui/archive-controls';
 import { FreeDocumentEditor } from '@/ui/free-document-editor';
 import { documentFromBlocks } from '@/lib/rich-document';
 import { usePathname, useRouter } from 'next/navigation';
@@ -266,6 +267,7 @@ export default function LayoutsPage({
         title={document ? '当前稿件' : '粘贴文章'}
         meta={
           <div className="layout-resume-actions">
+            {document?.id && <ArchiveButton kind="layout" id={document.id} onArchived={reset} />}
             <Button disabled={busy} disabledReason="正在处理稿件。" onClick={() => protect(reset)}>
               新建
             </Button>

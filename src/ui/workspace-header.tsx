@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ArchiveCenter } from './archive-controls';
 import { Button } from './components';
 
 const navigation = [
@@ -63,6 +64,7 @@ export function WorkspaceHeader({
           ),
         )}
       </nav>
+      <ArchiveCenter />
       <div className="clock mono">
         <time dateTime={date}>
           {date} {weekday}

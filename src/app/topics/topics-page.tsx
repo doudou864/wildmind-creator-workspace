@@ -1,4 +1,5 @@
 'use client';
+import { ArchiveButton } from '@/ui/archive-controls';
 import Link from 'next/link';
 import { useState } from 'react';
 import type { Parameters, Platform } from '@/lib/config';
@@ -199,6 +200,7 @@ export default function TopicsPage({
                           {topic.title} →
                         </button>
                         <div className="topic-row-actions">
+                          <ArchiveButton kind="topic" id={topic.id} />
                           {topic.status === 'candidate' ? (
                             <>
                               <Button
