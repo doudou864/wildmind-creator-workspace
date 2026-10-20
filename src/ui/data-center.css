@@ -124,3 +124,54 @@
 .data-center .small {
   font-size: 11px;
 }
+
+.analysis-summary {
+  margin-bottom: 12px;
+}
+.analysis-summary h2 {
+  font-size: 18px;
+  margin: 0 0 8px;
+}
+.analysis-summary > p {
+  margin: 8px 0;
+}
+.analysis-quick {
+  margin-top: 10px;
+}
+.analysis-quick summary,
+.analysis-curve summary {
+  cursor: pointer;
+}
+.analysis-quick .list-row {
+  display: block;
+  padding: 8px;
+}
+.analysis-table {
+  max-width: 960px;
+  min-width: 0;
+  width: 100%;
+  table-layout: auto;
+}
+.analysis-table-scroll {
+  overflow: auto;
+  padding-bottom: 12px;
+}
+.analysis-table td:first-child {
+  width: 38%;
+}
+.analysis-table td,
+.analysis-table th {
+  vertical-align: top;
+}
+.analysis-missing {
+  margin: 8px 0;
+}
+.analysis-interpretation .analysis-paragraphs {
+  display: block;
+}
+.analysis-interpretation .analysis-paragraphs p {
+  margin: 12px 0;
+}
+.analysis-table-scroll {
+  max-height: none;
+}

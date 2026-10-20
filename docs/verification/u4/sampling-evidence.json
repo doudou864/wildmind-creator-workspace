@@ -1,0 +1,35 @@
+{
+  "postId": "55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+  "publishedAt": "2026-10-14T02:20:00+08:00",
+  "metric": "播放量",
+  "rows": [
+    {
+      "metric_id": "douyin_视频_播放量",
+      "day_after_publish": 3,
+      "captured_at": "2026-10-17T11:49:53.932Z",
+      "value": 1172,
+      "precision": "exact"
+    },
+    {
+      "metric_id": "douyin_视频_播放量",
+      "day_after_publish": 3,
+      "captured_at": "2026-10-17T12:13:33.262Z",
+      "value": 1179,
+      "precision": "exact"
+    },
+    {
+      "metric_id": "douyin_视频_播放量",
+      "day_after_publish": 3,
+      "captured_at": "2026-10-17T12:13:50.650Z",
+      "value": 1179,
+      "precision": "exact"
+    },
+    {
+      "metric_id": "douyin_视频_播放量",
+      "day_after_publish": 4,
+      "captured_at": "2026-10-18T02:36:40.275Z",
+      "value": 1510,
+      "precision": "exact"
+    }
+  ]
+}
