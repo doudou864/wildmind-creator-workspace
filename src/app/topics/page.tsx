@@ -12,7 +12,7 @@ export default async function Page() {
     <TopicsPage
       parameters={config.parameters}
       channels={sources.channels}
-      channelDocument={sources.document}
+      platforms={config.platforms}
       initialData={await readTopics()}
       today={new Intl.DateTimeFormat('en-CA', {
         timeZone: 'Asia/Shanghai',
