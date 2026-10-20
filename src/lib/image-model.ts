@@ -3,7 +3,7 @@ import { z } from 'zod';
 export const imageConfigSchema = z.object({
   uploadMaxMB: z.number().positive(),
   acceptedTypes: z.array(z.enum(['image/png', 'image/jpeg'])).min(1),
-  styles: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), prompt: z.string().min(1) })).min(1),
+  styles: z.array(z.object({ id: z.string().min(1), name: z.string().min(1), prompt: z.string() })).min(1),
   purposes: z
     .array(
       z.object({
@@ -21,6 +21,7 @@ export const imageConfigSchema = z.object({
 export type ImageConfig = z.infer<typeof imageConfigSchema>;
 export const imageDraftSchema = z
   .object({
+    referenceIds: z.array(z.string().min(1)).max(3).optional(),
     uploadPurposeId: z.string().default(''),
     title: z.string().trim().min(1).max(200),
     purposeId: z.string().min(1),
@@ -56,6 +57,14 @@ export type Asset = {
   createdAt: string;
 };
 export type ImageData = {
+  pendingCrops?: {
+    id: string;
+    contentId: string | null;
+    width: number;
+    height: number;
+    ratio: string;
+    metadata: { title: string };
+  }[];
   tasks?: {
     id: string;
     input: ImageDraftInput;

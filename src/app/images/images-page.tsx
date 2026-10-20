@@ -1,5 +1,8 @@
 'use client';
 import Link from 'next/link';
+import { ImageReferencePicker } from '@/ui/image-reference-picker';
+import { ImageChatPanel } from '@/ui/image-chat-panel';
+import { ManualCropDialog } from '@/ui/manual-crop-dialog';
 import { inboxTime } from '@/lib/inbox-model';
 import { ContentPicker } from '@/ui/content-picker';
 import { AutosaveStatus } from '@/ui/autosave-status';
@@ -61,6 +64,16 @@ export default function ImagesPage({
     editInstruction: '',
   });
   const [draft, setDraft] = useState<ImageDraftInput>(blank);
+  const [cropId, setCropId] = useState<string | null>(null);
+  const seenCrops = useRef(new Set<string>());
+  const pendingCrops = (data.pendingCrops ?? []).filter((c) => c.contentId === draft.contentId);
+  useEffect(() => {
+    const next = pendingCrops.find((c) => !seenCrops.current.has(c.id));
+    if (next) {
+      seenCrops.current.add(next.id);
+      setCropId(next.id);
+    }
+  }, [data.pendingCrops, draft.contentId]);
   const [draftMeta, setDraftMeta] = useState<{ id: string } | null>(null);
   const savedRecord = useRef<string | null>(null);
   const editSession = useRef(0);
@@ -82,7 +95,9 @@ export default function ImagesPage({
       const finished = data.tasks?.find((t) => t.id === restoredTask.current);
       if (finished?.status === 'success' || finished?.status === 'failed') {
         setNotice(
-          finished.status === 'success' ? '后台生成完成，图片已进入素材库。' : (finished.reason ?? '后台生成失败。'),
+          finished.status === 'success'
+            ? '后台生成完成，请查看素材或待裁剪图片。'
+            : (finished.reason ?? '后台生成失败。'),
         );
         if (finished.status === 'success') {
           setTab('library');
@@ -553,20 +568,30 @@ export default function ImagesPage({
 
               {!isUpload && (
                 <>
-                  <label htmlFor="image-style">
-                    生图风格
-                    <select
-                      id="image-style"
-                      value={draft.styleId}
-                      onChange={(e) => update({ styleId: e.target.value })}
-                    >
-                      {config.styles.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <details>
+                    <summary>风格（可选）</summary>
+                    <label htmlFor="image-style">
+                      生图风格
+                      <select
+                        id="image-style"
+                        value={draft.styleId}
+                        onChange={(e) => update({ styleId: e.target.value })}
+                      >
+                        {config.styles.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  </details>
+                  <ImageReferencePicker
+                    draft={draft}
+                    assets={data.assets}
+                    disabled={busy}
+                    onChange={(referenceIds) => update({ referenceIds })}
+                    onUploaded={() => void refresh()}
+                  />
                   {purpose.contentMode === 'free' && (
                     <label htmlFor="image-ratio">
                       图片比例
@@ -599,8 +624,25 @@ export default function ImagesPage({
               </div>
             </div>
           </Card>
+          <ImageChatPanel
+            key={draft.contentId ?? 'none'}
+            contentId={draft.contentId}
+            purposeId={draft.purposeId}
+            referenceIds={draft.referenceIds ?? []}
+            onDone={() => void refresh()}
+          />
         </aside>
         <section className="image-main-column">
+          {pendingCrops.length > 0 && (
+            <Card title="等你裁剪">
+              <p>原图已保留，选择画面后存入素材库。</p>
+              {pendingCrops.map((c) => (
+                <Button key={c.id} onClick={() => setCropId(c.id)}>
+                  {c.metadata.title} · 裁剪 {c.ratio}
+                </Button>
+              ))}
+            </Card>
+          )}
           <Card
             title={tab === 'outputs' ? '图片工作区' : '素材库'}
             meta={
@@ -1072,7 +1114,7 @@ export default function ImagesPage({
           (data.generations ?? []).slice(0, 10).map((run) => (
             <p key={run.id} className="small mono">
               {new Date(run.startedAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' })} ·{' '}
-              {run.kind === 'edit' ? '修改' : '生成'} · {run.calls} 次 ·{' '}
+              {run.kind === 'edit' ? '修改' : run.kind === 'chat' ? '对话' : '生成'} · {run.calls} 次 ·{' '}
               {run.durationMs === null ? '--' : Math.round(run.durationMs / 1000) + '秒'} ·{' '}
               {run.status === 'success' ? '成功' : run.status === 'running' ? '进行中' : '失败'}
               {run.reason ? '：' + run.reason : ''}
@@ -1106,6 +1148,13 @@ export default function ImagesPage({
             <Empty>素材库暂无图片</Empty>
           )}
         </Dialog>
+      )}
+      {cropId && pendingCrops.find((c) => c.id === cropId) && (
+        <ManualCropDialog
+          crop={pendingCrops.find((c) => c.id === cropId)!}
+          onClose={() => setCropId(null)}
+          onSaved={() => void refresh()}
+        />
       )}
     </main>
   );

@@ -391,7 +391,7 @@ export const collectionState = sqliteTable('collection_state', {
 export const imageGenerations = sqliteTable('image_generations', {
   id: id(),
   fixture: bool('fixture').notNull().default(false),
-  kind: text('kind', { enum: ['generate', 'edit'] }).notNull(),
+  kind: text('kind', { enum: ['generate', 'edit', 'chat'] }).notNull(),
   usageDate: text('usage_date').notNull(),
   status: text('status', { enum: ['running', 'success', 'failed'] }).notNull(),
   startedAt: text('started_at').notNull(),
@@ -453,4 +453,50 @@ export const messageActions = sqliteTable('message_actions', {
   action: text('action', { enum: ['replied', 'low_value', 'undo'] }).notNull(),
   baseline: json<string[]>('baseline').notNull(),
   createdAt: text('created_at').notNull(),
+});
+
+export const imageChats = sqliteTable('image_chats', {
+  contentId: text('content_id')
+    .primaryKey()
+    .references(() => contents.id),
+  threadId: text('thread_id'),
+  updatedAt: updatedAt(),
+});
+export const imageChatTurns = sqliteTable('image_chat_turns', {
+  id: id(),
+  contentId: text('content_id')
+    .notNull()
+    .references(() => contents.id),
+  input: text('input').notNull(),
+  referenceIds: json<string[]>('reference_ids').notNull(),
+  output: text('output').notNull(),
+  error: text('error'),
+  status: text('status', { enum: ['running', 'success', 'failed'] }).notNull(),
+  assetIds: json<string[]>('asset_ids').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: updatedAt(),
+});
+export const imageCrops = sqliteTable('image_crops', {
+  id: id(),
+  contentId: text('content_id').references(() => contents.id),
+  generationId: text('generation_id')
+    .notNull()
+    .references(() => imageGenerations.id),
+  sourcePath: text('source_path').notNull(),
+  width: integer('width').notNull(),
+  height: integer('height').notNull(),
+  ratio: text('ratio').notNull(),
+  metadata: json<{
+    title: string;
+    purposeId: string;
+    topicId: string | null;
+    contentId: string | null;
+    prompt: string;
+    familyId: string;
+    version: number;
+  }>('metadata').notNull(),
+  crop: json<{ x: number; y: number; width: number; height: number; method: 'manual' }>('crop'),
+  assetId: text('asset_id').references(() => assets.id),
+  createdAt: text('created_at').notNull(),
+  updatedAt: updatedAt(),
 });

@@ -2,6 +2,7 @@
 type RecordView = Record<string, unknown>;
 const collections = new Set([
   'items',
+  'pendingCrops',
   'contents',
   'plannedContents',
   'topics',

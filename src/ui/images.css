@@ -566,3 +566,70 @@
 .images-workspace .image-workarea {
   min-height: 0;
 }
+
+.image-references {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+.image-references input {
+  max-width: 100%;
+}
+.chat-verbatim {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: inherit;
+  margin: 8px 0;
+  text-align: left;
+}
+.image-chat-history {
+  max-height: 480px;
+  overflow: auto;
+}
+.image-chat-history section {
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0;
+}
+.image-input-column textarea {
+  width: 100%;
+}
+.manual-crop-surface {
+  position: relative;
+  width: min(640px, 75vw);
+  user-select: none;
+}
+.manual-crop-surface > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.manual-crop-box {
+  position: absolute;
+  border: 2px solid var(--accent);
+  background: transparent;
+  box-shadow: 0 0 0 100vmax #0006;
+  clip-path: inset(-100vmax);
+  cursor: move;
+  touch-action: none;
+}
+.manual-crop-surface {
+  overflow: hidden;
+}
+.image-form {
+  gap: 10px;
+  margin-top: 12px;
+}
+.image-references {
+  gap: 6px;
+  margin: 6px 0;
+}
+.image-chat-panel textarea {
+  width: 100%;
+  min-height: 100px;
+  padding: 8px;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font: inherit;
+}

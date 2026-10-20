@@ -1,0 +1,31 @@
+{
+  "fixtureOnly": true,
+  "sameThread": true,
+  "eventCount": 2,
+  "turns": [
+    {
+      "input": "这是隔离测试，不生成图片。请原样回复：U9 streaming fixture",
+      "output": "U9 streaming fixture",
+      "status": "success",
+      "error": null
+    },
+    {
+      "input": "这是同一测试会话，不生成图片。请只回复上一条要求中的英文短语。",
+      "output": "U9 streaming fixture",
+      "status": "success",
+      "error": null
+    }
+  ],
+  "usage": [
+    {
+      "calls": 1,
+      "durationMs": 15521,
+      "status": "success"
+    },
+    {
+      "calls": 1,
+      "durationMs": 15473,
+      "status": "success"
+    }
+  ]
+}

@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm';
 import { copyFile, mkdir, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { openDatabase, type WorkspaceDatabase } from '../db/database.ts';
-import { assets, contents, topics, imageDrafts, imageGenerations } from '../db/schema.ts';
+import { assets, contents, topics, imageDrafts, imageGenerations, imageCrops } from '../db/schema.ts';
 import { loadImageConfig } from './image-config.ts';
 import {
   imageDraftSchema,
@@ -13,7 +13,7 @@ import {
   type ImageDraftInput,
 } from './image-model.ts';
 import { contentInputSchema, type Content } from './content-model.ts';
-import { imageInfo, imageRatio, assetFile, normalizeImage } from './image-files.ts';
+import { imageInfo, imageRatio, assetFile, normalizeImage, exactCrop } from './image-files.ts';
 import { generateImage, imageFailure, loadGenerationConfig } from '../ai/image-generation.ts';
 import { acquireJobLock } from '../jobs/lock.ts';
 import { shanghaiDate } from '../browser/policy.ts';
@@ -102,7 +102,7 @@ function versionFields(db: WorkspaceDatabase, input: UploadInput) {
 }
 export async function uploadImage(db: WorkspaceDatabase, input: UploadInput, bytes: Uint8Array) {
   const config = await loadImageConfig();
-  associations(db, input);
+  const linkedContent = associations(db, input);
   if (!config.purposes.some((p) => p.id === input.purposeId && p.contentMode !== 'upload'))
     throw new Error('请选择图片实际用途。');
   if (!bytes.length || bytes.length > config.uploadMaxMB * 1024 * 1024) throw new Error('图片文件为空或超过上传上限。');
@@ -117,6 +117,7 @@ export async function uploadImage(db: WorkspaceDatabase, input: UploadInput, byt
       const version = versionFields(db, input);
       const record = {
         id,
+        fixture: linkedContent?.fixture ?? false,
         ...version,
         title: input.title,
         purposeId: input.purposeId,
@@ -154,7 +155,7 @@ export async function generateAssets(db: WorkspaceDatabase, raw: unknown, genera
   const input = imageDraftSchema.parse(raw),
     config = await loadImageConfig(),
     generation = await loadGenerationConfig();
-  associations(db, input);
+  const linkedContent = associations(db, input);
   const purpose = config.purposes.find((p) => p.id === input.purposeId),
     style = config.styles.find((s) => s.id === input.styleId);
   if (!purpose || purpose.contentMode === 'upload' || !style) throw new Error('请选择有效的生图用途与风格。');
@@ -165,6 +166,13 @@ export async function generateAssets(db: WorkspaceDatabase, raw: unknown, genera
   versionFields(db, { ...input });
   if (input.parentAssetId && (!input.editInstruction.trim() || !parent)) throw new Error('请填写修改要求并选择原图。');
   const allAssets = db.db.select().from(assets).all();
+  const references = await Promise.all(
+    (input.referenceIds ?? []).map(async (id) => {
+      const a = allAssets.find((a) => a.id === id);
+      if (!a) throw Error('参考图不存在');
+      return assetFile(a.path);
+    }),
+  );
   const slots = imageSlots(input, config).filter((slot) => {
     const reused = input.existingAssets[slot.key];
     if (!reused) return true;
@@ -177,6 +185,7 @@ export async function generateAssets(db: WorkspaceDatabase, raw: unknown, genera
   if (!release) throw new Error('已有图片正在生成，请等待完成后再试。');
   const staged: (typeof assets.$inferInsert)[] = [],
     jobIds: string[] = [],
+    assetJobIds: string[] = [],
     files: string[] = [];
   try {
     // A dead process may leave usage logs, but never library entries; preserve its charged attempt.
@@ -201,6 +210,7 @@ export async function generateAssets(db: WorkspaceDatabase, raw: unknown, genera
         .insert(imageGenerations)
         .values({
           id: jobId,
+          fixture: linkedContent?.fixture ?? false,
           kind: parent ? 'edit' : 'generate',
           usageDate: shanghaiDate(),
           status: 'running',
@@ -210,16 +220,64 @@ export async function generateAssets(db: WorkspaceDatabase, raw: unknown, genera
         .run();
       const prompt = `用途：${purpose.name}。风格：${style.prompt}。任务：${input.title}。要求严格比例${slot.ratio}，主体边缘留安全余量。\n${parent ? '仅修改所附原图，其他部分尽量保持不变。修改要求：' : ''}${slot.text}\n补充：${input.content}`;
       try {
-        const result = await generate(prompt, parent ? await assetFile(parent.path) : null, generation);
+        const refs = [...(parent ? [await assetFile(parent.path)] : []), ...references];
+        const result = await generate(prompt, refs.length > 1 ? refs : (refs[0] ?? null), generation);
         const id = randomUUID(),
           source = `data/asset-sources/${id}.png`,
           destination = `data/assets/${id}.png`;
         files.push(source, destination);
         await copyFile(result.file, source);
+        const original = await imageInfo(source);
+        let needsCrop = false;
+        try {
+          exactCrop(original.width, original.height, slot.ratio, generation.maxCropFraction);
+        } catch {
+          needsCrop = true;
+        }
+        if (needsCrop) {
+          const now = new Date().toISOString();
+          db.db
+            .insert(imageCrops)
+            .values({
+              id,
+              contentId: input.contentId,
+              generationId: jobId,
+              sourcePath: source,
+              width: original.width,
+              height: original.height,
+              ratio: slot.ratio,
+              metadata: {
+                title: `${input.title} · ${slot.label}`,
+                purposeId: input.purposeId,
+                topicId: input.topicId,
+                contentId: input.contentId,
+                prompt,
+                ...versionFields(db, input),
+              },
+              createdAt: now,
+              updatedAt: now,
+            })
+            .run();
+          db.db
+            .update(imageGenerations)
+            .set({
+              status: 'success',
+              threadId: result.threadId,
+              sourcePath: source,
+              finishedAt: now,
+              durationMs: Date.parse(now) - Date.parse(startedAt),
+              reason: '等待人工裁剪',
+            })
+            .where(eq(imageGenerations.id, jobId))
+            .run();
+          continue;
+        }
         const info = await normalizeImage(source, destination, slot.ratio, generation.maxCropFraction);
+        assetJobIds.push(jobId);
         const now = new Date().toISOString();
         staged.push({
           id,
+          fixture: linkedContent?.fixture ?? false,
           ...versionFields(db, input),
           title: `${input.title} · ${slot.label}`,
           purposeId: input.purposeId,
@@ -266,11 +324,11 @@ export async function generateAssets(db: WorkspaceDatabase, raw: unknown, genera
         tx.insert(assets).values(asset).run();
         tx.update(imageGenerations)
           .set({ status: 'success', assetId: asset.id, reason: null })
-          .where(eq(imageGenerations.id, jobIds[i]))
+          .where(eq(imageGenerations.id, assetJobIds[i]))
           .run();
       }
     });
-    return { assets: staged, message: `已生成${staged.length}张并存入素材库；原图保留，近似比例仅作轻裁。` };
+    return { assets: staged, message: `${staged.length} 张已存入素材库；超出轻裁上限的原图请在待裁剪区确认。` };
   } catch (e) {
     for (const id of jobIds)
       db.db
@@ -278,7 +336,14 @@ export async function generateAssets(db: WorkspaceDatabase, raw: unknown, genera
         .set({ status: 'failed', reason: imageFailure(e), sourcePath: null, finishedAt: new Date().toISOString() })
         .where(and(eq(imageGenerations.id, id), eq(imageGenerations.status, 'running')))
         .run();
-    await Promise.all(files.map((file) => rm(file, { force: true })));
+    const protectedSources = new Set(
+      db.db
+        .select()
+        .from(imageCrops)
+        .all()
+        .map((c) => c.sourcePath),
+    );
+    await Promise.all(files.filter((file) => !protectedSources.has(file)).map((file) => rm(file, { force: true })));
     throw e;
   } finally {
     await release();

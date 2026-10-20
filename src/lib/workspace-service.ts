@@ -5,7 +5,7 @@ import { dashboardData } from './dashboard-store.ts';
 import { readImageTasks } from '../jobs/image-tasks.ts';
 import { publishingData } from './publishing-store.ts';
 import { usingDatabase, usedImages } from './media-store.ts';
-import { assets, contents, topics, imageDrafts, imageGenerations, layouts } from '../db/schema.ts';
+import { assets, contents, topics, imageDrafts, imageGenerations, layouts, imageCrops } from '../db/schema.ts';
 import { loadGenerationConfig } from '../ai/image-generation.ts';
 import { shanghaiDate } from '../browser/policy.ts';
 import { desc } from 'drizzle-orm';
@@ -30,6 +30,20 @@ export async function readImages(): Promise<ImageData> {
   const config = await loadGenerationConfig();
   return usingDatabase((db) => ({
     tasks: readImageTasks(db),
+    pendingCrops: db.db
+      .select()
+      .from(imageCrops)
+      .all()
+      .filter((c) => !c.assetId)
+      .map((c) => ({
+        ...c,
+        fixture:
+          db.db
+            .select()
+            .from(contents)
+            .all()
+            .find((item) => item.id === c.contentId)?.fixture ?? false,
+      })),
     assets: db.db.select().from(assets).all(),
     drafts: db.db
       .select()

@@ -2,6 +2,9 @@
 uploadMaxMB: 20
 acceptedTypes: [image/png, image/jpeg]
 styles:
+  - id: none
+    name: 不加风格
+    prompt: ""
   - id: default
     name: 通用清晰风格
     prompt: 主次清晰、文字易读、主体明确；按用途与比例调整构图。
