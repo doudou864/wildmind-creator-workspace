@@ -58,6 +58,7 @@ data/          数据库、素材、截图、备份（不进 git）
 
 **前端**
 - 做界面之前先读 `docs/design.md`，并对照 `docs/design-reference.webp`。
+- PRD 规则在代码里实现，不写成界面文字；做界面前先读 `docs/design.md` 第 10 节。
 - 只用 design.md 里定义的设计变量；组件和图表主题放在 `src/ui/` 复用。
 - 页面做完用 ego 截图，按 design.md 的验收清单自查。
 
