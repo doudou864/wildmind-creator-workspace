@@ -85,6 +85,20 @@
       "when": 1792501591910,
       "tag": "0011_worthless_adam_warlock",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1792502318606,
+      "tag": "0012_bent_genesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1792502520651,
+      "tag": "0013_light_thunderbolt_ross",
+      "breakpoints": true
     }
   ]
 }

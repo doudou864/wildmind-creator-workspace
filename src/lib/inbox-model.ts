@@ -50,7 +50,11 @@ export type ReplyEvidence =
 export type InboxMessage = {
   id: string;
   revision: number;
+  manualDisposition?: 'replied' | 'low_value' | null;
+  manualActionId?: string | null;
+  newReply?: boolean;
   platformId: string;
+  platformPostId?: string | null;
   channel: InboxChannel;
   author: string;
   body: string;
@@ -85,8 +89,13 @@ export type InboxData = {
   topicSyncReady: boolean;
   message: string;
 };
-export type ReplyState = 'waiting' | 'replied' | 'unknown';
+export type ReplyState = 'waiting' | 'replied' | 'unknown' | 'low_value';
+export function isMessageArchived(item: InboxMessage) {
+  return replyState(item) === 'replied' || replyState(item) === 'low_value';
+}
 export function replyState(item: InboxMessage): ReplyState {
+  if (item.manualDisposition) return item.manualDisposition;
+  if (item.newReply) return 'waiting';
   if (item.channel !== item.reply.kind) return 'unknown';
   if (item.reply.kind === 'comment') {
     if (item.reply.ownReplyFound === true) return 'replied';
@@ -158,7 +167,10 @@ export function filterInbox(items: InboxMessage[], themes: DemandTheme[], filter
         (filters.channel === 'all' || item.channel === filters.channel) &&
         (filters.category === 'all' ||
           (item.classification.status === 'ready' && item.classification.result.category === filters.category)) &&
-        (filters.reply === 'all' || assessments.get(item.id)?.state === filters.reply) &&
+        (filters.reply === 'all' ||
+          (filters.reply === 'archived'
+            ? isMessageArchived(item)
+            : assessments.get(item.id)?.state === filters.reply)) &&
         (filters.classification === 'all' || item.classification.status === filters.classification) &&
         (!filters.themeId || ids.has(item.id)) &&
         `${item.author} ${item.body} ${item.contentTitle ?? ''}`.toLocaleLowerCase().includes(query),

@@ -12,7 +12,12 @@ const platform = z
     loggedOut: z.array(z.string().min(1)),
     loggedInPath: z.string().nullable(),
     replyPages: z
-      .object({ comment: z.url().optional(), dm: z.url().optional(), hint: z.string().optional() })
+      .object({
+        comment: z.url().optional(),
+        dm: z.url().optional(),
+        hint: z.string().optional(),
+        commentTemplate: z.string().optional(),
+      })
       .optional(),
     riskMarkers: z.array(z.string()).default([]),
     confirmation: z.object({ button: z.string(), message: z.string(), deadline: z.string() }).optional(),

@@ -28,7 +28,12 @@ export default async function Page({
       initialFilters={{
         category: ['deal', 'idea', 'other'].includes(query.category ?? '') ? query.category! : 'all',
         channel: ['comment', 'dm'].includes(query.channel ?? '') ? query.channel! : 'all',
-        reply: ['waiting', 'replied', 'unknown'].includes(query.reply ?? '') ? query.reply! : 'all',
+        reply:
+          query.reply === 'replied'
+            ? 'archived'
+            : ['waiting', 'archived', 'unknown'].includes(query.reply ?? '')
+              ? query.reply!
+              : 'all',
       }}
       key={JSON.stringify(query)}
       initialMessageId={messageId}

@@ -195,6 +195,7 @@ export const topicSignals = sqliteTable('topic_signals', {
 });
 export const messages = sqliteTable('messages', {
   id: id(),
+  fixture: bool('fixture').notNull().default(false),
   revision: revision(),
   platformId: text('platform_id').notNull(),
   channel: text('channel', { enum: ['comment', 'dm'] }).notNull(),
@@ -438,5 +439,16 @@ export const dataInterpretations = sqliteTable('data_interpretations', {
   fingerprint: text('fingerprint').notNull().unique(),
   numbers: json<import('../lib/data-center-model').InterpretationInput>('numbers').notNull(),
   paragraphs: json<string[]>('paragraphs').notNull(),
+  createdAt: text('created_at').notNull(),
+});
+
+export const messageActions = sqliteTable('message_actions', {
+  id: id(),
+  unit: text('unit').notNull(),
+  messageId: text('message_id')
+    .notNull()
+    .references(() => messages.id),
+  action: text('action', { enum: ['replied', 'low_value', 'undo'] }).notNull(),
+  baseline: json<string[]>('baseline').notNull(),
   createdAt: text('created_at').notNull(),
 });

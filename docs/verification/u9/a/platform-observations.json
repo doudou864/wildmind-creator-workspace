@@ -1,0 +1,60 @@
+[
+  {
+    "platform": "bilibili-dm",
+    "requestedOrFinalUrl": "https://message.bilibili.com/#/whisper",
+    "pageTitle": "[p1 \"消息中心 - 哔哩哔哩弹幕视频网 - ( ゜- ゜)つロ 乾杯~ - bilibili\"",
+    "observedLabels": [
+      "消息"
+    ],
+    "error": null
+  },
+  {
+    "platform": "douyin",
+    "requestedOrFinalUrl": "https://www.douyin.com/",
+    "pageTitle": "[p1 \"抖音-记录美好生活\"",
+    "observedLabels": [],
+    "error": null
+  },
+  {
+    "platform": "xiaohongshu-comment",
+    "requestedOrFinalUrl": "https://www.xiaohongshu.com/notification",
+    "pageTitle": "[p1 \"通知 - 小红书\"",
+    "observedLabels": [
+      "评论和@",
+      "消息"
+    ],
+    "error": null
+  },
+  {
+    "platform": "xiaohongshu-dm",
+    "requestedOrFinalUrl": "https://www.xiaohongshu.com/chat?channel_id=&channel_type=explore_feed",
+    "pageTitle": "[p1 \"消息 - 小红书\"",
+    "observedLabels": [
+      "消息"
+    ],
+    "error": null
+  },
+  {
+    "platform": "channels-comment",
+    "requestedOrFinalUrl": "https://channels.weixin.qq.com/platform/interaction/comment",
+    "pageTitle": "[p1 \"视频号助手\"",
+    "observedLabels": [],
+    "error": null
+  },
+  {
+    "platform": "channels-dm",
+    "requestedOrFinalUrl": "https://channels.weixin.qq.com/platform/private_msg",
+    "pageTitle": "[p1 \"视频号助手\"",
+    "observedLabels": [],
+    "error": null
+  },
+  {
+    "platform": "youtube",
+    "requestedOrFinalUrl": "https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/comments/inbox?filter=%5B%7B%22isDisabled%22%3Afalse%2C%22isPinned%22%3Atrue%2C%22name%22%3A%22SORT_BY%22%2C%22value%22%3A%22SORT_BY_MOST_RELEVANT%22%7D%2C%7B%22name%22%3A%22ENGAGED_STATUS%22%2C%22value%22%3A%5B%22COMMENT_CATEGORY_NOT_ENGAGED%22%5D%7D%2C%7B%22name%22%3A%22PARENT_ENTITY_CONTENT_TYPE%22%2C%22value%22%3A%5B%22PARENT_ENTITY_CONTENT_TYPE_WATCH%22%2C%22PARENT_ENTITY_CONTENT_TYPE_SHORT%22%2C%22PARENT_ENTITY_CONTENT_TYPE_CREATOR_POST%22%5D%7D%5D",
+    "pageTitle": "[p1 \"社区 - YouTube Studio\"",
+    "observedLabels": [
+      "社区"
+    ],
+    "error": null
+  }
+]

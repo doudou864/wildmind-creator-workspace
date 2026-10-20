@@ -4,7 +4,7 @@ platforms:
     replyPages:
       comment: https://www.douyin.com/
       dm: https://www.douyin.com/
-      hint: 在平台左侧打开通知或消息
+      hint: 在平台顶部打开通知或消息
     url: https://creator.douyin.com/
     domains: [douyin.com]
     loggedIn: [抖音号, 粉丝指数]
@@ -22,6 +22,7 @@ platforms:
   - id: bilibili
     replyPages:
       comment: https://member.bilibili.com/platform/comment/article
+      commentTemplate: "https://member.bilibili.com/platform/comment/article/{postId}/{title}?type=1"
       dm: https://message.bilibili.com/
     url: https://member.bilibili.com/platform/home
     domains: [bilibili.com]
@@ -44,6 +45,7 @@ platforms:
   - id: youtube
     replyPages:
       comment: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA/comments/inbox
+      commentTemplate: "https://studio.youtube.com/video/{postId}/comments/inbox"
     url: https://studio.youtube.com/
     domains: [youtube.com, google.com]
     loggedIn: [我的频道, 频道分析, 当前订阅人数]

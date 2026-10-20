@@ -1,7 +1,7 @@
 'use client';
 import { MessageNavigation } from '@/ui/message-navigation';
 import Link from 'next/link';
-import { ReplyActions, type ReplyDestinations } from '@/ui/reply-actions';
+import { ReplyActions, ReplyToast, type ReplyDestinations } from '@/ui/reply-actions';
 import { useEditSession } from '@/ui/use-edit-session';
 import { useEffect, useState } from 'react';
 import type { Platform } from '@/lib/config';
@@ -24,7 +24,7 @@ import { PageHeader, Button, Card, Dialog, Empty, Segmented } from '@/ui/compone
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { request, useResource } from '@/ui/use-resource';
 const blankFilters: DealFilters = { status: 'all', platform: 'all', channel: 'all', query: '', linkedId: null };
-const replyLabels = { waiting: '待回复', replied: '已回复', unknown: '待核对' };
+const replyLabels = { waiting: '待回复', replied: '已回复', unknown: '待核对', low_value: '低价值' };
 type Editor = { base: Deal; brand: string; requirement: string; status: DealStatus };
 export default function DealsPage({
   config,
@@ -201,6 +201,7 @@ export default function DealsPage({
     <main className="workspace deals-workspace">
       <WorkspaceHeader current="/deals" date={today} syncWindow={syncWindow} />
       <MessageNavigation current="deals" />
+      <ReplyToast />
       <PageHeader
         title="商单列表"
         summary={counts.pending ? `${counts.pending} 条待处理` : '查看跟进中的商单，确认下一次回复'}

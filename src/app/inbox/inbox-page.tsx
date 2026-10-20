@@ -1,11 +1,12 @@
 'use client';
 import { MessageNavigation } from '@/ui/message-navigation';
 import { inboxSummary } from '@/ui/inbox-summary';
-import { ReplyActions, type ReplyDestinations } from '@/ui/reply-actions';
+import { ReplyActions, ReplyToast, type ReplyDestinations } from '@/ui/reply-actions';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import type { Platform } from '@/lib/config';
 import {
+  isMessageArchived,
   canSyncTopic,
   filterInbox,
   inboxPage,
@@ -29,7 +30,13 @@ const blankFilters: InboxFilters = {
   query: '',
   themeId: null,
 };
-const replyLabels = { waiting: '待回复', replied: '已回复', unknown: '待核对' };
+const replyLabels = {
+  waiting: '待回复',
+  replied: '已回复',
+  unknown: '待核对',
+  low_value: '低价值',
+  archived: '已归档',
+};
 const sourceLabels = { ready: '读取完成', pending: '等待读取', failed: '读取失败', unavailable: '当前无入口' };
 export default function InboxPage({
   config,
@@ -89,19 +96,22 @@ export default function InboxPage({
       .filter((id) => !platforms.some((p) => p.id === id))
       .map((id) => ({ id, name: platformName(id) })),
   ];
-  const scoped = filterInbox(data.items, data.themes, {
-    ...blankFilters,
-    platform: filters.platform,
-    channel: filters.channel,
-  });
-  const visibleThemes = data.themes.filter(
-    (t) => themeMessages(t, scoped).length > 0 || (filters.platform === 'all' && filters.channel === 'all'),
+  const scoped = filterInbox(
+    data.items.filter((item) => !isMessageArchived(item)),
+    data.themes,
+    {
+      ...blankFilters,
+      platform: filters.platform,
+      channel: filters.channel,
+    },
   );
+  const visibleThemes = data.themes.filter((t) => themeMessages(t, scoped).length > 0);
   const summary = inboxSummary(data.items);
   const valuableIds = new Set(summary.valuable.map((m) => m.id));
   const filtered = filterInbox(data.items, data.themes, filters)
     .filter(
       (item) =>
+        (filters.reply === 'archived' ? isMessageArchived(item) : !isMessageArchived(item)) &&
         (!linkedMessageId || item.id === linkedMessageId) &&
         (!priority || valuableIds.has(item.id)) &&
         (special !== 'topics' || (canSyncTopic(item) && !syncReceipts[item.id])) &&
@@ -118,9 +128,12 @@ export default function InboxPage({
   const assessment = active ? assessments.get(active.id) : null;
   const theme = filters.themeId ? data.themes.find((t) => t.id === filters.themeId) : null;
   const displayCount = (value: number) => (data.recordsReady ? value.toLocaleString('en-US') : '--');
-  const unclassified = data.items.filter((item) => item.classification.status !== 'ready').length;
+  const unclassified = data.items.filter(
+    (item) => !isMessageArchived(item) && item.classification.status !== 'ready',
+  ).length;
   const topics = data.items.filter(
     (item) =>
+      !isMessageArchived(item) &&
       item.classification.status === 'ready' &&
       item.classification.result.category === 'idea' &&
       !item.topicSignalId &&
@@ -173,6 +186,7 @@ export default function InboxPage({
     <main className="workspace inbox-workspace">
       <WorkspaceHeader current="/inbox" date={today} syncWindow={syncWindow} />
       <MessageNavigation current="inbox" />
+      <ReplyToast />
       <PageHeader
         title="互动收件箱"
         summary={summary.valuableWaiting ? '先回复商单，再看问题与观点' : '查看消息，挑选值得送进选题的需求'}
@@ -254,6 +268,9 @@ export default function InboxPage({
         >
           待识别 / 失败 <strong>{unclassified}</strong>
         </Button>
+        <Button onClick={() => filter({ ...blankFilters, reply: 'archived' })}>
+          已归档 {data.items.filter(isMessageArchived).length}
+        </Button>
         <Button className="stored-count" onClick={() => filter(blankFilters)}>
           全部已存消息 {data.items.length}
         </Button>
@@ -321,7 +338,7 @@ export default function InboxPage({
             <select aria-label="筛选回复状态" value={filters.reply} onChange={(e) => filter({ reply: e.target.value })}>
               <option value="all">全部回复状态</option>
               <option value="waiting">待回复</option>
-              <option value="replied">已回复</option>
+              <option value="archived">已归档</option>
               <option value="unknown">待核对</option>
             </select>
           </label>
@@ -451,7 +468,7 @@ export default function InboxPage({
                       </div>
                       <div className="inbox-message-title">
                         <strong>{item.author || '发送者未识别'}</strong>
-                        <span className="inbox-reply-state">{replyLabels[state]}</span>
+                        <span className="inbox-reply-state">{item.newReply ? '有新消息' : replyLabels[state]}</span>
                       </div>
                       <p className="inbox-message-body">{item.body || '原文未读取完整'}</p>
                       <div className="inbox-message-tags">

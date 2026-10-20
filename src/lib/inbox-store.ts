@@ -1,3 +1,4 @@
+import { readHandledMessages } from './message-actions.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { z } from 'zod';
@@ -53,7 +54,7 @@ export const inboxReadingSchema = z.object({
   reason: z.string().nullable(),
 });
 export function inboxData(db: WorkspaceDatabase): InboxData {
-  const items = db.db.select().from(messages).all();
+  const items = readHandledMessages(db);
   const valuableIds = new Set(
     items
       .filter((m) => m.classification.status === 'ready' && m.classification.result.category === 'idea')

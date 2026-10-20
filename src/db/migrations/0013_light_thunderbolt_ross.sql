@@ -1,0 +1,1 @@
+ALTER TABLE `messages` ADD `fixture` integer DEFAULT false NOT NULL;

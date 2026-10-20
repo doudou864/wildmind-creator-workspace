@@ -47,9 +47,11 @@ export function useResource<T>(url: string, initial: T, fetchOnMount = false) {
       if (document.visibilityState === 'visible') void refresh();
     };
     window.addEventListener('focus', onFocus);
+    window.addEventListener('inbox-handled', onFocus);
     document.addEventListener('visibilitychange', onVisibility);
     return () => {
       window.removeEventListener('focus', onFocus);
+      window.removeEventListener('inbox-handled', onFocus);
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [refresh]);

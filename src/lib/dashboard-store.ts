@@ -67,7 +67,7 @@ export function dashboardData(db: WorkspaceDatabase, config: WorkspaceConfig, no
         (m) =>
           m.classification.status === 'ready' &&
           m.classification.result.category === 'idea' &&
-          replies.get(m.id)?.state !== 'replied',
+          !['replied', 'low_value'].includes(replies.get(m.id)?.state ?? ''),
       )
       .map((m) => ({ id: m.id, title: m.body, platformId: m.platformId })),
     questionsReady: true,
