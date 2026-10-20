@@ -18,7 +18,7 @@ import {
   type DealStatus,
 } from '@/lib/deal-model';
 import { assessReplies, inboxPage, inboxTime, type InboxConfig } from '@/lib/inbox-model';
-import { Button, Card, Dialog, Empty, Segmented } from '@/ui/components';
+import { PageHeader, Button, Card, Dialog, Empty, Segmented } from '@/ui/components';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { request, useResource } from '@/ui/use-resource';
 const blankFilters: DealFilters = { status: 'all', platform: 'all', channel: 'all', query: '', linkedId: null };
@@ -196,35 +196,25 @@ export default function DealsPage({
   return (
     <main className="workspace deals-workspace">
       <WorkspaceHeader current="/deals" date={today} syncWindow={syncWindow} />
-      <div className="modebar">
-        <span className="eyebrow">07 · BRAND COLLABORATIONS</span>
-        <span>{data.message}</span>
-      </div>
-      <div className="topics-heading">
-        <div>
-          <h1>商单列表</h1>
-          <p>从合作线索，到跟进完成。每条商单都有来源。</p>
-        </div>
-        <div className="image-heading-actions">
-          <Link className="button" href="/inbox">
-            查看互动收件箱 →
+      <PageHeader
+        title="商单列表"
+        summary={`${items.length} 条商单，${counts.pending} 条待处理`}
+        onRefresh={() => void reload()}
+        refreshing={busy || refreshing}
+        action={
+          <Link className="button button-primary" href="/inbox?category=deal">
+            查看商单消息 →
           </Link>
-          <Button disabled={busy || refreshing} onClick={() => void reload()}>
-            {refreshing ? '正在读取记录…' : '刷新已存记录'}
-          </Button>
-        </div>
-      </div>
+        }
+      />
       <div className="deal-summary" aria-label="商单状态概况">
         {config.statuses.map((status, index) => (
-          <button
+          <Button
             key={status.id}
             className={filters.status === status.id ? 'active' : ''}
             aria-pressed={filters.status === status.id}
             onClick={() => filter({ status: status.id, query: '', linkedId: null })}
           >
-            <span className="eyebrow">
-              0{index + 1} · {status.id}
-            </span>
             <div>
               <strong
                 className={`mono ${status.id === 'pending' && data.recordsReady && counts.pending > 0 ? 'deal-attention' : ''}`}
@@ -233,13 +223,10 @@ export default function DealsPage({
               </strong>
               <span>{status.name}</span>
             </div>
-            <p>{status.description}</p>
-          </button>
+          </Button>
         ))}
       </div>
-      <p className="small deal-summary-note">
-        数量随平台与来源类型变化，包含历史商单。商单进度与消息是否已回复分别记录。
-      </p>
+
       <div className="deal-filters">
         <label>
           平台
@@ -303,23 +290,22 @@ export default function DealsPage({
       )}
       <div className="deal-grid">
         <Card
-          index="01"
           title="合作线索"
-          meta={<span className="eyebrow">{count(visible.length)} RECORDS</span>}
+          meta={<span className="eyebrow">{count(visible.length)} 条</span>}
           className="deal-list-card"
         >
           <div className="deal-table-heading eyebrow" aria-hidden="true">
-            <span>BRAND / REQUIREMENT</span>
-            <span>SOURCE</span>
-            <span>STATUS</span>
-            <span>UPDATED</span>
+            <span>品牌 / 需求</span>
+            <span>来源</span>
+            <span>状态</span>
+            <span>更新于</span>
           </div>
           <div className="deal-list">
             {page.items.length ? (
               page.items.map((deal) => {
                 const msg = dealSource(deal, data.messages);
                 return (
-                  <button
+                  <Button
                     key={deal.id}
                     className={`deal-row ${active?.id === deal.id ? 'active' : ''}`}
                     aria-pressed={active?.id === deal.id}
@@ -342,13 +328,13 @@ export default function DealsPage({
                     <time className="mono" dateTime={deal.updatedAt}>
                       {inboxTime(deal.updatedAt)}
                     </time>
-                  </button>
+                  </Button>
                 );
               })
             ) : (
               <Empty>
                 {!data.recordsReady
-                  ? '商单服务待接入，暂无记录'
+                  ? '暂无商单记录，读取合作消息后出现'
                   : filters.linkedId
                     ? '指定商单暂不可用，请刷新或返回全部商单'
                     : items.length
@@ -364,6 +350,7 @@ export default function DealsPage({
             <Button
               aria-label="上一页商单"
               disabled={page.page === 1}
+              disabledReason="已经是第一页。"
               onClick={() => {
                 setRequestedPage(page.page - 1);
                 setSelectedId(null);
@@ -375,6 +362,7 @@ export default function DealsPage({
             <Button
               aria-label="下一页商单"
               disabled={page.page === page.pages}
+              disabledReason="已经是最后一页。"
               onClick={() => {
                 setRequestedPage(page.page + 1);
                 setSelectedId(null);
@@ -383,10 +371,9 @@ export default function DealsPage({
               →
             </Button>
           </div>
-          <p className="small deal-list-note">线索从互动消息自动进入，不在这里重复创建；原始消息始终保留。</p>
         </Card>
         <aside className="deal-detail-column">
-          <Card index="02" title="商单详情" meta={<span className="eyebrow">DETAIL</span>}>
+          <Card title="商单详情">
             {!active ? (
               <Empty>选择一条商单，查看需求与来源</Empty>
             ) : (
@@ -423,22 +410,16 @@ export default function DealsPage({
                 <div className="deal-edit-action">
                   <Button
                     disabled={!data.writeReady || busy}
-                    title={!data.writeReady ? '商单保存服务待接入' : undefined}
+                    disabledReason={!data.writeReady ? '商单保存暂不可用。' : '正在处理，请稍候。'}
                     onClick={() => openEditor(active)}
                   >
                     修改商单
                   </Button>
-                  <span className="small">
-                    {data.writeReady ? '品牌、需求和进度可修改' : '保存服务待接入，暂不能修改'}
-                  </span>
                 </div>
-                <p className="small deal-list-note">
-                  更改商单进度不会标记消息已回复。请在平台沟通，回复状态随下次读取更新。
-                </p>
               </>
             )}
           </Card>
-          <Card index="03" title="原始消息" meta={<span className="eyebrow">SOURCE</span>}>
+          <Card title="原始消息">
             {!active ? (
               <Empty>选择商单后查看关联消息</Empty>
             ) : (
@@ -461,18 +442,18 @@ export default function DealsPage({
                   <Link href={`/inbox?message=${encodeURIComponent(active.source.messageId)}`}>查看消息与上下文 →</Link>
                   {source?.sourceUrl && /^https?:\/\//.test(source.sourceUrl) && (
                     <a href={source.sourceUrl} target="_blank" rel="noreferrer">
-                      原始平台页面 ↗
+                      原始平台页面 →
                     </a>
                   )}
                 </div>
               </>
             )}
           </Card>
-          <Card index="04" title="状态建议" meta={<span className="eyebrow">HUMAN CONFIRM</span>}>
+          <Card title="状态建议">
             {!active ? (
               <Empty>选择商单后查看已有建议</Empty>
             ) : !suggestion ? (
-              <Empty>{data.suggestionReady ? '暂无新的状态建议' : '状态建议服务待接入'}</Empty>
+              <Empty>{data.suggestionReady ? '暂无新的状态建议' : '暂无状态建议，收到新往来后更新'}</Empty>
             ) : (
               <div className="deal-suggestion">
                 <strong>
@@ -490,21 +471,20 @@ export default function DealsPage({
                 {issue && <p role="status">{issue}</p>}
                 <Button
                   disabled={!!issue || !data.writeReady || !data.suggestionReady || busy}
+                  disabledReason={
+                    issue ||
+                    (!data.suggestionReady || !data.writeReady ? '状态建议确认暂不可用。' : '正在处理，请稍候。')
+                  }
                   onClick={() => void accept(active)}
                 >
                   {busy ? '正在处理…' : `确认改为${stateName(suggestion.status)}`}
                 </Button>
-                {!data.suggestionReady && <span className="small">建议确认服务待接入，此操作暂不可用。</span>}
               </div>
             )}
-            <p className="small deal-list-note">根据新私信往来提供建议，由你确认后才更新商单；不会自动发送消息。</p>
           </Card>
         </aside>
       </div>
-      <footer className="layout-foot">
-        <span>评论 / 私信 → 合作线索 → 人工跟进</span>
-        <span>创建与更新时间由服务记录 · 历史商单持续保留</span>
-      </footer>
+
       {editor && (
         <Dialog title="修改商单" onClose={closeEditor}>
           <p className="dialog-intro">仅修改本机商单。来源与创建时间保持不变，不向合作方发送消息。</p>
@@ -554,7 +534,11 @@ export default function DealsPage({
             <div className="deal-edit-feedback" role="alert">
               <p>这条商单已更新或暂不可用。你的编辑已保留，请核对最新记录后再保存。</p>
               {latest && (
-                <Button disabled={busy} onClick={() => (dirty ? setDiscard('reload') : openEditor(latest))}>
+                <Button
+                  disabled={busy}
+                  disabledReason="正在处理，请稍候。"
+                  onClick={() => (dirty ? setDiscard('reload') : openEditor(latest))}
+                >
                   载入最新记录
                 </Button>
               )}
@@ -569,12 +553,22 @@ export default function DealsPage({
           ) : (
             <div className="deal-dialog-actions">
               <span className="small">{dirty ? '有未保存的编辑' : '与已存记录一致'}</span>
-              <Button disabled={busy} onClick={closeEditor}>
+              <Button disabled={busy} disabledReason="正在处理，请稍候。" onClick={closeEditor}>
                 取消
               </Button>
               <Button
-                className="selected"
                 disabled={!data.writeReady || !dirty || !editValid || conflict || busy}
+                disabledReason={
+                  !data.writeReady
+                    ? '商单保存暂不可用。'
+                    : !dirty
+                      ? '当前没有修改。'
+                      : conflict
+                        ? '记录已更新，请先载入最新记录。'
+                        : !editValid
+                          ? '请检查品牌、需求和状态。'
+                          : '正在保存，请稍候。'
+                }
                 onClick={() => void save()}
               >
                 {busy ? '正在保存…' : '保存修改'}

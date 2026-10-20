@@ -16,7 +16,7 @@ import {
   type ImageDraft,
   type ImageDraftInput,
 } from '@/lib/image-model';
-import { Button, Card, Dialog, Empty, Segmented } from '@/ui/components';
+import { PageHeader, Tag, Button, Card, Dialog, Empty, Segmented } from '@/ui/components';
 import { AssetImage } from '@/ui/asset-image';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { request, useResource } from '@/ui/use-resource';
@@ -47,8 +47,8 @@ export default function ImagesPage({
     content: '',
     ratio: config.purposes[0].ratios[0] ?? '',
     topicId:
-      initialData.contents.find((c) => c.id === initialContent)?.topicId ??
-      (initialData.topics.some((t) => t.id === initialTopic) ? initialTopic : null),
+      data.contents.find((c) => c.id === initialContent)?.topicId ??
+      (data.topics.some((t) => t.id === initialTopic) ? initialTopic : null),
     contentId: initialContent,
     existingAssets: {},
     parentAssetId: null,
@@ -92,7 +92,7 @@ export default function ImagesPage({
     return () => clearInterval(timer);
   }, [activeTask?.id, refresh]);
   const [notice, setNotice] = useState(
-    initialTopic && !initialData.topics.some((t) => t.id === initialTopic) ? '关联选题暂不可用，未自动关联。' : '',
+    initialTopic && !data.topics.some((t) => t.id === initialTopic) ? '关联选题暂不可用，未自动关联。' : '',
   );
   const [preview, setPreview] = useState<Preview | null>(null);
   const previewUrl = useRef<string | null>(null);
@@ -167,7 +167,7 @@ export default function ImagesPage({
   const linkedContent = data.contents.find((c) => c.id === draft.contentId);
   const associationIssue = draft.contentId
     ? !linkedContent
-      ? '关联作品暂不可用，请刷新作品资料'
+      ? '关联作品暂不可用，请刷新资料'
       : linkedContent.topicId !== draft.topicId
         ? '作品与选题关联不一致，请重新选择作品'
         : null
@@ -433,43 +433,27 @@ export default function ImagesPage({
     <main className="workspace images-workspace">
       <AutosaveStatus statuses={[autosave, metadataAutosave]} />
       <WorkspaceHeader current="/images" date={today} syncWindow={syncWindow} />
-      <div className="modebar">
-        <p>
-          <span className="mode-label mono">LOCAL</span>
-          {data.generationMessage}
-        </p>
-        <Button className="text-button" onClick={() => void refresh()}>
-          刷新素材 ↻
-        </Button>
-      </div>
-      <div className="topics-heading">
-        <div>
-          <span className="eyebrow">IMAGE STUDIO</span>
-          <h1>
-            生图中心<span className="heading-separator">/</span>
-            <span>让一个想法，有合适的画面</span>
-          </h1>
-        </div>
-        <div className="image-heading-actions">
-          <span className="small">
-            {dirty
-              ? data.storageReady
-                ? '正在自动保存…'
-                : '存储服务未接入，尚未保存'
-              : draftMeta
-                ? '已载入草稿'
-                : '新建图片任务'}
-          </span>
-          <Button disabled={busy} onClick={() => requestLoad('new')}>
-            新建任务 +
+      <PageHeader
+        title="生图中心"
+        summary={`${data.assets.length} 张素材，${data.drafts.length} 份草稿`}
+        onRefresh={() => void refresh()}
+        action={
+          <Button
+            variant="primary"
+            disabled={busy}
+            disabledReason="正在处理图片，请稍候。"
+            onClick={() => requestLoad('new')}
+          >
+            新建任务
           </Button>
-        </div>
-      </div>
+        }
+      />
       <div className="image-purpose-bar" role="group" aria-label="图片用途">
         {config.purposes.map((item, index) => (
-          <button
+          <Button
             key={item.id}
             disabled={busy}
+            disabledReason="正在处理，请稍候。"
             className={draft.purposeId === item.id ? 'active' : ''}
             aria-pressed={draft.purposeId === item.id}
             onClick={() => {
@@ -483,19 +467,17 @@ export default function ImagesPage({
               });
             }}
           >
-            <span className="eyebrow">0{index + 1}</span>
             <strong>{item.name}</strong>
             <span className="small">{item.ratios.join(' · ') || 'PNG / JPEG'}</span>
-          </button>
+          </Button>
         ))}
       </div>
       <div className="topic-feedback" role="status" aria-live="polite">
-        {error || associationIssue || notice || '选用途，填写内容与要求，再生成、修改或选定素材。'}
+        {error || associationIssue || notice}
       </div>
       <div className="image-studio-grid">
         <aside className="image-brief-column">
-          <Card index="01" title="内容与要求" meta={<span className="eyebrow">BRIEF</span>}>
-            <p className="small topic-rule">{purpose.description}</p>
+          <Card title="内容与要求">
             <div className="image-form">
               <label htmlFor="image-title">
                 任务名称
@@ -544,11 +526,6 @@ export default function ImagesPage({
                     onChange={(e) => update({ content: e.target.value, existingAssets: {} })}
                     rows={8}
                   />
-                  <span className="small">
-                    {purpose.id === 'douyin_images'
-                      ? '使用同一份内容重新配竖图，不另写一篇文章。'
-                      : '每段可先选已有图片，再为缺图的段落生成。'}
-                  </span>
                 </label>
               )}
               <label htmlFor="image-prompt">
@@ -576,7 +553,6 @@ export default function ImagesPage({
                         </option>
                       ))}
                     </select>
-                    <span className="small">{config.styles.find((s) => s.id === draft.styleId)?.prompt}</span>
                   </label>
                   {purpose.contentMode === 'free' && (
                     <label htmlFor="image-ratio">
@@ -602,19 +578,24 @@ export default function ImagesPage({
               )}
             </div>
             <div className="image-submit">
-              <Button className="selected" disabled={!canGenerate} onClick={() => void generate()}>
+              <Button
+                disabled={!canGenerate}
+                disabledReason={
+                  !data.generationReady
+                    ? '生图服务暂不可用。'
+                    : !data.storageReady
+                      ? '素材保存暂不可用。'
+                      : busy
+                        ? '正在生成，请稍候。'
+                        : associationIssue || '请填写内容与要求，选择输出比例；已有图片可直接复用。'
+                }
+                onClick={() => void generate()}
+              >
                 生成{slots.length ? ` ${slots.length - reused.length} 张图片` : '图片'}
               </Button>
-              <p className="small">
-                {!data.generationReady
-                  ? '生图服务待接入，暂不能生成。'
-                  : !data.storageReady
-                    ? '素材存储服务待接入。'
-                    : '结果会作为新版本保存，不覆盖原图。'}
-              </p>
             </div>
           </Card>
-          <Card index="04" title="自动参考" meta={<span className="eyebrow">REFERENCE</span>}>
+          <Card title="自动参考">
             {purpose.references.length ? (
               <>
                 <ul className="image-reference-rules">
@@ -622,32 +603,35 @@ export default function ImagesPage({
                     <li key={rule}>{rule}</li>
                   ))}
                 </ul>
-                <p className="small topic-rule">历史封面表现尚未接入，当前没有自动参考图。</p>
               </>
             ) : (
               <Empty>此用途不使用历史封面表现</Empty>
             )}
           </Card>
-          <Card index="06" title="任务草稿" meta={<span className="eyebrow">{data.drafts.length} SAVED</span>}>
+          <Card title="任务草稿" meta={<span className="eyebrow">{data.drafts.length} 份</span>}>
             {data.drafts.length ? (
               <div className="image-drafts">
                 {data.drafts.map((saved) => (
-                  <button key={saved.id} disabled={busy} onClick={() => requestLoad(saved)}>
+                  <Button
+                    key={saved.id}
+                    disabled={busy}
+                    disabledReason="正在处理，请稍候。"
+                    onClick={() => requestLoad(saved)}
+                  >
                     <strong>{saved.title}</strong>
                     <span>
                       {purposeName(saved.purposeId)} · {saved.updatedAt.slice(0, 10)}
                     </span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             ) : (
-              <Empty>{data.storageReady ? '暂无已保存草稿' : '草稿存储待接入，填写内容只在当前页面'}</Empty>
+              <Empty>{data.storageReady ? '暂无已保存草稿' : '暂无已保存草稿'}</Empty>
             )}
           </Card>
         </aside>
         <section className="image-main-column">
           <Card
-            index="02"
             title={tab === 'outputs' ? '图片工作区' : '素材库'}
             meta={
               <Segmented
@@ -715,15 +699,16 @@ export default function ImagesPage({
                     )}
                     <Button onClick={() => uploadRef.current?.click()}>选择本地图片</Button>
                     <Button
-                      className="selected"
                       disabled={!data.storageReady || !preview || !uploadPurpose || !!uploadIssue || busy}
+                      disabledReason={
+                        !data.storageReady
+                          ? '素材保存暂不可用。'
+                          : uploadIssue || '请选择图片及用途，等待当前操作完成。'
+                      }
                       onClick={() => void upload()}
                     >
                       上传并入库
                     </Button>
-                    <p className="small">
-                      {data.storageReady ? '上传后可关联作品、选择版本。' : '存储服务待接入，当前仅预览本地图片。'}
-                    </p>
                   </div>
                 ) : (
                   <div className="image-output-grid">
@@ -775,11 +760,6 @@ export default function ImagesPage({
                     {!slots.length && <Empty>粘贴正文后，按段落列出配图位置</Empty>}
                   </div>
                 )}
-                {!isUpload && (
-                  <p className="image-workarea-foot small">
-                    当前展示输出安排。生成结果会保留各自比例与版本，选定后供排版中心和发布中心使用。
-                  </p>
-                )}
               </>
             ) : (
               <>
@@ -819,7 +799,7 @@ export default function ImagesPage({
                 </div>
                 <div className="asset-grid">
                   {assets.map((asset) => (
-                    <button
+                    <Button
                       className={`asset-tile ${assetId === asset.id ? 'active' : ''}`}
                       key={asset.id}
                       onClick={() => setAssetId(asset.id)}
@@ -830,7 +810,7 @@ export default function ImagesPage({
                         {purposeName(asset.purposeId)} · {asset.ratio} · V{asset.version}
                       </span>
                       <span className="asset-selection">{asset.selected ? '已选定' : '未选定'}</span>
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 {!assets.length && (
@@ -839,7 +819,7 @@ export default function ImagesPage({
               </>
             )}
           </Card>
-          <Card index="05" title="修改图片" meta={<span className="eyebrow">REVISION</span>}>
+          <Card title="修改图片">
             <div className="image-revision">
               <div className="revision-original">
                 {parentAsset ? (
@@ -865,22 +845,22 @@ export default function ImagesPage({
                   />
                 </label>
                 <div>
-                  <span className="small">每次修改生成新版本，保留原图。</span>
                   <Button
-                    className="selected"
                     disabled={!parentAsset || !draft.editInstruction.trim() || !canGenerate}
+                    disabledReason={
+                      !data.generationReady ? '改图服务暂不可用。' : '请先选择原图并填写修改要求，等待当前操作完成。'
+                    }
                     onClick={() => void generate()}
                   >
                     生成修改版
                   </Button>
                 </div>
-                {!data.generationReady && <p className="small">改图服务待接入，修改要求尚未提交。</p>}
               </div>
             </div>
           </Card>
         </section>
         <aside className="image-detail-column">
-          <Card index="03" title="素材详情" meta={<span className="eyebrow">ASSET</span>}>
+          <Card title="素材详情">
             {focusedAsset ? (
               <>
                 <AssetImage className="asset-detail-image" src={assetUrl(focusedAsset)} alt={focusedAsset.title} />
@@ -905,10 +885,11 @@ export default function ImagesPage({
                 <p className="asset-prompt">{focusedAsset.prompt || '未填写'}</p>
                 <div className="asset-detail-actions">
                   <a className="button" href={assetUrl(focusedAsset)} download>
-                    下载原图 ↗
+                    下载原图 →
                   </a>
                   <Button
                     disabled={busy}
+                    disabledReason="正在处理，请稍候。"
                     onClick={() =>
                       setMetadata({
                         asset: focusedAsset,
@@ -921,11 +902,12 @@ export default function ImagesPage({
                   >
                     编辑用途与关联
                   </Button>
-                  <Button disabled={busy} onClick={() => prepareEdit(focusedAsset)}>
+                  <Button disabled={busy} disabledReason="正在处理，请稍候。" onClick={() => prepareEdit(focusedAsset)}>
                     作为修改原图
                   </Button>
                   <Button
                     disabled={busy}
+                    disabledReason="正在处理，请稍候。"
                     onClick={() => {
                       setUploadRevision(true);
                       update({
@@ -942,44 +924,52 @@ export default function ImagesPage({
                     上传新版本
                   </Button>
                 </div>
-                <p className="small">关联作品后，选定即为作品采用；未关联时只设置素材库默认版本。</p>
+
                 <p className="section-label">版本记录</p>
                 <div className="asset-versions">
                   {versions.map((asset) => (
                     <div key={asset.id}>
-                      <button onClick={() => setAssetId(asset.id)} className="text-button">
+                      <Button onClick={() => setAssetId(asset.id)} variant="text">
                         V{asset.version} · {asset.createdAt.slice(0, 10)}
-                      </button>
-                      <Button
-                        disabled={
-                          (asset.selected &&
-                            (!asset.contentId ||
-                              asset.purposeId !== 'video_cover' ||
-                              Object.values(
-                                data.contents.find((c) => c.id === asset.contentId)?.videoCovers ?? {},
-                              ).includes(asset.id))) ||
-                          !data.storageReady ||
-                          (!!asset.contentId && !data.contentWriteReady) ||
-                          busy
-                        }
-                        onClick={() => void selectVersion(asset)}
-                      >
-                        {asset.selected &&
-                        (!asset.contentId ||
-                          asset.purposeId !== 'video_cover' ||
-                          Object.values(
-                            data.contents.find((c) => c.id === asset.contentId)?.videoCovers ?? {},
-                          ).includes(asset.id))
-                          ? '已选定'
-                          : '选定此版'}
                       </Button>
+                      {asset.selected &&
+                      (!asset.contentId ||
+                        asset.purposeId !== 'video_cover' ||
+                        Object.values(data.contents.find((c) => c.id === asset.contentId)?.videoCovers ?? {}).includes(
+                          asset.id,
+                        )) ? (
+                        <Tag>已选定</Tag>
+                      ) : (
+                        <Button
+                          disabled={
+                            (asset.selected &&
+                              (!asset.contentId ||
+                                asset.purposeId !== 'video_cover' ||
+                                Object.values(
+                                  data.contents.find((c) => c.id === asset.contentId)?.videoCovers ?? {},
+                                ).includes(asset.id))) ||
+                            !data.storageReady ||
+                            (!!asset.contentId && !data.contentWriteReady) ||
+                            busy
+                          }
+                          disabledReason={
+                            !data.storageReady || (asset.contentId && !data.contentWriteReady)
+                              ? '素材或作品保存暂不可用。'
+                              : busy
+                                ? '正在处理，请稍候。'
+                                : '此版本已选定。'
+                          }
+                          onClick={() => void selectVersion(asset)}
+                        >
+                          选定此版
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
               </>
             ) : (
               <div className="asset-detail-empty">
-                <span className="eyebrow">NO ASSET SELECTED</span>
                 <Empty>在素材库选择图片，查看详情和版本</Empty>
                 <dl className="image-metadata">
                   {['用途与比例', '关联选题 / 作品', '来源与提示词', '版本与选定状态'].map((label) => (
@@ -992,11 +982,6 @@ export default function ImagesPage({
               </div>
             )}
           </Card>
-          <div className="image-handoff">
-            <span className="eyebrow">NEXT STEP</span>
-            <p>选定素材 → 排版 / 发布</p>
-            <p className="small">生图中心只出图和存图，发布前仍需人工确认。</p>
-          </div>
         </aside>
       </div>
       <input
@@ -1007,10 +992,7 @@ export default function ImagesPage({
         onChange={(e) => void chooseFile(e)}
         aria-label="选择上传图片"
       />
-      <footer className="footer">
-        <span className="mono">WILDMIND / IMAGE STUDIO</span>
-        <span>{data.storageReady ? '编辑内容自动保存' : '存储服务未接入，当前编辑仅在本窗口保留'}</span>
-      </footer>
+
       {metadata && (
         <Dialog
           title="素材用途与关联"
@@ -1052,15 +1034,12 @@ export default function ImagesPage({
               disabled={busy}
               onChange={(id, content) => setMetadata({ ...metadata, contentId: id, topicId: content?.topicId ?? null })}
             />
-            <p className="small">
-              来源始终保留为 AI 或用户上传。已被确认稿或作品采用的素材，服务会校验引用后再允许修改。
-            </p>
+
             {notice && <p role="status">{notice}</p>}
-            <p className="small">{data.storageReady ? '修改自动保存' : '素材存储服务未接入'}</p>
           </div>
         </Dialog>
       )}
-      <Card index="07" title="最近生图记录" meta="套餐次数 / 耗时">
+      <Card title="最近生图记录" meta="套餐次数 / 耗时">
         {(data.tasks ?? []).slice(0, 5).map((task) => (
           <p key={task.id} className="small">
             {task.input.title} ·{' '}
@@ -1095,7 +1074,7 @@ export default function ImagesPage({
           {pickableAssets.length ? (
             <div className="asset-picker">
               {pickableAssets.map((asset) => (
-                <button
+                <Button
                   key={asset.id}
                   onClick={() => {
                     update({ existingAssets: { ...draft.existingAssets, [pickSlot]: asset.id } });
@@ -1106,7 +1085,7 @@ export default function ImagesPage({
                   <span>
                     {asset.title} · {asset.ratio}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           ) : (

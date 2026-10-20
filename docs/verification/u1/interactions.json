@@ -1,0 +1,39 @@
+[
+  {
+    "test": "商单详情打开",
+    "ok": true
+  },
+  {
+    "test": "键盘聚焦禁用翻页",
+    "tooltip": "ⓘ 已经是第一页。"
+  },
+  {
+    "test": "上传禁用原因",
+    "tooltip": "ⓘ 平台上传尚不可用，当前可准备发布材料。"
+  },
+  {
+    "test": "发布记录过滤及页头",
+    "testNames": false,
+    "headers": 1,
+    "primary": 1,
+    "refresh": [
+      "上传到各平台",
+      "刷新"
+    ]
+  },
+  {
+    "test": "收件箱主操作与翻页",
+    "filter": "waiting",
+    "page": "按消息时间倒序 · 每页 20 条←2 / 3→"
+  },
+  {
+    "test": "弹窗内禁用提示",
+    "inDialog": true,
+    "text": "ⓘ 重抓操作尚不可用。"
+  },
+  {
+    "test": "只读原始发布记录仍保留",
+    "rawBatchCount": 3,
+    "rawTestContentCount": 4
+  }
+]

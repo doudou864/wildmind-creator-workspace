@@ -34,7 +34,7 @@ import {
   type PublishingConfig,
   type PublishingData,
 } from '@/lib/publishing-model';
-import { Button, Card, Dialog, Empty } from '@/ui/components';
+import { PageHeader, Button, Card, Dialog, Empty } from '@/ui/components';
 import { AssetImage } from '@/ui/asset-image';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { LayoutPreview } from '@/ui/layout-preview';
@@ -550,64 +550,58 @@ export default function PublishingPage({
     <main className="workspace publishing-workspace">
       <AutosaveStatus statuses={[autosave, mediaAutosave]} />
       <WorkspaceHeader current="/publishing" date={today} syncWindow={syncWindow} />
-      <div className="modebar">
-        <span className="eyebrow">05 · PUBLISHING DESK</span>
-        <span>{data.message}</span>
-      </div>
-      <div className="topics-heading">
-        <div>
-          <h1>发布中心</h1>
-          <p>文案只写一次。先上传看截图，再一次确认发布。</p>
-        </div>
-        <div className="image-heading-actions">
-          <span className="small">
-            {dirty
-              ? data.storageReady
-                ? '正在自动保存…'
-                : '存储服务未接入，尚未保存'
-              : meta
-                ? batchNames[meta.state]
-                : '新建发布准备'}
-          </span>
+      <PageHeader
+        title="发布中心"
+        summary={`${draft.settings.length} 个目标平台，${data.batches.length} 条发布记录`}
+        onRefresh={() => {
+          setLoadedScreenshots([]);
+          setScreenshotAttempt((n) => n + 1);
+          void refresh();
+        }}
+        refreshing={busy}
+        action={
           <Button
-            disabled={busy}
-            onClick={() => {
-              setLoadedScreenshots([]);
-              setScreenshotAttempt((n) => n + 1);
-              void refresh();
-            }}
+            variant="primary"
+            disabled={!canUpload}
+            disabledReason={
+              !data.uploadReady
+                ? '平台上传尚不可用，当前可准备发布材料。'
+                : busy
+                  ? '正在处理，请稍候。'
+                  : issues.length
+                    ? issues.join('；')
+                    : '请等待保存完成，并核对发布状态。'
+            }
+            onClick={() => void action('upload')}
           >
-            刷新资料
+            上传到各平台
           </Button>
-        </div>
-      </div>
+        }
+      />
       <div className="publish-mode" role="group" aria-label="发布来源">
         {modes.map((mode, i) => (
-          <button
+          <Button
             key={mode.value}
             className={draft.kind === mode.value ? 'active' : ''}
             aria-pressed={draft.kind === mode.value}
             disabled={busy}
+            disabledReason="正在处理，请稍候。"
             onClick={() => {
               if (mode.value !== draft.kind) protect(() => fresh(mode.value));
             }}
           >
-            <span className="eyebrow">0{i + 1}</span>
             <strong>{mode.label}</strong>
-            <span>
-              {mode.value === 'video'
-                ? '选择成片 · 自动保存与封面匹配'
-                : mode.value === 'layout'
-                  ? '接收确认版本 · 内容只读'
-                  : '上传自制图片 · 套用发布模板'}
-            </span>
-          </button>
+          </Button>
         ))}
       </div>
       {stale && liveBatch && (
         <p className="topic-feedback" role="alert">
           发布状态已更新，请载入最新状态后继续上传或发布。
-          <Button disabled={busy} onClick={() => protect(() => loadBatch(liveBatch))}>
+          <Button
+            disabled={busy}
+            disabledReason="正在处理，请稍候。"
+            onClick={() => protect(() => loadBatch(liveBatch))}
+          >
             载入最新发布状态
           </Button>
         </p>
@@ -624,7 +618,7 @@ export default function PublishingPage({
       )}
       <div className="publish-grid">
         <aside className="publish-source">
-          <Card index="01" title="内容来源" meta={<span className="eyebrow">SOURCE</span>}>
+          <Card title="内容来源">
             <div className="image-form">
               <ContentPicker
                 value={draft.contentId}
@@ -723,7 +717,6 @@ export default function PublishingPage({
               )}
               {draft.kind === 'layout' && (
                 <>
-                  <p className="small">这里只接收排版中心送来的确认快照，正文、封面和插图均不可编辑。</p>
                   {snapshots.length ? (
                     snapshots.map((s) => (
                       <div className="publish-snapshot" key={s.id}>
@@ -743,6 +736,11 @@ export default function PublishingPage({
                           <Button
                             disabled={
                               !data.handoffReady || !saved || busy || locked || !draft.snapshotIds.includes(s.id)
+                            }
+                            disabledReason={
+                              !data.handoffReady
+                                ? '发布交接暂不可用。'
+                                : '请确认版本已加入当前草稿，等待保存完成并解除锁定。'
                             }
                             onClick={() => setReturning(s)}
                           >
@@ -765,7 +763,6 @@ export default function PublishingPage({
               )}
               {draft.kind === 'xhs' && (
                 <>
-                  <p className="small">仅使用自己制作并上传的图片，不从 AI 生图中自动选图。</p>
                   <label className="publish-upload">
                     选择本机图片
                     <input
@@ -782,6 +779,7 @@ export default function PublishingPage({
                   </label>
                   <Button
                     disabled={busy || locked}
+                    disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
                     onClick={() => {
                       setSearch('');
                       setPicker(true);
@@ -805,6 +803,7 @@ export default function PublishingPage({
                             <Button
                               aria-label={`第${i + 1}张前移`}
                               disabled={i === 0 || busy || locked}
+                              disabledReason="已在首位，或正在处理，暂不能前移。"
                               onClick={() => {
                                 const ids = [...draft.imageIds];
                                 [ids[i - 1], ids[i]] = [ids[i], ids[i - 1]];
@@ -815,6 +814,7 @@ export default function PublishingPage({
                             </Button>
                             <Button
                               disabled={busy || locked}
+                              disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
                               onClick={() => change({ imageIds: draft.imageIds.filter((value) => value !== id) })}
                             >
                               移除
@@ -830,6 +830,7 @@ export default function PublishingPage({
                         <Button
                           aria-label={`本机第${i + 1}张前移`}
                           disabled={i === 0 || busy}
+                          disabledReason="已在首位，或正在处理，暂不能前移。"
                           onClick={() =>
                             setLocal((items) => {
                               const next = [...items];
@@ -842,6 +843,7 @@ export default function PublishingPage({
                         </Button>
                         <Button
                           disabled={busy}
+                          disabledReason="正在处理，请稍候。"
                           onClick={() => {
                             URL.revokeObjectURL(item.url);
                             urls.current = urls.current.filter((url) => url !== item.url);
@@ -856,20 +858,11 @@ export default function PublishingPage({
                   {!draft.imageIds.length && !local.length && <Empty>尚未选择自制图片</Empty>}
                 </>
               )}
-              {draft.kind !== 'layout' && (
-                <>
-                  <p className="small">
-                    {!data.storageReady
-                      ? '上传服务待接入；本机文件仅在本页预览。'
-                      : '选择文件后自动上传保存，编辑内容也会自动保存。'}
-                  </p>
-                </>
-              )}
+              {draft.kind !== 'layout' && <></>}
             </div>
           </Card>
           {draft.kind === 'video' && (
-            <Card index="02" title="作品封面" meta={<span className="eyebrow">AUTO MATCH</span>}>
-              <p className="small publish-card-note">只检查所选平台需要的封面；在生图中心选定即采用。</p>
+            <Card title="作品封面">
               <div className="publish-covers">
                 {covers.map((cover) => (
                   <div key={cover.ratio}>
@@ -900,9 +893,8 @@ export default function PublishingPage({
         </aside>
         <section className="publish-settings">
           {draft.kind !== 'layout' && (
-            <Card index="03" title="通用文案" meta={<span className="eyebrow">WRITE ONCE</span>}>
+            <Card title="通用文案">
               <fieldset className="image-form" disabled={locked || busy}>
-                <p className="small">填写一次，自动同步到未单独修改的平台；超长会标出，不会截断原文。</p>
                 <label>
                   标题
                   <input
@@ -985,21 +977,20 @@ export default function PublishingPage({
                   />
                 </label>
                 <div className="publish-ai-actions">
-                  <Button disabled={!data.aiReady || locked || busy} onClick={() => void writeWithAI()}>
+                  <Button
+                    disabled={!data.aiReady || locked || busy}
+                    disabledReason={
+                      !data.aiReady ? 'AI 写作暂不可用。' : locked ? '当前内容已锁定。' : '正在处理，请稍候。'
+                    }
+                    onClick={() => void writeWithAI()}
+                  >
                     AI 帮我写
                   </Button>
-                  <span className="small">
-                    {!data.aiReady ? 'AI 服务未接入' : '直接根据当前填写内容生成，保留已单独修改的平台版本'}
-                  </span>
                 </div>
               </fieldset>
             </Card>
           )}
-          <Card
-            index="04"
-            title="平台与发布模板"
-            meta={<span className="eyebrow">{draft.settings.length} SELECTED</span>}
-          >
+          <Card title="平台与发布模板" meta={<span className="eyebrow">{draft.settings.length} 个已选</span>}>
             <div className="publish-platforms">
               {eligibleTemplates.map((template) => {
                 const p = platforms.find((p) => p.id === template.platformId)!;
@@ -1034,12 +1025,9 @@ export default function PublishingPage({
                 );
               })}
             </div>
-            <p className="small">
-              勾选即生成平台版本。正常卡片默认收起，问题卡片自动展开；时间优先使用本月推荐，其次模板默认。
-            </p>
           </Card>
           {!draft.settings.length ? (
-            <Card index="—" title="平台版本">
+            <Card title="平台版本">
               <Empty>选择平台后自动生成版本，无需重复填写文案</Empty>
             </Card>
           ) : (
@@ -1055,7 +1043,7 @@ export default function PublishingPage({
                   key={item.platformId}
                   className={`publish-platform-card card ${problems.length ? 'publish-warning' : ''}`}
                 >
-                  <button
+                  <Button
                     className="publish-platform-summary"
                     aria-expanded={open}
                     aria-label={`${name(item.platformId)}平台版本`}
@@ -1083,7 +1071,7 @@ export default function PublishingPage({
                             : '跟随通用文案'}{' '}
                       · {open ? '收起' : '展开'}
                     </span>
-                  </button>
+                  </Button>
                   {open && (
                     <div className="publish-platform-body">
                       {problems.length > 0 && (
@@ -1111,6 +1099,7 @@ export default function PublishingPage({
                         <Button onClick={() => void copyText(item)}>复制文案</Button>
                         <Button
                           disabled={!item.individuallyEdited || locked || busy}
+                          disabledReason={!item.individuallyEdited ? '当前已跟随通用文案。' : '当前已锁定或正在处理。'}
                           onClick={() =>
                             change(restorePublishSetting(draft, item.platformId, data, config, Date.now()))
                           }
@@ -1146,9 +1135,7 @@ export default function PublishingPage({
                               {Array.from(item.description).length} / {template?.descriptionMax ?? '待核验'}
                             </span>
                           </label>
-                        ) : (
-                          <p className="small">正文与图片来自确认快照，需要改内容请退回排版中心。</p>
-                        )}
+                        ) : null}
                         <label>
                           话题标签
                           <input
@@ -1191,11 +1178,7 @@ export default function PublishingPage({
                             </label>
                           )}
                         </div>
-                        <p className="small">
-                          {defaultPublishTime(item.platformId, data, config, now)
-                            ? '已按本月推荐或模板时间生成，可单独调整。'
-                            : '暂无有效推荐或模板时间；默认人工确认后立即发布。'}
-                        </p>
+
                         {!template && <Button onClick={() => toggle(item.platformId)}>移除此发布目标</Button>}
                       </fieldset>
                     </div>
@@ -1206,7 +1189,7 @@ export default function PublishingPage({
           )}
         </section>
         <aside className="publish-check">
-          <Card index="05" title="发布前检查" meta={<span className="eyebrow">CHECKLIST</span>}>
+          <Card title="发布前检查">
             <div className="publish-check-summary">
               <strong className="mono">{String(draft.settings.length).padStart(2, '0')}</strong>
               <span>个目标平台</span>
@@ -1218,30 +1201,24 @@ export default function PublishingPage({
                 <p>内容检查通过，仍需人工核对并确认。</p>
               )}
             </div>
-            <p className="small publish-card-note">
-              {!data.uploadReady
-                ? '平台上传服务未接入；不会上传或点击发布。'
-                : !saved
-                  ? '内容正在自动保存；完成后即可上传。'
-                  : '上传后逐个平台查看截图，再确认发布。'}
-            </p>
-            <Button className="publish-review-button" disabled={!canUpload} onClick={() => void action('upload')}>
-              上传到各平台
-            </Button>
-            <p className="small publish-card-note">上传只填好后台并停在发布前；支持草稿的平台优先存草稿。</p>
           </Card>
-          <Card index="06" title="最近的发布记录" meta={<span className="eyebrow">{data.batches.length} ITEMS</span>}>
+          <Card title="最近的发布记录" meta={<span className="eyebrow">{data.batches.length} 条</span>}>
             {data.batches.length ? (
               <div className="publish-batches">
                 {data.batches.map((batch) => (
-                  <button key={batch.id} disabled={busy} onClick={() => setHistory(batch)}>
+                  <Button
+                    key={batch.id}
+                    disabled={busy}
+                    disabledReason="正在处理，请稍候。"
+                    onClick={() => setHistory(batch)}
+                  >
                     <strong>
                       {data.contents.find((c) => c.id === batch.draft.contentId)?.title ?? '关联作品不可用'}
                     </strong>
                     <span className="small">
                       {batchNames[batch.state]} · {batch.draft.settings.map((s) => name(s.platformId)).join(' / ')}
                     </span>
-                  </button>
+                  </Button>
                 ))}
               </div>
             ) : (
@@ -1250,15 +1227,13 @@ export default function PublishingPage({
           </Card>
         </aside>
       </div>
-      <Card
-        index="07"
-        title="截图审核与发布回执"
-        meta={<span className="eyebrow">{meta ? 'CURRENT RECORD' : 'NO RECORD'}</span>}
-      >
+      <Card title="截图审核与发布回执">
         <div className="publish-review-heading">
-          <p className="small">逐个平台查看填好后的真实截图。上传完成满 {expiryHours} 小时未发布，须重新上传。</p>
           <Button
             disabled={!canPublish}
+            disabledReason={
+              !data.publishReady ? '实际发布尚不可用。' : '请先上传并查看有效截图，等待保存完成，核对发布状态。'
+            }
             onClick={() => {
               setNow(Date.now());
               setReview({ draft: structuredClone(draft), requestId: crypto.randomUUID(), materials, receiptKey });
@@ -1312,12 +1287,17 @@ export default function PublishingPage({
                     </p>
                     {receipt.url && /^https?:\/\//.test(receipt.url) && (
                       <a href={receipt.url} target="_blank" rel="noreferrer">
-                        查看作品 ↗
+                        查看作品 →
                       </a>
                     )}
                     <div className="publish-ai-actions">
                       <Button
                         disabled={!canUpload || !uploadTargets.includes(receipt.platformId)}
+                        disabledReason={
+                          !data.uploadReady
+                            ? '平台上传尚不可用。'
+                            : '请核对材料与平台状态，仅可重新上传允许重传的目标。'
+                        }
                         onClick={() => void action('upload', undefined, receipt.platformId)}
                       >
                         重新上传该平台
@@ -1331,6 +1311,11 @@ export default function PublishingPage({
                           busy ||
                           dirty ||
                           stale
+                        }
+                        disabledReason={
+                          !data.publishReady
+                            ? '实际发布尚不可用。'
+                            : '仅能重试已核实未发布且截图有效的失败项，请等待保存完成。'
                         }
                         onClick={() => {
                           retryRequest.current = crypto.randomUUID();
@@ -1348,10 +1333,7 @@ export default function PublishingPage({
           <Empty>{meta ? '尚未上传到平台，暂无后台截图' : '上传完成后，在这里核对平台截图'}</Empty>
         )}
       </Card>
-      <footer className="layout-foot">
-        <span>平台审核中不等于已发布；失败只处理对应平台。</span>
-        <span>通用文案 → 平台版本 → 上传 → 截图审核 → 全部发布</span>
-      </footer>
+
       {picker && (
         <Dialog title="选择自己上传的图片" onClose={() => setPicker(false)}>
           <div className="image-form">
@@ -1370,18 +1352,19 @@ export default function PublishingPage({
               {data.assets
                 .filter((a) => a.source === 'upload' && a.title.includes(search))
                 .map((a) => (
-                  <button
+                  <Button
                     className="asset-tile"
                     key={a.id}
                     disabled={
                       draft.imageIds.includes(a.id) || draft.imageIds.length + local.length >= config.xhsMaxImages
                     }
+                    disabledReason="此图已添加，或已达到图片数量上限。"
                     onClick={() => change({ imageIds: [...draft.imageIds, a.id] })}
                   >
                     <AssetImage src={assetUrl(a.id)} alt={a.title} />
                     <strong>{a.title}</strong>
                     <span className="small">{draft.imageIds.includes(a.id) ? '已添加' : a.ratio}</span>
-                  </button>
+                  </Button>
                 ))}
             </div>
           ) : (
@@ -1447,7 +1430,11 @@ export default function PublishingPage({
           {notice && <p role="status">{notice}</p>}
           <div className="layout-dialog-actions">
             <Button onClick={() => setReturning(null)}>取消</Button>
-            <Button disabled={busy} onClick={() => void action('return', returning.id)}>
+            <Button
+              disabled={busy}
+              disabledReason="正在处理，请稍候。"
+              onClick={() => void action('return', returning.id)}
+            >
               确认退回
             </Button>
           </div>
@@ -1482,7 +1469,7 @@ export default function PublishingPage({
             {materialChanged
               ? '材料、截图或就绪状态已变化，请关闭后重新核对。'
               : !data.publishReady
-                ? '实际发布服务未接入。'
+                ? '实际发布暂不可用，请保留当前准备。'
                 : '请核对截图中的平台、内容、封面和时间。'}
           </p>
           <label className="publish-human-check">
@@ -1496,10 +1483,16 @@ export default function PublishingPage({
           </label>
           {notice && <p role="status">{notice}</p>}
           <div className="layout-dialog-actions">
-            <Button disabled={busy} onClick={() => setReview(null)}>
+            <Button disabled={busy} disabledReason="正在处理，请稍候。" onClick={() => setReview(null)}>
               返回审核
             </Button>
-            <Button disabled={!canPublish || !checked} onClick={() => void action('publish-all')}>
+            <Button
+              disabled={!canPublish || !checked}
+              disabledReason={
+                !data.publishReady ? '实际发布尚不可用。' : '请核对有效截图并勾选人工确认，等待保存完成。'
+              }
+              onClick={() => void action('publish-all')}
+            >
               {busy ? '正在提交…' : '确认全部发布'}
             </Button>
           </div>
@@ -1522,7 +1515,13 @@ export default function PublishingPage({
           {notice && <p role="status">{notice}</p>}
           <div className="layout-dialog-actions">
             <Button onClick={() => setRetry(null)}>取消</Button>
-            <Button disabled={busy || !data.publishReady || !retryAllowed} onClick={() => void retryReceipt()}>
+            <Button
+              disabled={busy || !data.publishReady || !retryAllowed}
+              disabledReason={
+                !data.publishReady ? '实际发布尚不可用。' : '仅能重试已核实未发布且截图有效的失败项，请等待保存完成。'
+              }
+              onClick={() => void retryReceipt()}
+            >
               确认重试
             </Button>
           </div>

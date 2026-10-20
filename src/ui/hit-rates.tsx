@@ -46,7 +46,7 @@ export function HitRates({ data, config, today }: { data: DashboardData; config:
     (p) => p.platformId === platformId && p.month === current && p.phase === 'estimated',
   );
   return (
-    <Card index="07" title="选题命中率" className="hit-rates" meta={<span className="eyebrow">D21 / D7</span>}>
+    <Card title="选题命中率" className="hit-rates" meta={<span className="eyebrow">D21 / D7</span>}>
       <div className="works-toolbar">
         <Segmented
           label="命中率平台"
@@ -75,16 +75,6 @@ export function HitRates({ data, config, today }: { data: DashboardData; config:
         </h3>
         <Groups period={estimated} estimated />
       </section>
-      <p className="small topic-rule">
-        {!data.reviewReady
-          ? '复盘服务待接入，暂无核算结果。'
-          : !final && !estimated
-            ? '所选月份暂无核算记录。'
-            : !final?.conclusionAllowed || !estimated?.conclusionAllowed
-              ? `样本未达到结论要求的月份只记录结果，累计 ${config.parameters.conclusionMinimum} 个选题前不判断推荐效果。`
-              : '样本已达到结论门槛。'}{' '}
-        按选题首发计数，排除自动建立及历史补录；抖音视频与图文合并核算，公众号单独核算。
-      </p>
     </Card>
   );
 }

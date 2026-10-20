@@ -1,5 +1,6 @@
 'use client';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { visibleRecords } from './visible-records.ts';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 export async function request<T>(url: string, init?: RequestInit): Promise<T> {
   let response: Response;
   try {
@@ -52,5 +53,6 @@ export function useResource<T>(url: string, initial: T, fetchOnMount = false) {
       document.removeEventListener('visibilitychange', onVisibility);
     };
   }, [refresh]);
-  return { data, error, refresh };
+  const visible = useMemo(() => visibleRecords(data), [data]);
+  return { data: visible, error, refresh };
 }

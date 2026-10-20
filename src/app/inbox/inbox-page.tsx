@@ -15,7 +15,7 @@ import {
   type InboxFilters,
   type InboxMessage,
 } from '@/lib/inbox-model';
-import { Button, Card, Empty, Segmented } from '@/ui/components';
+import { PageHeader, Button, Card, Empty, Segmented } from '@/ui/components';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { request, useResource } from '@/ui/use-resource';
 const blankFilters: InboxFilters = {
@@ -121,8 +121,7 @@ export default function InboxPage({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ expectedRevision: item.revision }),
       });
-      if (result.item?.id !== item.id || !result.item.topicSignalId)
-        throw new Error('同步结果未确认，请刷新记录后核对。');
+      if (result.item?.id !== item.id || !result.item.topicSignalId) throw new Error('同步结果未确认，请刷新后核对。');
       setSyncReceipts((current) => ({ ...current, [item.id]: result.item.topicSignalId! }));
       setNotice('已同步为选题输入。待回复状态保持不变，不会向平台发送消息。');
       await refresh();
@@ -139,31 +138,18 @@ export default function InboxPage({
   return (
     <main className="workspace inbox-workspace">
       <WorkspaceHeader current="/inbox" date={today} syncWindow={syncWindow} />
-      <div className="modebar">
-        <span className="eyebrow">06 · INTERACTION INBOX</span>
-        <span>{data.message}</span>
-      </div>
-      <div className="topics-heading">
-        <div>
-          <h1>互动收件箱</h1>
-          <p>从评论与私信里，看见合作机会和真实问题。</p>
-        </div>
-        <div className="image-heading-actions">
-          <span className="small">平台只读 · 不自动回复</span>
-          <Button disabled={refreshing} onClick={() => void reload()}>
-            {refreshing ? '正在读取记录…' : '刷新已存记录'}
+      <PageHeader
+        title="互动收件箱"
+        summary={`${data.items.length} 条消息，${data.themes.length} 个需求主题`}
+        onRefresh={() => void reload()}
+        refreshing={refreshing}
+        action={
+          <Button variant="primary" onClick={() => filter({ reply: 'waiting' })}>
+            查看待回复
           </Button>
-        </div>
-      </div>
-      <Card
-        index="00"
-        title="读取状态"
-        meta={<span className="eyebrow">DAILY · {syncWindow}</span>}
-        className="inbox-sources"
-      >
-        <p className="small inbox-source-note">
-          随每日主抓取读取一次。刷新仅重新加载本机记录，不触发额外抓取；平台回复后，待回复状态随下次读取更新。
-        </p>
+        }
+      />
+      <Card title="读取状态" meta={<span className="eyebrow">{syncWindow}</span>} className="inbox-sources">
         {data.sources.length ? (
           <div className="inbox-source-grid">
             {data.sources.map((source) => (
@@ -178,7 +164,9 @@ export default function InboxPage({
                 <time className="mono" dateTime={source.capturedAt ?? undefined}>
                   {inboxTime(source.capturedAt)}
                 </time>
-                {source.reason && <p>{source.reason}</p>}
+                {source.reason && (source.status === 'failed' || source.status === 'unavailable') && (
+                  <p>{source.reason}</p>
+                )}
               </div>
             ))}
           </div>
@@ -267,12 +255,12 @@ export default function InboxPage({
           <span>已存消息</span>
           <strong className="mono">{displayCount(scoped.length)}</strong>
         </div>
-        <button
+        <Button
           onClick={() => filter({ reply: 'waiting', category: 'all', classification: 'all', query: '', themeId: null })}
         >
           <span>待回复会话 / 评论</span>
           <strong className="mono">{displayCount(waitingCount(scoped, data.items))}</strong>
-        </button>
+        </Button>
         <div>
           <span>尚未同步的问题与观点</span>
           <strong className="mono">{displayCount(topics)}</strong>
@@ -281,7 +269,6 @@ export default function InboxPage({
           <span>待识别 / 识别失败</span>
           <strong className="mono">{displayCount(unclassified)}</strong>
         </div>
-        <p>统计随平台与消息类型变化。私信按会话计算待回复，评论按条计算；同步选题不等于已回复。</p>
       </div>
       {notice && (
         <p className="topic-feedback" role="status">
@@ -295,18 +282,18 @@ export default function InboxPage({
       )}
       <div className="inbox-grid">
         <aside className="inbox-sidebar">
-          <Card index="01" title="消息分类" meta={<span className="eyebrow">TRIAGE</span>}>
+          <Card title="消息分类">
             <div className="inbox-category-list">
-              <button
+              <Button
                 aria-pressed={filters.category === 'all'}
                 className={filters.category === 'all' ? 'active' : ''}
                 onClick={() => filter({ category: 'all', themeId: null })}
               >
                 <strong>全部消息</strong>
                 <span className="mono">{displayCount(scoped.length)}</span>
-              </button>
+              </Button>
               {config.categories.map((category) => (
-                <button
+                <Button
                   key={category.id}
                   aria-pressed={filters.category === category.id}
                   className={filters.category === category.id ? 'active' : ''}
@@ -314,7 +301,6 @@ export default function InboxPage({
                 >
                   <div>
                     <strong>{category.name}</strong>
-                    <p>{category.description}</p>
                   </div>
                   <span className="mono">
                     {displayCount(
@@ -324,12 +310,11 @@ export default function InboxPage({
                       ).length,
                     )}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
-            <p className="small inbox-note">待识别与识别失败的消息仍保留在“全部消息”，不会自动归入“其他”。</p>
           </Card>
-          <Card index="02" title="需求主题" meta={<span className="eyebrow">SIGNALS</span>}>
+          <Card title="需求主题">
             <div className="inbox-themes">
               {data.themes
                 .filter(
@@ -337,7 +322,7 @@ export default function InboxPage({
                     themeMessages(t, scoped).length > 0 || (filters.platform === 'all' && filters.channel === 'all'),
                 )
                 .map((t) => (
-                  <button
+                  <Button
                     key={t.id}
                     className={filters.themeId === t.id ? 'active' : ''}
                     aria-pressed={filters.themeId === t.id}
@@ -347,7 +332,7 @@ export default function InboxPage({
                   >
                     <strong>{t.title}</strong>
                     <span className="small">{themeMessages(t, scoped).length} 条当前范围来源</span>
-                  </button>
+                  </Button>
                 ))}
             </div>
             {!data.themes.length ? (
@@ -357,13 +342,11 @@ export default function InboxPage({
               <Empty>当前范围没有需求主题来源</Empty>
             ) : null}
             {filters.themeId && <Button onClick={() => filter({ themeId: null })}>清除主题筛选</Button>}
-            <p className="small inbox-note">主题保留原消息来源，可逐条核对后同步到选题中心。</p>
           </Card>
         </aside>
         <Card
-          index="03"
           title="消息列表"
-          meta={<span className="eyebrow">{data.recordsReady ? filtered.length : '--'} RECORDS</span>}
+          meta={<span className="eyebrow">{data.recordsReady ? filtered.length : '--'} 条</span>}
           className="inbox-list-card"
         >
           {theme && (
@@ -380,7 +363,7 @@ export default function InboxPage({
               page.items.map((item) => {
                 const state = assessments.get(item.id)?.state ?? 'unknown';
                 return (
-                  <button
+                  <Button
                     key={item.id}
                     className={`inbox-message ${active?.id === item.id ? 'active' : ''}`}
                     aria-pressed={active?.id === item.id}
@@ -408,13 +391,13 @@ export default function InboxPage({
                       {(item.topicSignalId || syncReceipts[item.id]) && <span>已同步选题输入</span>}
                       {item.contentTitle && <span className="inbox-message-work">{item.contentTitle}</span>}
                     </div>
-                  </button>
+                  </Button>
                 );
               })
             ) : (
               <Empty>
                 {!data.recordsReady
-                  ? '读取服务待接入，暂无消息记录'
+                  ? '暂无消息记录，完成读取后出现'
                   : linkedMessageId
                     ? '关联消息暂不可用，请刷新或返回全部消息'
                     : data.items.length
@@ -425,13 +408,19 @@ export default function InboxPage({
           </div>
           <div className="inbox-pagination">
             <span className="small">按消息时间倒序 · 每页 {config.pageSize} 条</span>
-            <Button aria-label="上一页消息" disabled={page.page === 1} onClick={() => setRequestedPage(page.page - 1)}>
+            <Button
+              aria-label="上一页消息"
+              disabled={page.page === 1}
+              disabledReason="已经是第一页。"
+              onClick={() => setRequestedPage(page.page - 1)}
+            >
               ←
             </Button>
             <span className="mono">{data.recordsReady ? `${page.page} / ${page.pages}` : '-- / --'}</span>
             <Button
               aria-label="下一页消息"
               disabled={page.page === page.pages}
+              disabledReason="已经是最后一页。"
               onClick={() => setRequestedPage(page.page + 1)}
             >
               →
@@ -439,12 +428,7 @@ export default function InboxPage({
           </div>
         </Card>
         <aside className="inbox-detail-column">
-          <Card
-            index="04"
-            title="原文与上下文"
-            meta={<span className="eyebrow">READ ONLY</span>}
-            className="inbox-detail"
-          >
+          <Card title="原文与上下文" className="inbox-detail">
             {!active ? (
               <Empty>选择一条消息查看原文与判定依据</Empty>
             ) : (
@@ -495,7 +479,6 @@ export default function InboxPage({
                   </p>
                 )}
                 <div className="inbox-classification">
-                  <span className="eyebrow">CLASSIFICATION</span>
                   <strong>{messageCategory(active)}</strong>
                   <p>
                     {active.classification.status === 'ready'
@@ -527,7 +510,7 @@ export default function InboxPage({
                 <div className="inbox-source-link">
                   {active.sourceUrl && /^https?:\/\//.test(active.sourceUrl) ? (
                     <a href={active.sourceUrl} target="_blank" rel="noreferrer">
-                      查看原始平台页面 ↗
+                      查看原始平台页面 →
                     </a>
                   ) : (
                     <span className="small">原始页面链接暂不可用</span>
@@ -537,7 +520,7 @@ export default function InboxPage({
             )}
           </Card>
           {active && (
-            <Card index="05" title="后续流转" meta={<span className="eyebrow">HANDOFF</span>}>
+            <Card title="后续流转">
               <div className="inbox-handoff">
                 {categoryOf === 'deal' ? (
                   <>
@@ -558,27 +541,24 @@ export default function InboxPage({
                 ) : categoryOf === 'idea' ? (
                   <>
                     <strong>{signalId ? '已同步为选题输入' : '可作为选题输入'}</strong>
-                    <p>同步保留原文、发送者、平台和作品来源；不会向对方发送消息，也不会改变待回复状态。</p>
+
                     {active.topicSyncedAt && <span className="small">同步于 {inboxTime(active.topicSyncedAt)}</span>}
                     <Button
                       disabled={!data.topicSyncReady || !!busyId || !!signalId}
-                      title={!data.topicSyncReady ? '选题输入同步服务待接入' : undefined}
+                      disabledReason={!data.topicSyncReady ? '选题同步暂不可用。' : '请等待当前同步完成。'}
                       onClick={() => void syncTopic(active)}
                     >
                       {busyId === active.id ? '正在同步…' : signalId ? '已同步选题输入' : '同步到选题中心'}
                     </Button>
                     <Link href="/topics">去选题中心 →</Link>
-                    {!data.topicSyncReady && <span className="small">同步服务待接入，此操作暂不可用。</span>}
                   </>
                 ) : categoryOf === 'other' ? (
                   <>
                     <strong>不进入商单或选题流程</strong>
-                    <p>保留原消息供查看，不自动回复，不在平台上做任何操作。</p>
                   </>
                 ) : (
                   <>
                     <strong>分类完成后再流转</strong>
-                    <p>识别未完成或失败时，不猜测分类，不自动创建商单或选题输入。</p>
                   </>
                 )}
               </div>
@@ -586,10 +566,6 @@ export default function InboxPage({
           )}
         </aside>
       </div>
-      <footer className="layout-foot">
-        <span>一条消息可贡献选题；同一私信会话只计一次待回复。</span>
-        <span>读取 → 分类 → 商单 / 需求主题 / 选题输入</span>
-      </footer>
     </main>
   );
 }

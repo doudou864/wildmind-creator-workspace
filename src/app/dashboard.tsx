@@ -10,7 +10,7 @@ import { checkpointNote, findAnomalies, type DashboardData, type Work } from '@/
 import { request, useResource } from '@/ui/use-resource';
 import { HitRates } from '@/ui/hit-rates';
 import { dateLabel, number, signed, lastSuccessTimeLabel } from '@/lib/format';
-import { Button, Card, Dialog, Empty, Ratio, Segmented } from '@/ui/components';
+import { PageHeader, Tag, Button, Card, Dialog, Empty, Ratio, Segmented } from '@/ui/components';
 import { Chart } from '@/ui/charts';
 
 import { WorkspaceHeader } from '@/ui/workspace-header';
@@ -174,9 +174,7 @@ export default function Dashboard({
     dialogTitle = `${modal.platform.name} · 采集状态`;
     dialogContent = (
       <>
-        <p className="dialog-intro">
-          {workspace.collectionReady ? '最近一次采集状态。' : '尚未接入采集服务，暂无采集日志。'}
-        </p>
+        <p className="dialog-intro">{workspace.collectionReady ? '最近一次采集状态。' : '暂无采集日志。'}</p>
         <dl className="detail-list">
           <div>
             <dt>采集方式</dt>
@@ -205,9 +203,9 @@ export default function Dashboard({
             <dd className="mono">{parameters.retryTimes.join(' / ')}</dd>
           </div>
         </dl>
-        <p className="muted">采集服务尚未接入，当前无法执行重抓。</p>
-        <Button disabled className="selected">
-          立即重抓（待接入）
+
+        <Button disabled disabledReason="重抓操作尚不可用。">
+          立即重抓
         </Button>
       </>
     );
@@ -258,29 +256,25 @@ export default function Dashboard({
               );
             })}
         </div>
-        <p className="muted">各检查点分别计算并定格；D1 只用于异常提醒，不参与走势分类。</p>
       </>
     );
   }
   return (
     <main className="workspace">
-      <h1 className="sr-only">野生脑洞总控台</h1>
       <WorkspaceHeader current="/" date={displayDate} syncWindow={parameters.syncWindow} />
-      <div className="modebar">
-        <p>
-          <span className="mode-label mono">LOCAL</span>
-          {workspace.collectionReady ? '本机业务数据 · 每日更新' : '采集服务待接入 · 尚无平台数据'}
-        </p>
-        <Button
-          className="text-button"
-          onClick={() => {
-            void refresh();
-            void refreshDeals();
-          }}
-        >
-          刷新数据 ↻
-        </Button>
-      </div>
+      <PageHeader
+        title="总控台"
+        summary={`${works.length} 条近期作品，${counts.pending} 条待处理商单`}
+        onRefresh={() => {
+          void refresh();
+          void refreshDeals();
+        }}
+        action={
+          <Button variant="primary" onClick={() => setModal({ type: 'attention' })}>
+            查看待处理
+          </Button>
+        }
+      />
       {(error || dealError) && (
         <p role="alert" className="topic-feedback">
           {error || dealError}
@@ -288,8 +282,8 @@ export default function Dashboard({
       )}
       <section className="card health" aria-label="数据健康">
         <div className="health-heading">
-          <h2 className="eyebrow">00 · SOURCE</h2>
-          <span className="eyebrow">最近一次成功更新 · 点击查看日志</span>
+          <h2 className="eyebrow">数据更新</h2>
+          <span className="eyebrow">最近成功更新</span>
         </div>
         <div className="health-grid">
           {healthPlatforms.map((item) => {
@@ -297,7 +291,7 @@ export default function Dashboard({
             const status = source?.status ?? 'pending';
             return (
               <div className={`health-item ${status}`} key={item.id}>
-                <button
+                <Button
                   className="source-button"
                   onClick={() => setModal({ type: 'source', platform: item })}
                   aria-label={`${item.name}采集状态：${status === 'failed' ? '失败' : status === 'success' ? '成功' : '尚未抓取'}`}
@@ -312,9 +306,9 @@ export default function Dashboard({
                   <time className="mono" dateTime={source?.lastSuccess ?? undefined}>
                     {lastSuccessLabel(item.id)}
                   </time>
-                </button>
+                </Button>
                 {status === 'failed' && (
-                  <Button className="selected retry" onClick={() => setModal({ type: 'source', platform: item })}>
+                  <Button className="retry" onClick={() => setModal({ type: 'source', platform: item })}>
                     重抓
                   </Button>
                 )}
@@ -331,7 +325,7 @@ export default function Dashboard({
       </section>
       <div className="dashboard-grid">
         <div className="left-column">
-          <Card index="01" title="今日行动" meta={<span className="eyebrow">待办汇总</span>} className="actions-card">
+          <Card title="今日行动" meta={<span className="eyebrow">待办汇总</span>} className="actions-card">
             {[
               {
                 label: '商单待回复',
@@ -407,7 +401,6 @@ export default function Dashboard({
                   <span className="letter mono">{String.fromCharCode(65 + index)}</span>
                   <span>
                     <strong>{row.label}</strong>
-                    <small>{row.note}</small>
                   </span>
                   <span className="action-count mono">{row.ready ? number(row.count) : '--'}</span>
                   <span aria-hidden="true">→</span>
@@ -416,10 +409,9 @@ export default function Dashboard({
             {(failedPlatforms.length > 0 ||
               (workspace.attention?.length ?? 0) > 0 ||
               workspace.accountAlerts.length > 0) && (
-              <button className="action-row action-summary" onClick={() => setModal({ type: 'attention' })}>
+              <Button className="action-row action-summary" onClick={() => setModal({ type: 'attention' })}>
                 <span>
                   <strong>平台异常待处理</strong>
-                  <small>查看原因与处理提示</small>
                 </span>
                 <span className="action-count mono">
                   {
@@ -431,7 +423,7 @@ export default function Dashboard({
                   }
                 </span>
                 <span aria-hidden="true">→</span>
-              </button>
+              </Button>
             )}
             {!actions.length &&
               !failedPlatforms.length &&
@@ -441,18 +433,12 @@ export default function Dashboard({
               !workspace.attention?.length && (
                 <Empty>{actionsReady ? '今天没有待办' : '待办资料尚未齐备，暂不能判断今天是否有事'}</Empty>
               )}
-            {!actionsReady && (
-              <p className="small">
-                {!workspace.accountAlertsReady ? '账号违规 / 限流信息尚未接入。' : '部分待办资料尚未齐备。'}
-              </p>
-            )}
           </Card>
           <Card
-            index="05"
             title="商单"
             meta={
               <Link className="text-button eyebrow" href="/deals">
-                LIST →
+                查看全部 →
               </Link>
             }
           >
@@ -464,30 +450,42 @@ export default function Dashboard({
                   >
                     {deals.recordsReady ? number(counts[state.id]) : '--'}
                   </strong>
-                  <span>{state.name}</span>
+                  <span>{state.name} →</span>
                 </Link>
               ))}
             </div>
           </Card>
-          <Card index="06" title="洞察与异常" className="insights-card">
+          <Card title="洞察与异常" className="insights-card">
             <p className="section-label">需求主题</p>
             {workspace.themes.length ? (
               workspace.themes.slice(0, parameters.dashboardPreviewLimit).map((theme) => (
                 <div className="insight-row" key={theme.id}>
                   <Link href={`/inbox?theme=${encodeURIComponent(theme.id)}`}>
-                    {theme.title}
-                    <small>{theme.count} 条来源</small>
+                    {theme.title} →<small>{theme.count} 条来源</small>
                   </Link>
-                  <Button
-                    disabled={!workspace.themeSyncReady || !!themeBusy || !!theme.signalId || !!themeReceipts[theme.id]}
-                    onClick={() => void syncTheme(theme)}
-                  >
-                    {theme.signalId || themeReceipts[theme.id] ? '已送入选题' : '送进选题'}
-                  </Button>
+                  {theme.signalId || themeReceipts[theme.id] ? (
+                    <Tag>已送入选题</Tag>
+                  ) : (
+                    <Button
+                      disabled={
+                        !workspace.themeSyncReady || !!themeBusy || !!theme.signalId || !!themeReceipts[theme.id]
+                      }
+                      disabledReason={
+                        !workspace.themeSyncReady
+                          ? '选题同步暂不可用。'
+                          : theme.signalId || themeReceipts[theme.id]
+                            ? '已送入选题，无需重复同步。'
+                            : '正在同步，请稍候。'
+                      }
+                      onClick={() => void syncTheme(theme)}
+                    >
+                      送进选题
+                    </Button>
+                  )}
                 </div>
               ))
             ) : (
-              <Empty>{workspace.themesReady ? '暂无需求主题' : '需求主题待接入'}</Empty>
+              <Empty>{workspace.themesReady ? '暂无需求主题' : '尚无需求主题，读取消息后生成'}</Empty>
             )}
             {themeNotice && (
               <p role="status" className="small">
@@ -505,19 +503,19 @@ export default function Dashboard({
                     </small>
                     {alert.sourceUrl && /^https?:\/\//.test(alert.sourceUrl) && (
                       <a href={alert.sourceUrl} target="_blank" rel="noreferrer">
-                        查看平台证据 ↗
+                        查看平台证据 →
                       </a>
                     )}
                   </span>
                 </div>
               ))
             ) : (
-              <Empty>{workspace.accountAlertsReady ? '暂无账号异常' : '账号异常信息待接入'}</Empty>
+              <Empty>{workspace.accountAlertsReady ? '暂无账号异常' : '尚无账号异常记录'}</Empty>
             )}
             <p className="section-label anomaly-heading">作品异常 · {platform.name}</p>
             {anomalies.length ? (
               anomalies.map(({ work, day, ratio }) => (
-                <button
+                <Button
                   key={`${work.id}-${day}`}
                   className="insight-row"
                   onClick={() =>
@@ -533,21 +531,15 @@ export default function Dashboard({
                       D{day} 达基线 {number(ratio, 1)}× · 查看详情 →
                     </small>
                   </span>
-                </button>
+                </Button>
               ))
             ) : (
               <Empty>暂无作品异常</Empty>
             )}
-            <div className="insight-footnote small">
-              仅在 D1 / D3 检查点识别异常；
-              <br />
-              样本不足或指标缺失时不做判断。
-            </div>
           </Card>
         </div>
         <div className="center-column">
           <Card
-            index="02"
             title="平台趋势"
             meta={
               <Segmented
@@ -592,7 +584,8 @@ export default function Dashboard({
               />
               <Button
                 aria-expanded={showAllPlatforms}
-                className="text-button platform-more"
+                className="platform-more"
+                variant="text"
                 onClick={() => setShowAllPlatforms(!showAllPlatforms)}
               >
                 {showAllPlatforms ? '收起' : '更多平台 +'}{' '}
@@ -617,12 +610,7 @@ export default function Dashboard({
               </div>
             )}
           </Card>
-          <Card
-            index="04"
-            title="近期作品"
-            meta={<span className="eyebrow ratio-caption">÷ 同龄基线 · 1 格 = {parameters.ratioPerCell}×</span>}
-            className="works-card"
-          >
+          <Card title="近期作品" meta={<span className="eyebrow">{works.length} 条</span>} className="works-card">
             <div className="works-toolbar">
               <span className="small">
                 近 {parameters.recentWindow} 天 · {platform.name} · {works.length} 条
@@ -637,7 +625,7 @@ export default function Dashboard({
             <table className="works-table">
               <thead>
                 <tr>
-                  <th>TITLE</th>
+                  <th>作品</th>
                   {parameters.checkpoints.map((point) => (
                     <th key={point}>D{point}</th>
                   ))}
@@ -648,7 +636,7 @@ export default function Dashboard({
                 {works.map((work) => (
                   <tr key={work.id}>
                     <td>
-                      <button
+                      <Button
                         className="work-title"
                         onClick={() =>
                           platform.id === dataCenterPlatformId
@@ -663,7 +651,7 @@ export default function Dashboard({
                             {dateLabel(work.published)}
                           </time>
                         </span>
-                      </button>
+                      </Button>
                     </td>
                     {parameters.checkpoints.map((point) => (
                       <td key={point}>
@@ -694,17 +682,12 @@ export default function Dashboard({
               </tbody>
             </table>
             {works.length === 0 && <Empty>暂无近期作品</Empty>}
-            <div className="works-footnote small">
-              <span>视频与图文分别计算基线 · 不足 {parameters.baselineMinimum} 条时不算倍数</span>
-              <span className="mono">{platform.code}</span>
-            </div>
           </Card>
           <HitRates data={workspace} config={config} today={today} />
         </div>
         <Card
-          index="03"
           title={`粉丝 · ${platform.name}`}
-          meta={<span className="eyebrow">{range}D</span>}
+          meta={<span className="eyebrow">{range} 天</span>}
           className="followers-card"
         >
           <div className="followers-total">
@@ -733,7 +716,6 @@ export default function Dashboard({
           <div className="fan-section">
             <div className="section-label">
               <span>粉丝总数</span>
-              <span className="eyebrow">TOTAL</span>
             </div>
             {days.length ? (
               <Chart days={days} metric="followers" label="粉丝总数" kind="line" />
@@ -744,7 +726,6 @@ export default function Dashboard({
           <div className="fan-section net-section">
             <div className="section-label">
               <span>每日净增</span>
-              <span className="eyebrow">DAILY CHANGE</span>
             </div>
             {days.length ? (
               <Chart days={days} metric="net_followers" label="粉丝净增" kind="needles" referenceDate={displayDate} />
@@ -767,12 +748,7 @@ export default function Dashboard({
           </p>
         </Card>
       </div>
-      <footer className="footer">
-        <span className="mono">WILDMIND / CREATOR WORKSPACE</span>
-        <span>
-          只和自己的历史作品比<span className="footer-divider">/</span>本机工作台
-        </span>
-      </footer>
+
       {modal && (
         <Dialog title={dialogTitle} onClose={() => setModal(null)}>
           {dialogContent}

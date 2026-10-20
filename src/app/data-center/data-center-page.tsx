@@ -1,14 +1,15 @@
 'use client';
+import { visibleRecords } from '@/ui/visible-records';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { DataCenterData, Interpretation } from '@/lib/data-center-model';
 import { backfillNote, displayAnalysisValue as display } from '@/lib/data-center-model';
 import { WorkspaceHeader } from '@/ui/workspace-header';
-import { Button, Card, Empty } from '@/ui/components';
+import { PageHeader, Button, Card, Empty } from '@/ui/components';
 import { DataCenterChart, MetricNeedle } from '@/ui/data-center-chart';
 import { request } from '@/ui/use-resource';
 export default function DataCenterPage({
-  data,
+  data: initialData,
   today,
   syncWindow,
 }: {
@@ -16,6 +17,7 @@ export default function DataCenterPage({
   today: string;
   syncWindow: string;
 }) {
+  const data = visibleRecords(initialData);
   const router = useRouter();
   const [query, setQuery] = useState('');
   const [day, setDay] = useState(data.checkpoints.filter((d) => d <= data.age).at(-1) ?? data.checkpoints[0]);
@@ -51,17 +53,29 @@ export default function DataCenterPage({
   return (
     <main className="workspace data-center">
       <WorkspaceHeader current="/data-center" date={today} syncWindow={syncWindow} />
-      <h1 className="sr-only">数据中心</h1>
-      <div className="modebar">
-        <p>
-          <span className="mode-label mono">ANALYSIS</span>抖音 · 只和较早发布的同形式作品比
-        </p>
-        <Button className="text-button" onClick={() => router.refresh()}>
-          刷新已存数据 ↻
-        </Button>
-      </div>
+      <PageHeader
+        title="数据中心"
+        summary={`${data.posts.length} 条作品可分析`}
+        onRefresh={() => router.refresh()}
+        action={
+          <Button
+            variant="primary"
+            disabled={!selected || busy || fresh || !data.fingerprints[day]}
+            disabledReason={
+              busy
+                ? '正在生成解读，请稍候。'
+                : fresh
+                  ? '当前数据已有解读，可在下方查看。'
+                  : '请选择有检查点数据的作品。'
+            }
+            onClick={() => void generate()}
+          >
+            {busy ? '生成中…' : '生成解读'}
+          </Button>
+        }
+      />
       {!selected ? (
-        <Card index="00" title="数据中心">
+        <Card title="数据中心">
           <Empty>暂无可分析的抖音作品</Empty>
         </Card>
       ) : (
@@ -112,7 +126,6 @@ export default function DataCenterPage({
             </div>
           </section>
           <Card
-            index="01"
             title="累计播放量 · 同天龄对比"
             className="analysis-curve"
             meta={
@@ -122,15 +135,8 @@ export default function DataCenterPage({
             }
           >
             <DataCenterChart rows={data.curve} checkpoints={data.checkpoints} minimum={data.minimum} />
-            <p className="small">
-              缺数断线，不补零。
-              {data.curve.some((r) => r.count < data.minimum) &&
-                `部分天龄样本不足（最多 ${Math.max(...data.curve.map((r) => r.count))}/${data.minimum}），不足的天龄不画中位线和范围。`}
-              悬停看当天样本数。
-            </p>
           </Card>
           <Card
-            index="02"
             title="逐项对比 · 偏低项在前"
             className="analysis-comparison"
             meta={
@@ -139,6 +145,7 @@ export default function DataCenterPage({
                   <Button
                     key={d}
                     disabled={d > data.age}
+                    disabledReason={`作品尚未满 ${d} 天。`}
                     className={day === d ? 'selected' : ''}
                     aria-pressed={day === d}
                     onClick={() => setDay(d)}
@@ -198,20 +205,8 @@ export default function DataCenterPage({
               </table>
               {!rows.length && <Empty>{data.age < day ? '尚未到检查点' : '没有已存的指标数据'}</Empty>}
             </div>
-            <p className="small">
-              互动量按每千次播放比较；浅灰带是正常范围，黑色细针是本条位置。检查点补抓照常比较并标注。
-            </p>
           </Card>
-          <Card
-            index="03"
-            title="AI 解读"
-            className="analysis-interpretation"
-            meta={
-              <Button disabled={busy || fresh || !data.fingerprints[day]} onClick={() => void generate()}>
-                {busy ? '生成中…' : fresh ? '已保存' : saved ? `用 D${day} 数据重新生成` : '生成解读'}
-              </Button>
-            }
-          >
+          <Card title="AI 解读" className="analysis-interpretation">
             {saved ? (
               <>
                 <p className="small">
@@ -228,7 +223,7 @@ export default function DataCenterPage({
                 </div>
               </>
             ) : (
-              <Empty>点击才生成，解读会自动保存。</Empty>
+              <Empty>尚无解读，可点击上方“生成解读”。</Empty>
             )}
             {error && (
               <p role="alert" className="small">

@@ -1,0 +1,280 @@
+[
+  {
+    "name": "data-center",
+    "width": 1440,
+    "start": 118,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 72,
+        "bottom": 106
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "data-center",
+    "width": 1728,
+    "start": 120,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 74,
+        "bottom": 108
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "images",
+    "width": 1440,
+    "start": 118,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 72,
+        "bottom": 106
+      }
+    ],
+    "notes": [
+      "2026/10/18 02:11:06 · 生成 · 1 次 · 37秒 · 成功",
+      "2026/10/18 02:06:46 · 生成 · 1 次 · 47秒 · 成功",
+      "2026/10/18 02:05:47 · 生成 · 1 次 · 58秒 · 成功",
+      "2026/10/18 02:05:05 · 生成 · 1 次 · 43秒 · 成功",
+      "2026/10/18 00:07:51 · 生成 · 1 次 · 38秒 · 成功",
+      "2026/10/18 00:01:22 · 生成 · 1 次 · 102秒 · 成功",
+      "2026/10/18 00:00:15 · 生成 · 1 次 · 51秒 · 成功",
+      "2026/10/17 23:56:45 · 修改 · 1 次 · 164秒 · 成功",
+      "2026/10/17 23:54:49 · 生成 · 1 次 · 61秒 · 成功"
+    ]
+  },
+  {
+    "name": "images",
+    "width": 1728,
+    "start": 120,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 74,
+        "bottom": 108
+      }
+    ],
+    "notes": [
+      "2026/10/18 02:11:06 · 生成 · 1 次 · 37秒 · 成功",
+      "2026/10/18 02:06:46 · 生成 · 1 次 · 47秒 · 成功",
+      "2026/10/18 02:05:47 · 生成 · 1 次 · 58秒 · 成功",
+      "2026/10/18 02:05:05 · 生成 · 1 次 · 43秒 · 成功",
+      "2026/10/18 00:07:51 · 生成 · 1 次 · 38秒 · 成功",
+      "2026/10/18 00:01:22 · 生成 · 1 次 · 102秒 · 成功",
+      "2026/10/18 00:00:15 · 生成 · 1 次 · 51秒 · 成功",
+      "2026/10/17 23:56:45 · 修改 · 1 次 · 164秒 · 成功",
+      "2026/10/17 23:54:49 · 生成 · 1 次 · 61秒 · 成功"
+    ]
+  },
+  {
+    "name": "layouts",
+    "width": 1440,
+    "start": 142,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 84,
+        "bottom": 118
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "layouts",
+    "width": 1728,
+    "start": 144,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 86,
+        "bottom": 120
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "publishing",
+    "width": 1440,
+    "start": 142,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 84,
+        "bottom": 118
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "publishing",
+    "width": 1728,
+    "start": 144,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 86,
+        "bottom": 120
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "inbox",
+    "width": 1440,
+    "start": 142,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 84,
+        "bottom": 118
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "inbox",
+    "width": 1728,
+    "start": 144,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 86,
+        "bottom": 120
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "deals",
+    "width": 1440,
+    "start": 142,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 84,
+        "bottom": 118
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "deals",
+    "width": 1728,
+    "start": 144,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 86,
+        "bottom": 120
+      }
+    ],
+    "notes": []
+  },
+  {
+    "name": "dashboard",
+    "width": 1440,
+    "start": 118,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 72,
+        "bottom": 106
+      }
+    ],
+    "notes": [
+      "命中 -- / 已终判 --该月首发选题 --",
+      "命中 -- / 已终判 --该月首发选题 --",
+      "预估命中 -- / 已完成 D7 --该月首发选题 --",
+      "预估命中 -- / 已完成 D7 --该月首发选题 --",
+      "所选 30 天中仅有 2 天记录，区间净增暂不计算。"
+    ]
+  },
+  {
+    "name": "dashboard",
+    "width": 1728,
+    "start": 120,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 74,
+        "bottom": 108
+      }
+    ],
+    "notes": [
+      "命中 -- / 已终判 --该月首发选题 --",
+      "命中 -- / 已终判 --该月首发选题 --",
+      "预估命中 -- / 已完成 D7 --该月首发选题 --",
+      "预估命中 -- / 已完成 D7 --该月首发选题 --",
+      "所选 30 天中仅有 2 天记录，区间净增暂不计算。"
+    ]
+  },
+  {
+    "name": "topics",
+    "width": 1440,
+    "start": 118,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 72,
+        "bottom": 106
+      }
+    ],
+    "notes": [
+      "抖音搜索关键词 · 采集于2026-10-17T12:15:12.432Z；本账号显示占比：8.9%；原始线索未提供可直达链接；探索依据：给定已发布偏好未见益智题逐步验证，区别于自动剪辑和AI创业话题；已有华容道搜索线索支持尝试。history为空，未做过状态仍待核对；热度未验证。",
+      "样本尚未达到门槛，不新增 FIRE。"
+    ]
+  },
+  {
+    "name": "topics",
+    "width": 1728,
+    "start": 120,
+    "overflow": false,
+    "linksWithoutArrow": [],
+    "legacyText": false,
+    "primary": [
+      {
+        "top": 74,
+        "bottom": 108
+      }
+    ],
+    "notes": [
+      "抖音搜索关键词 · 采集于2026-10-17T12:15:12.432Z；本账号显示占比：8.9%；原始线索未提供可直达链接；探索依据：给定已发布偏好未见益智题逐步验证，区别于自动剪辑和AI创业话题；已有华容道搜索线索支持尝试。history为空，未做过状态仍待核对；热度未验证。",
+      "样本尚未达到门槛，不新增 FIRE。"
+    ]
+  }
+]

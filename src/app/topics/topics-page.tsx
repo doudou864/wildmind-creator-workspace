@@ -14,7 +14,7 @@ import {
   type TopicData,
 } from '@/lib/topic-model';
 import { number } from '@/lib/format';
-import { Button, Card, Dialog, Empty, Segmented, Tag } from '@/ui/components';
+import { PageHeader, Button, Card, Dialog, Empty, Segmented, Tag } from '@/ui/components';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { request, useResource } from '@/ui/use-resource';
 
@@ -95,35 +95,24 @@ export default function TopicsPage({
   return (
     <main className="workspace topics-workspace">
       <WorkspaceHeader current="/topics" date={today} syncWindow={parameters.syncWindow} />
-      <div className="modebar">
-        <p>
-          <span className="mode-label mono">LOCAL</span>
-          {data.serviceMessage}
-        </p>
-        <Button className="text-button" onClick={() => void refresh()}>
-          刷新记录 ↻
-        </Button>
-      </div>
-      <div className="topics-heading">
-        <div>
-          <span className="eyebrow">TOPIC DISCOVERY</span>
-          <h1>
-            选题中心<span className="heading-separator">/</span>
-            <span>下一条，做什么？</span>
-          </h1>
-        </div>
-        <div className="topic-generation">
-          <span className="small">{data.generationReady ? '按启用渠道生成' : '选题生成服务待接入'}</span>
-          <Button className="selected" disabled={!data.generationReady || busy} onClick={() => void generate()}>
+      <PageHeader
+        title="选题中心"
+        summary={`${candidateCount} 个待筛选，${saved.length} 个已选中`}
+        onRefresh={() => void refresh()}
+        action={
+          <Button
+            variant="primary"
+            disabled={!data.generationReady || busy}
+            disabledReason={!data.generationReady ? '选题生成服务尚不可用。' : '正在生成，请稍候。'}
+            onClick={() => void generate()}
+          >
             生成 {parameters.topicCandidateCount} 个候选
           </Button>
-        </div>
-      </div>
+        }
+      />
       <section className="card topic-summary" aria-label="选题概况">
         <div className="topic-summary-intro">
-          <span className="eyebrow">00 · TOPIC LIBRARY</span>
           <p>选题库</p>
-          <small>历史记录持续保留</small>
         </div>
         {[
           { value: candidateCount, label: '待筛选' },
@@ -136,33 +125,23 @@ export default function TopicsPage({
             <span>{item.label}</span>
           </div>
         ))}
-        <div className="topic-summary-note">
-          <span className="eyebrow">PREFERENCE → DIRECTION</span>
-          <p>
-            偏好决定推什么
-            <br />
-            表现决定标什么
-          </p>
-        </div>
       </section>
       <div className="topic-feedback" role="status" aria-live="polite">
-        {error ||
-          notice ||
-          `每批 ${parameters.topicCandidateCount} 个候选，含 ${parameters.topicExploreMin}–${parameters.topicExploreMax} 个探索位；热度证据范围见具体来源。`}
+        {error || notice}
       </div>
       <div className="topics-grid">
         <aside className="topic-sidebar">
-          <Card index="01" title="输入渠道" meta={<span className="eyebrow">{enabled.length} ON</span>}>
-            <button
+          <Card title="输入渠道" meta={<span className="eyebrow">{enabled.length} 个启用</span>}>
+            <Button
               className={`channel-filter ${channelId === 'all' ? 'active' : ''}`}
               aria-pressed={channelId === 'all'}
               onClick={() => setChannelId('all')}
             >
               <span>全部渠道</span>
               <span className="mono">{topics.length}</span>
-            </button>
+            </Button>
             {channels.map((channel) => (
-              <button
+              <Button
                 key={channel.id}
                 className={`channel-filter ${channelId === channel.id ? 'active' : ''}`}
                 aria-pressed={channelId === channel.id}
@@ -173,21 +152,18 @@ export default function TopicsPage({
                   <small>{channel.enabled ? channel.type : '已停用 · 历史记录保留'}</small>
                 </span>
                 <span className="mono">{topics.filter((t) => t.channelId === channel.id).length}</span>
-              </button>
+              </Button>
             ))}
             <div className="channel-config">
-              <p className="small">
-                外部渠道 {channels.filter((c) => c.kind === 'external').length} 个 · 在渠道文档中增删
-              </p>
-              <Button onClick={() => setModal(true)}>查看渠道文档 ↗</Button>
+              <Button onClick={() => setModal(true)}>查看渠道文档 →</Button>
             </div>
           </Card>
-          <Card index="04" title="FIRE 开启条件">
+          <Card title="D21 样本">
             <div className="sample-count">
               <strong className="mono">{number(data.d21Samples)}</strong>
               <span className="mono">/ {parameters.topicFireMinimum}</span>
             </div>
-            <p className="small">有 D21 结果的抖音作品，含历史补录</p>
+
             <div
               className="sample-track"
               role="progressbar"
@@ -202,20 +178,14 @@ export default function TopicsPage({
             </div>
             <p className="sample-status">
               {data.d21Samples === null
-                ? '复盘服务待接入，样本数未知'
+                ? '暂无 D21 样本数据'
                 : fireEnabled
                   ? '已达到开启门槛'
                   : `还差 ${parameters.topicFireMinimum - data.d21Samples} 条 D21 结果`}
             </p>
-            <p className="small topic-rule">样本不足仍可选题，不新增 FIRE。首次选中的标记与依据永久保留。</p>
           </Card>
         </aside>
-        <Card
-          index="02"
-          title="候选方向"
-          meta={<span className="eyebrow">{visible.length} ITEMS</span>}
-          className="topic-list-card"
-        >
+        <Card title="候选方向" meta={<span className="eyebrow">{visible.length} 条</span>} className="topic-list-card">
           <div className="topic-status-tabs">
             <Segmented<StatusFilter>
               label="选题状态"
@@ -262,15 +232,15 @@ export default function TopicsPage({
                 <span className="topic-number mono">{count(index + 1)}</span>
                 <div className="topic-row-content">
                   <div className="topic-row-title">
-                    <button
+                    <Button
                       className="topic-title"
                       aria-pressed={focused?.id === topic.id}
                       onClick={() => setFocusId(topic.id)}
                     >
                       {topic.title}
-                    </button>
+                    </Button>
                     {isFire(topic) && <Tag>FIRE</Tag>}
-                    {topic.exploration && <Tag outline>EXPLORE</Tag>}
+                    {topic.exploration && <Tag>EXPLORE</Tag>}
                   </div>
                   <p className="topic-direction">{topic.direction}</p>
                   <div className="topic-row-footer">
@@ -278,12 +248,16 @@ export default function TopicsPage({
                     <div className="topic-row-actions">
                       {topic.status === 'candidate' ? (
                         <>
-                          <Button disabled={!canChange} onClick={() => void updateTopic(topic, 'skipped')}>
+                          <Button
+                            disabled={!canChange}
+                            disabledReason={!data.writeReady ? '选题保存暂不可用。' : '正在处理，请稍候。'}
+                            onClick={() => void updateTopic(topic, 'skipped')}
+                          >
                             跳过
                           </Button>
                           <Button
-                            className="selected"
                             disabled={!canChange}
+                            disabledReason={!data.writeReady ? '选题保存暂不可用。' : '正在处理，请稍候。'}
                             onClick={() => void updateTopic(topic, 'selected')}
                           >
                             选中
@@ -293,7 +267,11 @@ export default function TopicsPage({
                         <>
                           <span className="decision-label">{topicStatusLabels[topic.status]}</span>
                           {topic.status !== 'published' && (
-                            <Button disabled={!canChange} onClick={() => void updateTopic(topic, 'candidate')}>
+                            <Button
+                              disabled={!canChange}
+                              disabledReason={!data.writeReady ? '选题保存暂不可用。' : '正在处理，请稍候。'}
+                              onClick={() => void updateTopic(topic, 'candidate')}
+                            >
                               移回候选
                             </Button>
                           )}
@@ -309,25 +287,24 @@ export default function TopicsPage({
             )}
           </div>
           <div className="topic-list-bottom">
-            <span>停用渠道不影响历史候选与已选记录</span>
-            <Button className="text-button" onClick={clear}>
+            <Button variant="text" onClick={clear}>
               清除筛选
             </Button>
           </div>
         </Card>
         <aside className="topic-detail-column">
-          <Card index="03" title="选题依据" className="topic-detail-card">
+          <Card title="选题依据" className="topic-detail-card">
             {focused ? (
               <>
                 <div className="detail-topic-tags">
                   {isFire(focused) && <Tag>FIRE</Tag>}
-                  {focused.exploration && <Tag outline>EXPLORE</Tag>}
+                  {focused.exploration && <Tag>EXPLORE</Tag>}
                   <span className="small">{focused.selectedAt ? '首次选中时已定格' : '尚未选中'}</span>
                 </div>
                 <h3>{focused.title}</h3>
                 <p className="detail-direction">{focused.direction}</p>
                 <div className="topic-detail-section">
-                  <h4 className="eyebrow">SOURCE · 原始线索</h4>
+                  <h4 className="eyebrow">原始线索</h4>
                   <blockquote>{focused.signal}</blockquote>
                   <p className="small">
                     {source?.name ?? '来源渠道已移除'} · {focused.sourceContext}
@@ -342,7 +319,7 @@ export default function TopicsPage({
                       <dd>
                         {focused.sourceUrl ? (
                           <a href={focused.sourceUrl} target="_blank" rel="noreferrer">
-                            查看原始来源 ↗
+                            查看原始来源 →
                           </a>
                         ) : (
                           '--'
@@ -352,7 +329,7 @@ export default function TopicsPage({
                   </dl>
                 </div>
                 <div className="topic-detail-section">
-                  <h4 className="eyebrow">EVIDENCE · 推荐依据</h4>
+                  <h4 className="eyebrow">推荐依据</h4>
                   {evidence ? (
                     <>
                       <p className="topic-evidence">{evidence.reason}</p>
@@ -380,8 +357,8 @@ export default function TopicsPage({
                 <div className="detail-topic-actions">
                   {focused.status !== 'published' && (
                     <Button
-                      className="selected"
                       disabled={!canChange}
+                      disabledReason={!data.writeReady ? '选题保存暂不可用。' : '正在处理，请稍候。'}
                       onClick={() =>
                         void updateTopic(focused, focused.status === 'selected' ? 'candidate' : 'selected')
                       }
@@ -424,11 +401,11 @@ export default function TopicsPage({
               <Empty>选择一个候选，查看来源与依据</Empty>
             )}
           </Card>
-          <Card index="05" title="已选清单" meta={<span className="eyebrow">{count(saved.length)} PICKED</span>}>
+          <Card title="已选清单" meta={<span className="eyebrow">{count(saved.length)} 个已选</span>}>
             {saved.length ? (
               <div className="picked-list">
                 {saved.map((topic) => (
-                  <button
+                  <Button
                     key={topic.id}
                     onClick={() => {
                       setStatus('selected');
@@ -440,21 +417,17 @@ export default function TopicsPage({
                   >
                     <span>{topic.title}</span>
                     {isFire(topic) && <Tag>FIRE</Tag>}
-                    <span>↗</span>
-                  </button>
+                    <span>→</span>
+                  </Button>
                 ))}
               </div>
             ) : (
               <Empty>还没有选中的方向</Empty>
             )}
-            <p className="small topic-rule">选中后可进入生图中心，关联封面与配图。</p>
           </Card>
         </aside>
       </div>
-      <footer className="footer">
-        <span className="mono">WILDMIND / TOPIC DISCOVERY</span>
-        <span>选题与表现分开判断 · 首次选择保留依据</span>
-      </footer>
+
       {modal && (
         <Dialog title="选题输入渠道" onClose={() => setModal(false)}>
           <p className="dialog-intro">

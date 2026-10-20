@@ -24,7 +24,7 @@ import {
   type LayoutDocument,
   type LayoutPlatform,
 } from '@/lib/layout-model';
-import { Button, Card, Dialog, Empty, Segmented } from '@/ui/components';
+import { PageHeader, Button, Card, Dialog, Empty, Segmented } from '@/ui/components';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { LayoutPreview } from '@/ui/layout-preview';
 import { AssetImage } from '@/ui/asset-image';
@@ -52,7 +52,7 @@ export default function LayoutsPage({
   const [source, setSource] = useState('');
   const [contentId, setContentId] = useState<string | null>(initialContent);
   const [document, setDocument] = useState<LayoutDocument | null>(
-    () => initialData.documents.find((d) => d.id === initialLayout) ?? null,
+    () => data.documents.find((d) => d.id === initialLayout) ?? null,
   );
   const savedRecord = useRef<string | null>(null);
   const editSession = useRef(0);
@@ -215,36 +215,22 @@ export default function LayoutsPage({
     <main className="workspace layouts-workspace">
       <AutosaveStatus statuses={[autosave]} />
       <WorkspaceHeader current="/layouts" date={today} syncWindow={syncWindow} />
-      <div className="modebar">
-        <span className="eyebrow">04 · LAYOUT STUDIO</span>
-        <span>{data.message}</span>
-      </div>
-      <div className="topics-heading">
-        <div>
-          <h1>排版中心</h1>
-          <p>一份文章，三个版本。分别编辑，分别确认。</p>
-        </div>
-        <div className="image-heading-actions">
-          <span className="small">
-            {dirty
-              ? data.storageReady
-                ? '正在自动保存…'
-                : '存储服务未接入，尚未保存'
-              : document?.id
-                ? '已保存'
-                : '尚未开始'}
-          </span>
-          <Button disabled={busy} onClick={() => void refresh()}>
-            刷新资料
-          </Button>
-          <Button disabled={busy} onClick={() => setLibrary(true)}>
-            稿件库 · {documents.length}
-          </Button>
-          <Button disabled={busy} onClick={() => protect(reset)}>
+      <PageHeader
+        title="排版中心"
+        summary={`${documents.length} 份稿件${document ? '，正在编辑' : ''}`}
+        onRefresh={() => void refresh()}
+        refreshing={busy}
+        action={
+          <Button
+            variant="primary"
+            disabled={busy}
+            disabledReason="正在处理稿件，请稍候。"
+            onClick={() => protect(reset)}
+          >
             新建文章
           </Button>
-        </div>
-      </div>
+        }
+      />
       {feedback && (
         <p className="topic-feedback" role="status">
           {feedback}
@@ -256,9 +242,12 @@ export default function LayoutsPage({
         </p>
       )}
       <Card
-        index="00"
         title="文章来源"
-        meta={<span className="eyebrow">{config.style.name} · 三版独立</span>}
+        meta={
+          <Button disabled={busy} disabledReason="正在处理，请稍候。" onClick={() => setLibrary(true)}>
+            稿件库 · {documents.length}
+          </Button>
+        }
         className="layout-source"
       >
         <ContentPicker
@@ -290,19 +279,15 @@ export default function LayoutsPage({
               />
             </label>
             <div className="layout-source-notes">
-              <p>按明确的文字标记识别结构；普通文本按段落排版，可在每版中调整结构。</p>
-              <p>公众号保留完整排版；抖音复用原文后精简；X 保留标题、加粗、列表和图片。</p>
-              <Button className="selected" disabled={!source.trim()} onClick={generate}>
+              <Button disabled={!source.trim()} disabledReason="请先粘贴文章。" onClick={generate}>
                 开始排版 →
               </Button>
-              <span className="small">建立稿件后自动保存；服务未接入时仅保留本页编辑</span>
             </div>
           </div>
         ) : (
           <div className="layout-source-summary">
             <div>
               <strong>{parseArticle(document.source).title}</strong>
-              <p className="small">初始内容来自同一篇文章；后续编辑互不联动。需要另一篇文章时选择“新建文章”。</p>
             </div>
             <details>
               <summary>查看原文</summary>
@@ -322,15 +307,12 @@ export default function LayoutsPage({
           return (
             <Card
               key={platform.id}
-              index={`0${index + 1}`}
               title={platform.name}
               meta={<span className="layout-status">{!v ? '待排版' : locked ? '已送出 · 锁定' : '待确认'}</span>}
               className="layout-version"
             >
               <div className="layout-version-toolbar">
-                <span className="eyebrow">
-                  {platform.code} · {platform.preview}
-                </span>
+                <span className="eyebrow">{platform.preview}</span>
                 <Segmented
                   label={`${platform.name}视图`}
                   value={modes[platform.id]}
@@ -388,6 +370,7 @@ export default function LayoutsPage({
                                 <Button
                                   aria-label={`${platform.name}第${i + 1}块上移`}
                                   disabled={i === 0}
+                                  disabledReason="已在首位，或正在处理，暂不能前移。"
                                   onClick={() => move(platform.id, block.id, -1)}
                                 >
                                   ↑
@@ -395,6 +378,7 @@ export default function LayoutsPage({
                                 <Button
                                   aria-label={`${platform.name}第${i + 1}块下移`}
                                   disabled={i === v.blocks.length - 1}
+                                  disabledReason="已在末位，不能下移。"
                                   onClick={() => move(platform.id, block.id, 1)}
                                 >
                                   ↓
@@ -472,6 +456,7 @@ export default function LayoutsPage({
                             platform.id === 'douyin' &&
                             v.blocks.filter((b) => b.type === 'image').length >= config.douyinMaxImages
                           }
+                          disabledReason="已达到此平台的配图数量上限。"
                           onClick={() => {
                             setSearch('');
                             setPicker({ platform: platform.id });
@@ -503,6 +488,7 @@ export default function LayoutsPage({
                             )}
                             <Button
                               disabled={locked || busy}
+                              disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
                               onClick={() => {
                                 setSearch('');
                                 setPicker({ platform: platform.id, cover: r });
@@ -515,15 +501,7 @@ export default function LayoutsPage({
                       })}
                     </div>
                   )}
-                  {platform.id === 'douyin' && (
-                    <p className="layout-version-note">
-                      原文已复用，请精简为图文文案。配图 {config.douyinImageRatio}，最多 {config.douyinMaxImages}{' '}
-                      张（工作台配置）。
-                    </p>
-                  )}
-                  {platform.id === 'x' && (
-                    <p className="layout-version-note">仅保留标题、加粗、列表、图片；引用转为正文。</p>
-                  )}
+
                   <div className="layout-ai">
                     <label>
                       用自然语言修改这一版
@@ -539,28 +517,24 @@ export default function LayoutsPage({
                     </label>
                     <Button
                       disabled={!data.aiReady || !persisted || !instructions[platform.id].trim() || locked || busy}
+                      disabledReason={
+                        !data.aiReady
+                          ? 'AI 修改暂不可用。'
+                          : locked
+                            ? '请先退回修改。'
+                            : !instructions[platform.id].trim()
+                              ? '请填写修改要求。'
+                              : '请等待稿件保存或当前操作完成。'
+                      }
                       onClick={() => void act(platform.id, 'ai')}
                     >
                       应用修改
                     </Button>
-                    <span className="small">
-                      {!data.aiReady ? 'AI 修改服务待接入' : !persisted ? '正在自动保存稿件' : '修改后需重新确认'}
-                    </span>
                   </div>
                 </>
               )}
               <div className="layout-confirm">
-                <div className="small">
-                  {!v
-                    ? '完成编辑后，单独确认这一版'
-                    : locked
-                      ? '发布中心只分发；如需改稿，先退回排版中心。'
-                      : issues.length
-                        ? issues.join(' · ')
-                        : dirty
-                          ? '内容正在自动保存。'
-                          : '内容已齐备，请预览并人工确认。'}
-                </div>
+                <div className="small">{v && issues.length > 0 ? issues.join(' · ') : null}</div>
                 <div className="layout-confirm-buttons">
                   {v && (
                     <Button
@@ -597,7 +571,17 @@ export default function LayoutsPage({
 
                   <Button
                     disabled={!canSend}
-                    title={!data.handoffReady ? '发布交接服务未接入' : undefined}
+                    disabledReason={
+                      !data.handoffReady
+                        ? '发布交接暂不可用。'
+                        : issues.length
+                          ? issues.join('；')
+                          : !v
+                            ? '请先排版文章。'
+                            : locked
+                              ? '这一版已送出，请先退回修改。'
+                              : '请等待稿件保存完成。'
+                    }
                     onClick={() => setConfirmation({ platform: platform.id, action: 'confirm-send' })}
                   >
                     确认并送去发布
@@ -613,6 +597,7 @@ export default function LayoutsPage({
                   {locked && (
                     <Button
                       disabled={!persisted || !data.handoffReady || busy}
+                      disabledReason={!data.handoffReady ? '发布交接暂不可用。' : '请等待稿件保存或当前操作完成。'}
                       onClick={() => setConfirmation({ platform: platform.id, action: 'revise' })}
                     >
                       退回修改
@@ -624,15 +609,13 @@ export default function LayoutsPage({
           );
         })}
       </div>
-      <footer className="layout-foot">
-        <span>预览按平台结构呈现，平台端最终效果在发布接入时核对。</span>
-        <span>编辑自动保存 → 确认并送去发布</span>
+      <div className="page-tools">
         <Link
           href={`/images?${new URLSearchParams({ ...(document?.contentId ? { content: document.contentId } : contentId ? { content: contentId } : {}), ...(initialTopic ? { topic: initialTopic } : {}) })}`}
         >
           去生图中心准备配图 →
         </Link>
-      </footer>
+      </div>
       {picker && (
         <Dialog
           title={`选择${picker.cover ? `${picker.cover} 封面` : '配图'} · ${config.platforms.find((p) => p.id === picker.platform)?.name}`}
@@ -653,19 +636,19 @@ export default function LayoutsPage({
             >
               新窗口去生图中心 →
             </Link>
-            <Button onClick={() => void refresh()}>刷新素材</Button>
+            <Button onClick={() => void refresh()}>刷新</Button>
           </div>
           {available.length ? (
             <div className="asset-picker">
               {available.map((a) => (
-                <button key={a.id} className="asset-tile" onClick={() => choose(a)}>
+                <Button key={a.id} className="asset-tile" onClick={() => choose(a)}>
                   <AssetImage src={`/api/images/assets/${encodeURIComponent(a.id)}/file`} alt={a.title} />
                   <strong>{a.title}</strong>
                   <span className="small">
                     {a.ratio} · V{a.version}
                     {a.selected ? ' · 已选版本' : ''}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           ) : (
@@ -678,7 +661,7 @@ export default function LayoutsPage({
           {documents.length ? (
             <div className="image-drafts">
               {documents.map((d) => (
-                <button
+                <Button
                   key={d.id}
                   onClick={() => {
                     setLibrary(false);
@@ -701,7 +684,7 @@ export default function LayoutsPage({
                       .map((p) => `${p.name}：${d.variants[p.id].status === 'sent' ? '已送出' : '待确认'}`)
                       .join(' / ')}
                   </span>
-                </button>
+                </Button>
               ))}
             </div>
           ) : (

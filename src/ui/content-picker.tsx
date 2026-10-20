@@ -108,7 +108,7 @@ export function ContentPicker({
       <div>
         <Button
           disabled={disabled || !data.writeReady}
-          title={!data.writeReady ? '作品保存服务待接入' : undefined}
+          disabledReason={!data.writeReady ? '作品保存暂不可用。' : '当前作品已锁定或正在处理。'}
           onClick={() => {
             setTitle('');
             setTopic(topicId ?? '');
@@ -120,11 +120,11 @@ export function ContentPicker({
         >
           新建作品
         </Button>{' '}
-        <Button disabled={busy} onClick={() => void refresh()}>
-          刷新作品
+        <Button disabled={busy} disabledReason="正在处理，请稍候。" onClick={() => void refresh()}>
+          刷新
         </Button>
       </div>
-      {!data.recordsReady && <p className="small">作品服务待接入；新建和保存暂不可用。</p>}
+      {null}
       {error && <p role="alert">{error}</p>}
       {open && (
         <Dialog
@@ -171,11 +171,18 @@ export function ContentPicker({
               <input aria-label="计划发布日期" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
             </label>
           </fieldset>
-          <p className="small">同一个选题可以分别制作视频或图文，每条作品独立关联素材和发布记录。</p>
+
           {notice && <p role="alert">{notice}</p>}
           <Button
             disabled={
               busy || !title.trim() || !data.writeReady || (!!topic && !data.topics.some((t) => t.id === topic))
+            }
+            disabledReason={
+              !data.writeReady
+                ? '作品保存暂不可用。'
+                : !title.trim()
+                  ? '请填写作品标题。'
+                  : '请确认关联选题仍可用，并等待当前操作完成。'
             }
             onClick={() => void create()}
           >

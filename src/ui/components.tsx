@@ -1,20 +1,114 @@
 'use client';
 
-import { useLayoutEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { number } from '@/lib/format';
 import type { Parameters } from '@/lib/config';
 
-export function Button({ className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement>) {
-  return <button className={`button ${className}`} {...props} />;
+export function Button({
+  className = '',
+  variant = 'secondary',
+  disabledReason,
+  children,
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: 'primary' | 'secondary' | 'text';
+  disabledReason?: string;
+}) {
+  const button = (
+    <button className={`button button-${variant} ${className}`} {...props}>
+      {children}
+      {variant === 'text' && <span aria-hidden="true"> →</span>}
+    </button>
+  );
+  return props.disabled ? (
+    <span
+      className="disabled-control"
+      tabIndex={0}
+      role="group"
+      aria-label={disabledReason ?? props.title ?? '当前不可用'}
+      data-disabled-reason={disabledReason ?? props.title ?? '请先完成所需内容，或等待当前操作结束。'}
+      aria-describedby="disabled-help"
+    >
+      {button}
+    </span>
+  ) : (
+    button
+  );
+}
+
+function DisabledHelp() {
+  const [hint, setHint] = useState<{ reason: string; x: number; y: number } | null>(null);
+  useEffect(() => {
+    function show(event: Event) {
+      const target =
+        event.target instanceof Element ? event.target.closest<HTMLElement>('[data-disabled-reason]') : null;
+      if (!target) return setHint(null);
+      const rect = target.getBoundingClientRect();
+      setHint({
+        reason: target.dataset.disabledReason!,
+        x: Math.max(12, Math.min(rect.left, window.innerWidth - 360)),
+        y: Math.min(rect.bottom + 6, window.innerHeight - 90),
+      });
+    }
+    const hide = () => setHint(null);
+    document.addEventListener('pointerover', show);
+    document.addEventListener('focusin', show);
+    document.addEventListener('focusout', hide);
+    document.addEventListener('scroll', hide, true);
+    return () => {
+      document.removeEventListener('pointerover', show);
+      document.removeEventListener('focusin', show);
+      document.removeEventListener('focusout', hide);
+      document.removeEventListener('scroll', hide, true);
+    };
+  }, []);
+  const tooltip = (
+    <span
+      id="disabled-help"
+      role="tooltip"
+      className={hint ? 'disabled-help' : 'sr-only'}
+      style={hint ? { left: hint.x, top: hint.y } : undefined}
+    >
+      ⓘ {hint?.reason ?? '悬停或聚焦禁用操作，查看原因'}
+    </span>
+  );
+  return hint ? createPortal(tooltip, document.querySelector('dialog[open]') ?? document.body) : tooltip;
+}
+
+export function PageHeader({
+  title,
+  summary,
+  action,
+  onRefresh,
+  refreshing = false,
+}: {
+  title: string;
+  summary: ReactNode;
+  action: ReactNode;
+  onRefresh: () => void;
+  refreshing?: boolean;
+}) {
+  return (
+    <div className="page-header">
+      <h1>{title}</h1>
+      <p className="page-summary">{summary}</p>
+      <div className="page-actions">
+        {action}
+        <Button onClick={onRefresh} disabled={refreshing} disabledReason="正在处理，请稍后刷新。">
+          刷新
+        </Button>
+      </div>
+      <DisabledHelp />
+    </div>
+  );
 }
 export function Card({
-  index,
   title,
   meta,
   children,
   className = '',
 }: {
-  index: string;
   title: string;
   meta?: ReactNode;
   children: ReactNode;
@@ -23,10 +117,7 @@ export function Card({
   return (
     <section className={`card ${className}`}>
       <div className="card-heading">
-        <h2>
-          <span className="eyebrow">{index}</span>
-          {title}
-        </h2>
+        <h2>{title}</h2>
         {meta && <div className="card-meta">{meta}</div>}
       </div>
       {children}
@@ -76,8 +167,13 @@ export function Ratio({ value, parameters }: { value: number | null; parameters:
 export function Empty({ children }: { children: ReactNode }) {
   return <p className="empty">{children}</p>;
 }
-export function Tag({ children, outline = false }: { children: ReactNode; outline?: boolean }) {
-  return <span className={`tag${outline ? ' tag-outline' : ''}`}>{children}</span>;
+export function Tag({ children, dot = false }: { children: ReactNode; dot?: boolean }) {
+  return (
+    <span className="tag">
+      {dot && <span aria-hidden="true">● </span>}
+      {children}
+    </span>
+  );
 }
 export function Dialog({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null);

@@ -907,3 +907,158 @@ dialog::backdrop {
   font-size: 32px;
   font-weight: 700;
 }
+
+/* U1: shared presentation, without changing navigation keys. */
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 56px;
+  padding: 12px 0;
+}
+.page-header h1 {
+  font-size: 20px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.page-summary {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.page-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.page-actions .button {
+  min-height: 34px;
+  padding: 7px 14px;
+}
+.page-tools {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+.button-primary {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--card);
+}
+.button-primary:hover:not(:disabled) {
+  background: var(--ink-2);
+}
+.button-text {
+  background: transparent;
+  border-color: transparent;
+  gap: 4px;
+}
+.button-text:hover:not(:disabled) {
+  background: var(--hover);
+  text-decoration: underline;
+}
+.workspace .button:disabled,
+.workspace button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.disabled-control {
+  display: inline-flex;
+  max-width: 100%;
+  cursor: not-allowed;
+}
+.disabled-control:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.disabled-control > button {
+  pointer-events: none;
+}
+.disabled-help {
+  position: fixed;
+  z-index: 100;
+  width: max-content;
+  max-width: 348px;
+  padding: 10px 12px;
+  background: var(--ink);
+  color: var(--card);
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.7;
+  pointer-events: none;
+}
+.workspace .tag,
+.workspace .tag-outline,
+.workspace .layout-status,
+.workspace .deal-state,
+.workspace .inbox-reply-state {
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--ink-2);
+  padding: 0;
+  font-size: 12px;
+}
+.workspace a:not(.brand):not(.nav-key):hover {
+  text-decoration: underline;
+}
+.workspace button:not(.button):not(:disabled):hover {
+  background-color: var(--hover);
+}
+.workspace .text-button:not(.button) {
+  border: 1px solid var(--line);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.topic-feedback:empty {
+  display: none;
+}
+
+.workspace .button.button-secondary {
+  border: 1px solid var(--line);
+  background-color: var(--card);
+}
+.workspace .button.button-secondary:hover:not(:disabled) {
+  background-color: var(--hover);
+}
+.workspace .button.selected,
+.workspace .button[aria-pressed='true'] {
+  background-color: var(--ink);
+  color: var(--card);
+  border-color: var(--ink);
+}
+.workspace .button.selected:hover:not(:disabled),
+.workspace .button[aria-pressed='true']:hover:not(:disabled) {
+  background-color: var(--ink-2);
+}
+.workspace .button:not(.nav-key) {
+  white-space: normal;
+}
+.workspace .segments .button,
+.workspace .page-actions .button {
+  white-space: nowrap;
+}
+.workspace .source-button {
+  padding: 5px 8px;
+}
+.workspace .source-button::after {
+  content: '→';
+}
+.workspace .deal-summary > button {
+  display: block;
+  text-align: left;
+}
+.workspace .topic-summary {
+  grid-template-columns: 1.1fr repeat(4, 1fr);
+}
+.workspace .topic-title {
+  text-align: left;
+}
+.workspace .work-title {
+  display: block;
+  padding: 5px 8px;
+}
+.workspace .retry {
+  white-space: nowrap;
+}
