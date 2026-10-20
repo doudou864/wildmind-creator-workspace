@@ -1,0 +1,21 @@
+{
+  "backup": "data/backups/u1-fixture-confirmation/workspace-2026-10-20T10-03-54-316Z-00000551928834467625-882d9607-303d-40ca-b35f-febe80cd21b0.db",
+  "originalColumnDifferences": [
+    "collection_state"
+  ],
+  "marked": {
+    "contents": [
+      "017cfc52-c228-4df9-809e-6f92744f7428",
+      "23c65909-52c5-481f-876e-f9e7bd39dbbe"
+    ],
+    "image_drafts": [
+      "7269cbfa-c50d-4cf6-b139-537001b93c63"
+    ],
+    "publish_records": [
+      "92070da1-57ea-4c0b-8a10-54748a7f5fc3",
+      "9d5ab14c-a613-4af2-a4b4-20a025a6d488",
+      "0c46b7bd-ef3d-42e0-846d-ef31daaed398"
+    ]
+  },
+  "concurrentChangeNote": "collection_state 仅 schedule:2026-10-20 的 updated_at 被现有定时任务持续更新；value 内容不变。其余所有原有表和原有字段与迁移前备份完全一致。"
+}

@@ -81,6 +81,7 @@ export const publishDraftSchema = z
 export type PublishDraft = z.infer<typeof publishDraftSchema>;
 export type PublishSetting = z.infer<typeof publishSettingSchema>;
 export type PublishBatch = {
+  fixture?: boolean;
   id: string;
   revision: number;
   state: 'draft' | 'uploading' | 'prepared' | 'queued' | 'running' | 'finished';

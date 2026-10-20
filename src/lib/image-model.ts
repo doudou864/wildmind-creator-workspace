@@ -36,7 +36,7 @@ export const imageDraftSchema = z
   })
   .strict();
 export type ImageDraftInput = z.infer<typeof imageDraftSchema>;
-export type ImageDraft = ImageDraftInput & { id: string; updatedAt: string };
+export type ImageDraft = ImageDraftInput & { id: string; updatedAt: string; fixture?: boolean };
 export type Asset = {
   id: string;
   familyId: string;

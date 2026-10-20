@@ -67,3 +67,7 @@ Ego Lite 提示有更新，本轮沿用当前版本完成验收，未升级浏�
 - [近期作品 4 → 5 对比](dashboard-recovery-comparison.png) · [消息 385 → 387、待回复 40 → 42 对比](inbox-recovery-comparison.png)。
 - [两档页面检查](rework-checks.json)：每页刷新入口均为 1，无横向溢出，无居中文字；操作按钮均不折行，列表标题允许自然换行。[交互检查](rework-interactions.json)：主题展开/收起、作品非标题单元格跳转、下拉重新读取和页头整页刷新通过。
 - `node scripts/list-fixture-candidates.mjs` 以 SQLite readonly + query_only 扫描；[候选清单](fixture-candidates.md) 共 10 条：作品 4、草稿 1、发布记录 3、消息 2、商单 0。未记录创建时间的如实注明，没有用更新时间顶替。未标记、未删除、未改数据库结构。请用户按 ID 逐条确认；本轮不进入 U2。
+
+## 候选逐条确认（后续记录）
+
+用户已确认 6 条为测试记录、4 条为真实记录。已备份、迁移并标记，详情见 [fixture 执行报告](fixture-confirmation.md)。本页先前截图记录的是 U1 返工时刻（尚未标记），不能作为标记后的发布列表状态；当前原始 3 条发布记录仍可查，页面列表已隐藏。两份 Opus5.5 档案只读调查见 [结论与待确认方案](opus-association-conclusion.md)。停在 U1。

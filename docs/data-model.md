@@ -442,3 +442,7 @@ PostSnapshot / AccountDaily 增加 precision（exact/display/unknown）和 rawVa
 ### 数据中心 AI 解读（第 13 步）
 
 迁移 `0008_daffy_nocturne` 仅新增 `data_interpretations` 和指纹唯一索引，迁移前备份。保存作品、检查点、计算数字表、四段解读和生成时间；指纹由作品与数字表计算，相同数据复用已存结果。页面读取不调用 AI、不写解读；只有按钮成功生成才写入，新数字表另存一条，历史记录保留。
+
+## 显式测试记录标记（U1，2026-10-20 用户确认）
+
+Drizzle 0009 为 `contents`、`image_drafts`、`publish_records` 各新增 `fixture INTEGER NOT NULL DEFAULT false`，ORM/读取结果映射为布尔值。仅用户逐条确认的记录设为 true；不根据标题或关联关系推断。原始 GET 接口返回全部记录和标记，正常 UI 读取投影过滤 fixture=true；写入输入契约不开放此字段。原业务字段、发布安全状态与历史数据保留。执行前在线备份数据库。

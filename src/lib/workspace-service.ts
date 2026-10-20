@@ -35,7 +35,7 @@ export async function readImages(): Promise<ImageData> {
       .select()
       .from(imageDrafts)
       .all()
-      .map((r) => ({ ...r.input, id: r.id, updatedAt: r.updatedAt })),
+      .map((r) => ({ ...r.input, id: r.id, updatedAt: r.updatedAt, fixture: r.fixture })),
     topics: db.db.select({ id: topics.id, title: topics.title }).from(topics).all(),
     contents: db.db.select().from(contents).all(),
     contentWriteReady: true,

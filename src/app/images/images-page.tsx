@@ -210,7 +210,7 @@ export default function ImagesPage({
       savedRecord.current = null;
       setDraftMeta(null);
     } else {
-      const { id, updatedAt, ...input } = value;
+      const { id, updatedAt, fixture, ...input } = value;
       setDraft(imageDraftSchema.parse(input));
       setDraftMeta({ id: value.id });
     }

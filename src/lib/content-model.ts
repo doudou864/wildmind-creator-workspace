@@ -16,6 +16,7 @@ export const contentInputSchema = z
   })
   .strict();
 export const contentSchema = contentInputSchema.extend({
+  fixture: z.boolean().optional(),
   id: z.string().min(1),
   updatedAt: z.string(),
   videoCovers: z.record(z.string(), z.string()).default({}),

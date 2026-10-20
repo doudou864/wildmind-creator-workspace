@@ -32,6 +32,7 @@ export const topics = sqliteTable('topics', {
 });
 export const contents = sqliteTable('contents', {
   id: id(),
+  fixture: bool('fixture').notNull().default(false),
   topicId: text('topic_id').references(() => topics.id),
   form: text('form', { enum: ['视频', '图文'] }).notNull(),
   title: text('title').notNull(),
@@ -165,6 +166,7 @@ export const assets = sqliteTable(
 );
 export const imageDrafts = sqliteTable('image_drafts', {
   id: id(),
+  fixture: bool('fixture').notNull().default(false),
   input: json<ImageDraftInput>('input').notNull(),
   updatedAt: updatedAt(),
 });
@@ -256,6 +258,7 @@ export const topicGenerationResults = sqliteTable('topic_generation_results', {
 });
 export const publishRecords = sqliteTable('publish_records', {
   id: id(),
+  fixture: bool('fixture').notNull().default(false),
   revision: revision(),
   contentId: text('content_id')
     .notNull()
