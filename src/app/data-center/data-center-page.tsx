@@ -17,6 +17,7 @@ import { DataCenterChart, MetricNeedle } from '@/ui/data-center-chart';
 import { request } from '@/ui/use-resource';
 export default function DataCenterPage({
   data: initialData,
+  embedded = false,
   metricPresentation,
   rawReadings,
   readings,
@@ -24,6 +25,7 @@ export default function DataCenterPage({
   syncWindow,
 }: {
   data: DataCenterData;
+  embedded?: boolean;
   metricPresentation: DataCenterConfig['presentation'];
   rawReadings: AnalysisRead;
   readings: DashboardRead['readings'];
@@ -126,20 +128,21 @@ export default function DataCenterPage({
       </table>
     );
   }
+  const Root = embedded ? 'section' : 'main';
   return (
-    <main className="workspace data-center">
-      <WorkspaceHeader current="/data-center" date={today} syncWindow={syncWindow} />
+    <Root className={embedded ? 'data-center embedded-analysis' : 'workspace data-center'}>
+      {!embedded && <WorkspaceHeader current="/data-center" date={today} syncWindow={syncWindow} />}
       <PageHeader
-        title="数据中心"
+        title={embedded ? '作品表现' : '数据中心'}
         summary={
           selected
             ? `发布第 ${data.age} 天 · 最新累计播放 ${current?.precision === 'display' ? '约 ' : ''}${display(current?.value ?? null)} · ${conclusion}`
             : '先采集作品数据，再查看表现'
         }
-        onRefresh={() => router.refresh()}
+        onRefresh={embedded ? undefined : () => router.refresh()}
         action={
           <Button
-            variant="primary"
+            variant={embedded ? 'secondary' : 'primary'}
             disabled={!selected || busy || fresh || !data.fingerprints[day]}
             disabledReason={
               busy
@@ -163,41 +166,45 @@ export default function DataCenterPage({
           <section className="card analysis-summary">
             <h2>{workTitle(selected.title)}</h2>
             <p className="accent">数据{freshness(current?.capturedAt, today)}</p>
-            <div className="analysis-picker">
-              <input
-                aria-label="搜索作品标题"
-                placeholder="搜标题"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              <select
-                aria-label="选择作品"
-                value={selected.id}
-                onChange={(e) => router.push(`/data-center?post=${encodeURIComponent(e.target.value)}`)}
-              >
-                {!available.some((p) => p.id === selected.id) && (
-                  <option value={selected.id}>{workTitle(selected.title)}</option>
-                )}
-                {available.map((p) => (
-                  <option value={p.id} key={p.id}>
-                    {workTitle(p.title)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <details className="analysis-quick">
-              <summary>快速切换最近 {Math.min(10, data.posts.length)} 条作品 →</summary>
-              {data.posts.slice(0, 10).map((p) => (
-                <Link
-                  className="list-row"
-                  aria-current={p.id === selected.id ? 'page' : undefined}
-                  key={p.id}
-                  href={`/data-center?post=${encodeURIComponent(p.id)}`}
-                >
-                  {workTitle(p.title)} →
-                </Link>
-              ))}
-            </details>
+            {!embedded && (
+              <>
+                <div className="analysis-picker">
+                  <input
+                    aria-label="搜索作品标题"
+                    placeholder="搜标题"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <select
+                    aria-label="选择作品"
+                    value={selected.id}
+                    onChange={(e) => router.push(`/data-center?post=${encodeURIComponent(e.target.value)}`)}
+                  >
+                    {!available.some((p) => p.id === selected.id) && (
+                      <option value={selected.id}>{workTitle(selected.title)}</option>
+                    )}
+                    {available.map((p) => (
+                      <option value={p.id} key={p.id}>
+                        {workTitle(p.title)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <details className="analysis-quick">
+                  <summary>快速切换最近 {Math.min(10, data.posts.length)} 条作品 →</summary>
+                  {data.posts.slice(0, 10).map((p) => (
+                    <Link
+                      className="list-row"
+                      aria-current={p.id === selected.id ? 'page' : undefined}
+                      key={p.id}
+                      href={`/data-center?post=${encodeURIComponent(p.id)}`}
+                    >
+                      {workTitle(p.title)} →
+                    </Link>
+                  ))}
+                </details>
+              </>
+            )}
           </section>
           <Card
             title={enough ? '同龄数据对比' : '本条数据'}
@@ -324,6 +331,6 @@ export default function DataCenterPage({
           </Card>
         </>
       )}
-    </main>
+    </Root>
   );
 }

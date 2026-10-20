@@ -1,4 +1,5 @@
 'use client';
+import { MessageNavigation } from '@/ui/message-navigation';
 import { inboxSummary } from '@/ui/inbox-summary';
 import { ReplyActions, type ReplyDestinations } from '@/ui/reply-actions';
 import Link from 'next/link';
@@ -171,6 +172,7 @@ export default function InboxPage({
   return (
     <main className="workspace inbox-workspace">
       <WorkspaceHeader current="/inbox" date={today} syncWindow={syncWindow} />
+      <MessageNavigation current="inbox" />
       <PageHeader
         title="互动收件箱"
         summary={summary.valuableWaiting ? '先回复商单，再看问题与观点' : '查看消息，挑选值得送进选题的需求'}

@@ -1,28 +1,14 @@
-import { analysisRead } from '@/ui/analysis-read';
-import { dashboardRead } from '@/ui/dashboard-read';
-import { loadConfig } from '@/lib/config';
-import { loadDataCenterConfig } from '@/lib/data-center-config';
-import { usingDatabase } from '@/lib/media-store';
-import { dataCenterData } from '@/lib/data-center-store';
-import { shanghaiDate } from '@/browser/policy';
-import { notFound } from 'next/navigation';
-import DataCenterPage from './data-center-page';
+import { redirect } from 'next/navigation';
 export const dynamic = 'force-dynamic';
-export const metadata = { title: '数据中心 · WILDMIND' };
-export default async function Page({ searchParams }: { searchParams: Promise<{ post?: string }> }) {
-  const [query, config, settings] = await Promise.all([searchParams, loadConfig(), loadDataCenterConfig()]);
-  const all = await usingDatabase((db) => dataCenterData(db, config, settings));
-  if (query.post && !all.posts.some((p) => p.id === query.post)) notFound();
-  const data = query.post ? await usingDatabase((db) => dataCenterData(db, config, settings, query.post)) : all;
-  return (
-    <DataCenterPage
-      key={data.selected?.id ?? 'empty'}
-      data={data}
-      metricPresentation={settings.presentation}
-      rawReadings={await usingDatabase((db) => analysisRead(db, data.selected?.id, config.metrics))}
-      readings={await usingDatabase((db) => dashboardRead(db, config).readings)}
-      today={shanghaiDate()}
-      syncWindow={config.parameters.syncWindow}
-    />
-  );
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(await searchParams)) {
+    if (Array.isArray(value)) value.forEach((v) => params.append(key, v));
+    else if (value !== undefined) params.set(key, value);
+  }
+  redirect(`/works${params.size ? '?' + params.toString() : ''}`);
 }

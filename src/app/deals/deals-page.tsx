@@ -1,4 +1,5 @@
 'use client';
+import { MessageNavigation } from '@/ui/message-navigation';
 import Link from 'next/link';
 import { ReplyActions, type ReplyDestinations } from '@/ui/reply-actions';
 import { useEditSession } from '@/ui/use-edit-session';
@@ -199,6 +200,7 @@ export default function DealsPage({
   return (
     <main className="workspace deals-workspace">
       <WorkspaceHeader current="/deals" date={today} syncWindow={syncWindow} />
+      <MessageNavigation current="deals" />
       <PageHeader
         title="商单列表"
         summary={counts.pending ? `${counts.pending} 条待处理` : '查看跟进中的商单，确认下一次回复'}
@@ -455,13 +457,9 @@ export default function DealsPage({
                 </div>
               </>
             )}
-            <h3>状态建议</h3>
-            {!active ? (
-              <Empty>选择商单后查看已有建议</Empty>
-            ) : !suggestion ? (
-              <Empty>{data.suggestionReady ? '暂无新的状态建议' : '暂无状态建议，收到新往来后更新'}</Empty>
-            ) : (
+            {active && suggestion && (
               <div className="deal-suggestion">
+                <h3>状态建议</h3>
                 <strong>
                   {stateName(active.status)} → {stateName(suggestion.status)}
                 </strong>
