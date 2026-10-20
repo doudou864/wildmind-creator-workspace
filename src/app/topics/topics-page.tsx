@@ -110,7 +110,13 @@ export default function TopicsPage({
       <WorkspaceHeader current="/topics" date={today} syncWindow={parameters.syncWindow} />
       <PageHeader
         title="选题中心"
-        summary={candidateCount ? '挑一个方向，带去做图' : '生成下一批候选，或继续已选方向'}
+        summary={
+          candidateCount
+            ? '挑一个方向，带去做图'
+            : selectedTopic
+              ? '生成下一批候选，或继续已选方向'
+              : '生成下一批候选，挑选新的方向'
+        }
         onRefresh={() => void refresh()}
         action={candidateCount > 3 ? generateButton : null}
       />

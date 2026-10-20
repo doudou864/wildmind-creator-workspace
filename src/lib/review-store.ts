@@ -21,7 +21,7 @@ export function refreshReviews(database: WorkspaceDatabase, config: WorkspaceCon
       const content = contentRows.find((c) => c.id === p.contentId);
       const topic = topicRows.find((t) => t.id === content?.topicId);
       const platform = config.platforms.find((c) => c.id === p.platformId);
-      if (!content || !platform || !p.publishedAt) return [];
+      if (!content || content.fixture || topic?.fixture || !platform || !p.publishedAt) return [];
       const name = platform.reviewMetricByForm?.[content.form] ?? platform.reviewMetric;
       const metric = config.metrics.find(
         (m) =>

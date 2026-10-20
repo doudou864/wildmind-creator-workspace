@@ -27,7 +27,7 @@ export async function storePublishMedia(db: WorkspaceDatabase, raw: unknown, fil
   )
     throw new Error('文件为空、过大或格式不支持。');
   if (!video) {
-    const saved: (typeof assets.$inferSelect)[] = [];
+    const saved: Awaited<ReturnType<typeof uploadImage>>[] = [];
     try {
       for (const file of files)
         saved.push(

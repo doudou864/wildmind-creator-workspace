@@ -14,6 +14,7 @@ const bool = (name: string) => integer(name, { mode: 'boolean' });
 
 export const topics = sqliteTable('topics', {
   id: id(),
+  fixture: bool('fixture').notNull().default(false),
   title: text('title').notNull(),
   direction: text('direction').notNull(),
   channelId: text('channel_id').notNull(),
@@ -146,6 +147,7 @@ export const assets = sqliteTable(
   'assets',
   {
     id: id(),
+    fixture: bool('fixture').notNull().default(false),
     familyId: text('family_id').notNull(),
     contentId: text('content_id').references(() => contents.id),
     topicId: text('topic_id').references(() => topics.id),
@@ -173,6 +175,7 @@ export const imageDrafts = sqliteTable('image_drafts', {
 });
 export const layouts = sqliteTable('layouts', {
   id: id(),
+  fixture: bool('fixture').notNull().default(false),
   contentId: text('content_id').references(() => contents.id),
   source: text('source').notNull(),
   variants: json<LayoutDocument['variants']>('variants').notNull(),
@@ -384,6 +387,7 @@ export const collectionState = sqliteTable('collection_state', {
 
 export const imageGenerations = sqliteTable('image_generations', {
   id: id(),
+  fixture: bool('fixture').notNull().default(false),
   kind: text('kind', { enum: ['generate', 'edit'] }).notNull(),
   usageDate: text('usage_date').notNull(),
   status: text('status', { enum: ['running', 'success', 'failed'] }).notNull(),
@@ -399,6 +403,7 @@ export const imageGenerations = sqliteTable('image_generations', {
 
 export const imageTasks = sqliteTable('image_tasks', {
   id: id(),
+  fixture: bool('fixture').notNull().default(false),
   input: json<ImageDraftInput>('input').notNull(),
   status: text('status', { enum: ['queued', 'running', 'success', 'failed'] }).notNull(),
   pid: integer('pid'),

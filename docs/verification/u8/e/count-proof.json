@@ -1,0 +1,26 @@
+{
+  "before": {
+    "rawContents": 10,
+    "visibleContents": 7,
+    "posts": 25,
+    "messages": 387,
+    "visibleSelectedTopics": 1,
+    "visibleAssets": 14,
+    "visibleLayouts": 2
+  },
+  "after": {
+    "rawContents": 10,
+    "visibleContents": 6,
+    "posts": 25,
+    "messages": 387,
+    "visibleSelectedTopics": 0,
+    "visibleAssets": 13,
+    "visibleLayouts": 1
+  },
+  "unchanged": {
+    "posts": true,
+    "post_snapshots": true,
+    "review_checkpoints": true,
+    "messages": true
+  }
+}

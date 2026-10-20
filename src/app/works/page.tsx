@@ -8,7 +8,7 @@ import { dataCenterData } from '@/lib/data-center-store';
 import { analysisRead } from '@/ui/analysis-read';
 import { dashboardRead } from '@/ui/dashboard-read';
 import { isVisibleRecord } from '@/ui/visible-records';
-import { workTitle } from '@/ui/data-freshness';
+import { dataDate, workTitle } from '@/ui/data-freshness';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { WorkPageHeader } from '@/ui/work-page-header';
 import { shanghaiDate } from '@/browser/policy';
@@ -116,7 +116,8 @@ export default async function Page({
                 <section className="card">
                   <h2>{workTitle(selected.title)}</h2>
                   <p>
-                    发布于 {post?.publishedAt} · 最近采集 {latest ?? '暂无'}
+                    发布于 {post?.publishedAt ? dataDate(post.publishedAt) : '未知'} · 最近采集{' '}
+                    {latest ? dataDate(latest) : '暂无'}
                   </p>
                   <p className="small">本平台先看已采集数值，同龄比较尚未开放。</p>
                   <dl className="work-platform-values">

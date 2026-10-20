@@ -6,6 +6,7 @@ export const evidenceSchema = z.object({
   reason: z.string().min(1),
 });
 export const topicSchema = z.object({
+  fixture: z.boolean().optional(),
   id: z.string().min(1),
   title: z.string().min(1),
   direction: z.string().min(1),

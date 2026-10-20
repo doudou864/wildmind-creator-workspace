@@ -36,7 +36,7 @@ export async function readImages(): Promise<ImageData> {
       .from(imageDrafts)
       .all()
       .map((r) => ({ ...r.input, id: r.id, updatedAt: r.updatedAt, fixture: r.fixture })),
-    topics: db.db.select({ id: topics.id, title: topics.title }).from(topics).all(),
+    topics: db.db.select({ id: topics.id, title: topics.title, fixture: topics.fixture }).from(topics).all(),
     contents: db.db.select().from(contents).all(),
     contentWriteReady: true,
     generationReady: true,
@@ -73,7 +73,7 @@ export async function readDeals(): Promise<DealData> {
 export async function readContents(): Promise<ContentData> {
   return usingDatabase((db) => ({
     items: db.db.select().from(contents).all(),
-    topics: db.db.select({ id: topics.id, title: topics.title }).from(topics).all(),
+    topics: db.db.select({ id: topics.id, title: topics.title, fixture: topics.fixture }).from(topics).all(),
     recordsReady: true,
     writeReady: true,
     message: '',

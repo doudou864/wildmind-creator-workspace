@@ -13,7 +13,7 @@ export function dashboardRead(database: WorkspaceDatabase, config: WorkspaceConf
     const c = allContents.find((c) => c.id === p.contentId),
       t = allTopics.find((t) => t.id === c?.topicId),
       platform = config.platforms.find((x) => x.id === p.platformId);
-    if (!c || !p.publishedAt || !platform) return [];
+    if (!c || c.fixture || t?.fixture || !p.publishedAt || !platform) return [];
     const metric = config.metrics.find(
       (m) =>
         m.scope === 'post' &&

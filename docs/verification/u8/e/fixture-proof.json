@@ -1,0 +1,185 @@
+{
+  "backup": "data/backups/u8-e/workspace-2026-10-20T13-07-30-480Z-00000562944937690125-807ce221-9106-4a91-a5ab-fb407ba7d746.db",
+  "marked": [
+    {
+      "table": "contents",
+      "id": "c051b651-924b-4aac-ac52-2886857e5b81"
+    },
+    {
+      "table": "topics",
+      "id": "3c1b569f-68ce-499b-a56e-ea8f53264a1a"
+    },
+    {
+      "table": "assets",
+      "id": "a4b3e572-4c30-4a4f-af2c-41a77c57da7e"
+    },
+    {
+      "table": "layouts",
+      "id": "f27560c2-30bc-45eb-b4f7-03efc6291c4d"
+    },
+    {
+      "table": "image_drafts",
+      "id": "47819964-c3ea-4c87-9ebd-2f45df1ea606"
+    },
+    {
+      "table": "image_drafts",
+      "id": "b636e2cb-82d1-4593-96f8-15211e3949a4"
+    },
+    {
+      "table": "image_tasks",
+      "id": "fed58975-898d-49a2-80b5-d1e837ee4cd2"
+    },
+    {
+      "table": "image_tasks",
+      "id": "62e5d4c7-1e95-47ef-8b8a-5db22a2607e0"
+    },
+    {
+      "table": "image_generations",
+      "id": "c7f54457-49b2-45a5-8a71-6d96fb6685be"
+    },
+    {
+      "table": "image_generations",
+      "id": "6e688b0f-d011-43d0-98d4-eb2bd3cffa04"
+    }
+  ],
+  "preservedAllOtherFields": true,
+  "sourceTopic": {
+    "id": "3c1b569f-68ce-499b-a56e-ea8f53264a1a",
+    "title": "用华容道检查AI：答案能不能逐步复现",
+    "direction": "以“tt华容道”搜索为线索，待取得明确题面和规则后，测试模型给出的每一步是否可执行，不根据关键词编造解法或成绩。",
+    "channel_id": "search_keywords",
+    "signal": "tt华容道",
+    "source_context": "采集于2026-10-17T12:15:12.432Z；本账号显示占比：8.9%；原始线索未提供可直达链接；探索依据：给定已发布偏好未见益智题逐步验证，区别于自动剪辑和AI创业话题；已有华容道搜索线索支持尝试。history为空，未做过状态仍待核对；热度未验证。",
+    "source_url": null,
+    "exploration": 1,
+    "evidence": null,
+    "status": "selected",
+    "frozen_fire": 0,
+    "frozen_evidence": null,
+    "selected_at": "2026-10-20T10:37:33.623Z",
+    "automatic": 0,
+    "created_at": "2026-10-18T04:18:00.716Z",
+    "updated_at": "2026-10-20T10:37:33.623Z",
+    "fixture": 1
+  },
+  "layoutVariantsPreserved": {
+    "wechat": {
+      "title": "用华容道检查AI：答案能不能逐步复现",
+      "blocks": [
+        {
+          "id": "block-1",
+          "type": "paragraph",
+          "text": "先准备一道题面明确的华容道，再让 AI 给出每一步移动。",
+          "assetId": null
+        },
+        {
+          "id": "block-3",
+          "type": "heading",
+          "text": "我们要检查什么",
+          "assetId": null
+        },
+        {
+          "id": "block-5",
+          "type": "paragraph",
+          "text": "逐步照着答案移动方块，记录哪里能复现、哪里需要补充说明。",
+          "assetId": null
+        },
+        {
+          "id": "block-7",
+          "type": "heading",
+          "text": "还没开始的部分",
+          "assetId": null
+        },
+        {
+          "id": "block-9",
+          "type": "paragraph",
+          "text": "这是一份待验证的制作草稿，题面、完整步骤和实际结果尚待补充。",
+          "assetId": null
+        }
+      ],
+      "covers": {
+        "1:1": "a4b3e572-4c30-4a4f-af2c-41a77c57da7e"
+      },
+      "status": "draft",
+      "updatedAt": "2026-10-20T10:49:45.413Z"
+    },
+    "douyin": {
+      "title": "用华容道检查AI：答案能不能逐步复现",
+      "blocks": [
+        {
+          "id": "block-1",
+          "type": "paragraph",
+          "text": "先准备一道题面明确的华容道，再让 AI 给出每一步移动。",
+          "assetId": null
+        },
+        {
+          "id": "block-3",
+          "type": "heading",
+          "text": "我们要检查什么",
+          "assetId": null
+        },
+        {
+          "id": "block-5",
+          "type": "paragraph",
+          "text": "逐步照着答案移动方块，记录哪里能复现、哪里需要补充说明。",
+          "assetId": null
+        },
+        {
+          "id": "block-7",
+          "type": "heading",
+          "text": "还没开始的部分",
+          "assetId": null
+        },
+        {
+          "id": "block-9",
+          "type": "paragraph",
+          "text": "这是一份待验证的制作草稿，题面、完整步骤和实际结果尚待补充。",
+          "assetId": null
+        }
+      ],
+      "covers": {},
+      "status": "draft",
+      "updatedAt": "2026-10-20T10:48:57.237Z"
+    },
+    "x": {
+      "title": "用华容道检查AI：答案能不能逐步复现",
+      "blocks": [
+        {
+          "id": "block-1",
+          "type": "paragraph",
+          "text": "先准备一道题面明确的华容道，再让 AI 给出每一步移动。",
+          "assetId": null
+        },
+        {
+          "id": "block-3",
+          "type": "heading",
+          "text": "我们要检查什么",
+          "assetId": null
+        },
+        {
+          "id": "block-5",
+          "type": "paragraph",
+          "text": "逐步照着答案移动方块，记录哪里能复现、哪里需要补充说明。",
+          "assetId": null
+        },
+        {
+          "id": "block-7",
+          "type": "heading",
+          "text": "还没开始的部分",
+          "assetId": null
+        },
+        {
+          "id": "block-9",
+          "type": "paragraph",
+          "text": "这是一份待验证的制作草稿，题面、完整步骤和实际结果尚待补充。",
+          "assetId": null
+        }
+      ],
+      "covers": {},
+      "status": "draft",
+      "updatedAt": "2026-10-20T10:48:57.237Z"
+    }
+  },
+  "postCount": 0,
+  "foreignKeyErrors": []
+}

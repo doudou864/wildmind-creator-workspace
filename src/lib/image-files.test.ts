@@ -12,3 +12,8 @@ test('失败原因以中文区分超时、套餐额度、未登录', () => {
   expect(imageFailure(new Error('usage limit exceeded'))).toContain('套餐额度');
   expect(imageFailure(new Error('401 unauthorized'))).toContain('登录');
 });
+
+test('U6 horizontal output cannot silently exceed the approved two-percent crop limit', () => {
+  expect(() => exactCrop(1920, 819, '2.35:1', 0.02)).toThrow('偏差过大');
+  expect(exactCrop(1880, 800, '2.35:1', 0.02)).toEqual({ width: 1880, height: 800 });
+});

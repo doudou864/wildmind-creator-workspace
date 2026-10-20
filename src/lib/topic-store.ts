@@ -191,7 +191,7 @@ export async function generateTopics(
       .select()
       .from(topics)
       .all()
-      .filter((t) => t.status === 'published')
+      .filter((t) => !t.fixture && t.status === 'published')
       .map((t) => t.title);
     const schema = z.object({
       items: z

@@ -34,7 +34,7 @@ export function dataCenterData(
     )
     .flatMap((p) => {
       const c = content.find((c) => c.id === p.contentId);
-      if (!c) return [];
+      if (!c || c.fixture || topic.find((t) => t.id === c.topicId)?.fixture) return [];
       const metric = config.metrics.find(
         (m) =>
           m.scope === 'post' &&
