@@ -198,7 +198,7 @@ export default function DealsPage({
       <WorkspaceHeader current="/deals" date={today} syncWindow={syncWindow} />
       <PageHeader
         title="商单列表"
-        summary={`${items.length} 条商单，${counts.pending} 条待处理`}
+        summary={counts.pending ? `${counts.pending} 条待处理` : '查看跟进中的商单，确认下一次回复'}
         onRefresh={() => void reload()}
         refreshing={busy || refreshing}
         action={

@@ -2,16 +2,16 @@
   {
     "file": "dashboard-after-1440.png",
     "width": 1440,
-    "height": 1544,
-    "bytes": 252921,
-    "sha256": "37ca82c1e5305f69ec19637ff59d769b96febede80b7346f4fecbcd032cb1612"
+    "height": 1542,
+    "bytes": 253602,
+    "sha256": "addb8fd13eefc5144b8a520dd2bb011739feb069c4be0836ba9038d68b4f54bf"
   },
   {
     "file": "dashboard-after-1728.png",
     "width": 1728,
-    "height": 1548,
-    "bytes": 262215,
-    "sha256": "96ee9ad46e0f3437ba3c1fe4902e41af1ef219cbe221a0a2309269c81a50954e"
+    "height": 1564,
+    "bytes": 268060,
+    "sha256": "68cb7b526c94bc82082c05f66cb01bea2a4859ec7297af90fc2499309135e9ec"
   },
   {
     "file": "dashboard-before-1440.png",
@@ -28,18 +28,32 @@
     "sha256": "8892149536197c6cb21b0836d8f952b519a8420c8b65f71d7ad7b9307c6ef115"
   },
   {
+    "file": "dashboard-before-rework-1440.png",
+    "width": 1440,
+    "height": 1544,
+    "bytes": 252921,
+    "sha256": "37ca82c1e5305f69ec19637ff59d769b96febede80b7346f4fecbcd032cb1612"
+  },
+  {
+    "file": "dashboard-recovery-comparison.png",
+    "width": 1420,
+    "height": 568,
+    "bytes": 90481,
+    "sha256": "4be8b4bee74ca245b5361a07852d0f9ffa52dd7652a84c37d1cb17db07a0c95f"
+  },
+  {
     "file": "data-center-after-1440.png",
-    "width": 1685,
+    "width": 1440,
     "height": 946,
-    "bytes": 107692,
-    "sha256": "7199fa477a137c0c5f888bcf2598f6b60c596054759a8a64395c250a3a950deb"
+    "bytes": 108469,
+    "sha256": "0b641a0153bf9cbdb903c0a122750dedecbca8135f0a41c5bd8cef0518fc2b4b"
   },
   {
     "file": "data-center-after-1728.png",
     "width": 1728,
     "height": 950,
-    "bytes": 107569,
-    "sha256": "5e50a4211ae753a57ae0945d07ad3158731fe34ecbe022436dacd2c1d2746d32"
+    "bytes": 109749,
+    "sha256": "42e62d4bb4a084f2fba99f9b819237e643824206af4ca8fb45dbb9ac87944d8a"
   },
   {
     "file": "data-center-before-1440.png",
@@ -59,15 +73,15 @@
     "file": "deals-after-1440.png",
     "width": 1440,
     "height": 900,
-    "bytes": 98693,
-    "sha256": "4fc854e3473e4c9f7e2fd219f9644ebec835a39f532ace8028245d5f526d04c7"
+    "bytes": 91511,
+    "sha256": "f2a689a05c814472ac1675b8b9b1cfaad026b8267977c4050d6b1e41a3d60567"
   },
   {
     "file": "deals-after-1728.png",
     "width": 1728,
     "height": 900,
-    "bytes": 99329,
-    "sha256": "9b133cf69e26c308ee35914006c15e0b053b61cf78707d3cdd25cb87bfafaff8"
+    "bytes": 94579,
+    "sha256": "81f4a872ba591ea979d98509d5c216a9e83af83bb9c9f08b2bb5703d17e1ad89"
   },
   {
     "file": "deals-before-1440.png",
@@ -93,16 +107,16 @@
   {
     "file": "images-after-1440.png",
     "width": 1440,
-    "height": 1483,
-    "bytes": 211440,
-    "sha256": "452b1d25f120a1cfcb2774d98bd2e4b2afc3e7b1e78ba5cecf51017f613457ae"
+    "height": 1564,
+    "bytes": 223671,
+    "sha256": "48e05a548803d724745db114fcbd301a27a62e13fd056d463af0f875165aba5b"
   },
   {
     "file": "images-after-1728.png",
     "width": 1728,
-    "height": 1527,
-    "bytes": 215030,
-    "sha256": "25c1a7533fb3fdf6ab3e9136db90ac89bf43ca03cb5098907888f32721706836"
+    "height": 1577,
+    "bytes": 227764,
+    "sha256": "29f5db71242faabc57c39b995fff6b720d7b54706f23731ecb08c9bc5b53016a"
   },
   {
     "file": "images-before-1440.png",
@@ -121,16 +135,16 @@
   {
     "file": "inbox-after-1440.png",
     "width": 1440,
-    "height": 3564,
-    "bytes": 607439,
-    "sha256": "ad07021cffbe69cd91e6ee81bcf83fb9f3040b336cb6525a88696182d8ac2562"
+    "height": 3465,
+    "bytes": 480034,
+    "sha256": "f48e6f5679fa3f4f23af4dc9adc0149865adeb711a4601fdf3e66ccb511ffd72"
   },
   {
     "file": "inbox-after-1728.png",
     "width": 1728,
-    "height": 3552,
-    "bytes": 612197,
-    "sha256": "e94257243d187b810cd7a7eda43f59930f0999aa18322db7219427b326769b4d"
+    "height": 3453,
+    "bytes": 494257,
+    "sha256": "286b7cd8ef3651f196864698e787b72730c35322822989a08b8749aabdd139b8"
   },
   {
     "file": "inbox-before-1440.png",
@@ -147,18 +161,32 @@
     "sha256": "92fe605babc45a4a4ac4902db349e8542d9ed7981ef7c6f6184c2293c7a4163b"
   },
   {
+    "file": "inbox-before-rework-1440.png",
+    "width": 1440,
+    "height": 3564,
+    "bytes": 607439,
+    "sha256": "ad07021cffbe69cd91e6ee81bcf83fb9f3040b336cb6525a88696182d8ac2562"
+  },
+  {
+    "file": "inbox-recovery-comparison.png",
+    "width": 2800,
+    "height": 148,
+    "bytes": 17306,
+    "sha256": "9057034ae172062ab3316351cb64c64f2fd09e5ce6f83714474b97111c836a5d"
+  },
+  {
     "file": "layouts-after-1440.png",
     "width": 1440,
     "height": 1047,
-    "bytes": 76527,
-    "sha256": "b548ecd1cda0d41dc751f6dc20a1d9f7f295cb2c8d845300fd416002d71ee359"
+    "bytes": 77107,
+    "sha256": "f3757af33dd40362446b0e22440f1a060259345c3d08a33178b9060ee212f10d"
   },
   {
     "file": "layouts-after-1728.png",
     "width": 1728,
     "height": 1051,
-    "bytes": 78295,
-    "sha256": "741dd07ae6b3b92e460f3db9b1a21a07d61dc6e3ff5808f8da763883d1b4ccab"
+    "bytes": 78834,
+    "sha256": "8dda7e08f9c032dcbe0b3de1e38b0a67b79f51f09b336f82672e08ca36010ce0"
   },
   {
     "file": "layouts-before-1440.png",
@@ -178,15 +206,15 @@
     "file": "publishing-after-1440.png",
     "width": 1440,
     "height": 1214,
-    "bytes": 132332,
-    "sha256": "4ee8d0420e5a39755cdbedd8651c2c845771716579054b0d1b7dc9b0260033d5"
+    "bytes": 145212,
+    "sha256": "f7771712281457f1758252a87154341208d12beb544340b8b7098816f890f82c"
   },
   {
     "file": "publishing-after-1728.png",
     "width": 1728,
     "height": 1181,
-    "bytes": 133539,
-    "sha256": "4a706584555bb9431cf868bfbfe8936d3cf27286b265ab8fd15a938188646c3e"
+    "bytes": 146725,
+    "sha256": "9066accebe083b0b5be913f28c8ed6d3e2fa1ad29d35f7b75018193fa9f73248"
   },
   {
     "file": "publishing-before-1440.png",
@@ -206,15 +234,15 @@
     "file": "topics-after-1440.png",
     "width": 1440,
     "height": 958,
-    "bytes": 173201,
-    "sha256": "0b31460f76cadfa2ba4a34079e7c57809353b2c0cf5ba7ff2a31aa4186d936b9"
+    "bytes": 172429,
+    "sha256": "68b251f152331ebc90ee9bc4ddf3ed034c86decc357b4b8d11618b117b01bc60"
   },
   {
     "file": "topics-after-1728.png",
     "width": 1728,
     "height": 920,
-    "bytes": 172117,
-    "sha256": "1567bf6043415f504212c377b3c78d59c08dbabfe627f701be9b996a24d0be1a"
+    "bytes": 171465,
+    "sha256": "7bad3ef5a721aa761bed895561d0c33954d0bd6a55f3fdbc872b63e144ff7820"
   },
   {
     "file": "topics-before-1440.png",

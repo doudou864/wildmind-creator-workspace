@@ -43,6 +43,11 @@ export default function Dashboard({
   const [themeBusy, setThemeBusy] = useState<string | null>(null),
     [themeNotice, setThemeNotice] = useState('');
   const [themeReceipts, setThemeReceipts] = useState<Record<string, string>>({});
+  const pendingDealReplies = actions.filter((g) => replies.get(g.message.id)?.state === 'waiting').length;
+  const pendingIdeaReplies = waitingCount(
+    deals.messages.filter((m) => m.classification.status === 'ready' && m.classification.result.category === 'idea'),
+    deals.messages,
+  );
   const planned = workspace.plannedContents.filter((c) => c.plannedDate === today);
   const actionsReady =
     workspace.collectionReady &&
@@ -264,7 +269,13 @@ export default function Dashboard({
       <WorkspaceHeader current="/" date={displayDate} syncWindow={parameters.syncWindow} />
       <PageHeader
         title="总控台"
-        summary={`${works.length} 条近期作品，${counts.pending} 条待处理商单`}
+        summary={
+          deals.recordsReady
+            ? pendingDealReplies || pendingIdeaReplies || planned.length
+              ? `${pendingDealReplies} 条商单待回复，${pendingIdeaReplies} 条价值消息待回复${planned.length ? `，${planned.length} 条计划待发布` : ''}`
+              : '查看待核对消息和平台状态，安排下一条作品'
+            : '先查看数据更新，确认采集结果'
+        }
         onRefresh={() => {
           void refresh();
           void refreshDeals();
@@ -292,7 +303,7 @@ export default function Dashboard({
             return (
               <div className={`health-item ${status}`} key={item.id}>
                 <Button
-                  className="source-button"
+                  className="source-button list-row"
                   onClick={() => setModal({ type: 'source', platform: item })}
                   aria-label={`${item.name}采集状态：${status === 'failed' ? '失败' : status === 'success' ? '成功' : '尚未抓取'}`}
                 >
@@ -396,9 +407,8 @@ export default function Dashboard({
               },
             ]
               .filter((row) => !row.ready || row.count > 0)
-              .map((row, index) => (
-                <Link className="action-row action-summary" href={row.href} key={row.label}>
-                  <span className="letter mono">{String.fromCharCode(65 + index)}</span>
+              .map((row) => (
+                <Link className="action-row action-summary list-row" href={row.href} key={row.label}>
                   <span>
                     <strong>{row.label}</strong>
                   </span>
@@ -409,7 +419,7 @@ export default function Dashboard({
             {(failedPlatforms.length > 0 ||
               (workspace.attention?.length ?? 0) > 0 ||
               workspace.accountAlerts.length > 0) && (
-              <Button className="action-row action-summary" onClick={() => setModal({ type: 'attention' })}>
+              <Button className="action-row action-summary list-row" onClick={() => setModal({ type: 'attention' })}>
                 <span>
                   <strong>平台异常待处理</strong>
                 </span>
@@ -634,17 +644,37 @@ export default function Dashboard({
               </thead>
               <tbody>
                 {works.map((work) => (
-                  <tr key={work.id}>
+                  <tr
+                    key={work.id}
+                    data-clickable
+                    tabIndex={0}
+                    role="link"
+                    aria-label={`查看作品：${work.title}`}
+                    onClick={() =>
+                      platform.id === dataCenterPlatformId
+                        ? router.push(`/data-center?post=${encodeURIComponent(work.id)}`)
+                        : setModal({ type: 'work', work })
+                    }
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.target === e.currentTarget) {
+                        e.currentTarget.click();
+                      }
+                    }}
+                  >
                     <td>
                       <Button
-                        className="work-title"
-                        onClick={() =>
+                        className="work-title list-row"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           platform.id === dataCenterPlatformId
                             ? router.push(`/data-center?post=${encodeURIComponent(work.id)}`)
-                            : setModal({ type: 'work', work })
-                        }
+                            : setModal({ type: 'work', work });
+                        }}
                       >
                         <strong>{work.title}</strong>
+                        <span className="row-arrow" aria-hidden="true">
+                          →
+                        </span>
                         <span>
                           {work.form}{' '}
                           <time className="mono" dateTime={work.published}>

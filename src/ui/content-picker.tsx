@@ -1,7 +1,7 @@
 'use client';
 import { usePathname } from 'next/navigation';
 import { useEditSession } from './use-edit-session';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { contentInputSchema, contentSchema, contentMatches, type Content, type ContentData } from '@/lib/content-model';
 import { Button, Dialog } from './components';
 import { request, useResource } from './use-resource';
@@ -22,6 +22,11 @@ export function ContentPicker({
   disabled?: boolean;
 }) {
   const { data, error, refresh } = useResource<ContentData>('/api/contents', empty, true);
+  useEffect(() => {
+    const reload = () => void refresh();
+    window.addEventListener('workspace:refresh-pickers', reload);
+    return () => window.removeEventListener('workspace:refresh-pickers', reload);
+  }, [refresh]);
   const [open, setOpen] = useState(false),
     [title, setTitle] = useState(''),
     [topic, setTopic] = useState(topicId ?? ''),
@@ -85,6 +90,10 @@ export function ContentPicker({
         关联作品
         <select
           aria-label="关联作品"
+          onPointerDown={() => void refresh()}
+          onKeyDown={(e) => {
+            if (['ArrowDown', 'ArrowUp', ' ', 'Enter'].includes(e.key)) void refresh();
+          }}
           disabled={disabled}
           value={value ?? ''}
           onChange={(e) =>
@@ -119,9 +128,6 @@ export function ContentPicker({
           }}
         >
           新建作品
-        </Button>{' '}
-        <Button disabled={busy} disabledReason="正在处理，请稍候。" onClick={() => void refresh()}>
-          刷新
         </Button>
       </div>
       {null}

@@ -2,19 +2,26 @@ import { describe, expect, it } from 'vitest';
 import { isVisibleRecord, visibleRecords } from './visible-records';
 
 describe('normal-page read projection', () => {
-  it('hides named test records and explicit fixtures, but not ordinary message bodies', () => {
-    expect(isVisibleRecord({ title: '验收草稿·茶杯与柠檬（不发布）' })).toBe(false);
-    expect(isVisibleRecord({ name: '测试成片' })).toBe(false);
-    expect(isVisibleRecord({ title: '普通作品', fixture: true })).toBe(false);
+  it('only hides explicit fixtures; real titles containing 测试 remain visible', () => {
+    expect(isVisibleRecord({ title: '验收草稿·茶杯与柠檬（不发布）' })).toBe(true);
+    expect(isVisibleRecord({ title: 'Opus5.5实战工作中最真实的一次测试' })).toBe(true);
+    for (const marker of [
+      { fixture: true },
+      { fixture: 'fixture' },
+      { isFixture: true },
+      { source: 'fixture' },
+      { tags: ['fixture'] },
+    ])
+      expect(isVisibleRecord({ title: '普通作品', ...marker })).toBe(false);
     expect(isVisibleRecord({ title: '普通作品', tags: ['fixture'] })).toBe(false);
     expect(isVisibleRecord({ author: '观众', text: '请测试一下这个功能' })).toBe(true);
     expect(isVisibleRecord({ variants: {}, source: '真实文章\n正文讨论测试方法' })).toBe(true);
   });
-  it('also hides linked publishing history and receipts without deleting or rewriting source records', () => {
+  it('does not infer fixtures from links or rewrite source records', () => {
     const source = {
       contents: [
-        { id: 'test', title: '验收作品' },
-        { id: 'real', title: '真实作品' },
+        { id: 'test', title: '验收作品', fixture: true },
+        { id: 'real', title: 'Opus5.5实战工作中最真实的一次测试' },
       ],
       batches: [
         { id: 'a', draft: { contentId: 'test' } },
@@ -29,13 +36,13 @@ describe('normal-page read projection', () => {
     const original = structuredClone(source);
     const view = visibleRecords(source);
     expect(view.contents.map((r) => r.id)).toEqual(['real']);
-    expect(view.batches.map((r) => r.id)).toEqual(['b']);
-    expect(view.receipts.map((r) => r.id)).toEqual(['rb']);
+    expect(view.batches.map((r) => r.id)).toEqual(['a', 'b']);
+    expect(view.receipts.map((r) => r.id)).toEqual(['ra', 'rb']);
     expect(view.hitRates).toBe(source.hitRates);
     expect(source).toEqual(original);
   });
   it('filters dashboard works and detail selections without altering baselines or comparison results', () => {
-    const test = { id: 'test', title: '测试作品' };
+    const test = { id: 'test', title: '测试作品', isFixture: true };
     const data = {
       platforms: { douyin: { works: [test, { id: 'real', title: '作品' }], baselines: { video: 30 } } },
       selected: test,

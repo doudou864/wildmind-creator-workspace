@@ -217,7 +217,7 @@ export default function LayoutsPage({
       <WorkspaceHeader current="/layouts" date={today} syncWindow={syncWindow} />
       <PageHeader
         title="排版中心"
-        summary={`${documents.length} 份稿件${document ? '，正在编辑' : ''}`}
+        summary={document ? '继续编辑稿件，检查配图和排版' : '新建文章，开始排版'}
         onRefresh={() => void refresh()}
         refreshing={busy}
         action={
@@ -636,7 +636,6 @@ export default function LayoutsPage({
             >
               新窗口去生图中心 →
             </Link>
-            <Button onClick={() => void refresh()}>刷新</Button>
           </div>
           {available.length ? (
             <div className="asset-picker">

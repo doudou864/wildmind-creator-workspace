@@ -1,0 +1,318 @@
+[
+  {
+    "name": "dashboard",
+    "width": 1440,
+    "summary": "1 条商单待回复，10 条价值消息待回复",
+    "refresh": 1,
+    "overflow": false,
+    "start": 118,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 5,
+    "primary": [
+      {
+        "top": 72,
+        "bottom": 106
+      }
+    ],
+    "retry": [
+      {
+        "whiteSpace": "nowrap",
+        "height": 24.1953125
+      }
+    ],
+    "legacyText": false
+  },
+  {
+    "name": "dashboard",
+    "width": 1728,
+    "summary": "1 条商单待回复，10 条价值消息待回复",
+    "refresh": 1,
+    "overflow": false,
+    "start": 120,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 5,
+    "primary": [
+      {
+        "top": 74,
+        "bottom": 108
+      }
+    ],
+    "retry": [
+      {
+        "whiteSpace": "nowrap",
+        "height": 24.1953125
+      }
+    ],
+    "legacyText": false
+  },
+  {
+    "name": "data-center",
+    "width": 1440,
+    "summary": "选择作品，查看表现并生成解读",
+    "refresh": 1,
+    "overflow": false,
+    "start": 118,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 0,
+        "bottom": 0
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "data-center",
+    "width": 1728,
+    "summary": "选择作品，查看表现并生成解读",
+    "refresh": 1,
+    "overflow": false,
+    "start": 120,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 0,
+        "bottom": 0
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "topics",
+    "width": 1440,
+    "summary": "1 个选题待筛选",
+    "refresh": 1,
+    "overflow": false,
+    "start": 118,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 72,
+        "bottom": 106
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "topics",
+    "width": 1728,
+    "summary": "1 个选题待筛选",
+    "refresh": 1,
+    "overflow": false,
+    "start": 120,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 74,
+        "bottom": 108
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "images",
+    "width": 1440,
+    "summary": "新建任务，选择作品并准备配图",
+    "refresh": 1,
+    "overflow": false,
+    "start": 118,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 0,
+        "bottom": 0
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "images",
+    "width": 1728,
+    "summary": "新建任务，选择作品并准备配图",
+    "refresh": 1,
+    "overflow": false,
+    "start": 120,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 0,
+        "bottom": 0
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "layouts",
+    "width": 1440,
+    "summary": "新建文章，开始排版",
+    "refresh": 1,
+    "overflow": false,
+    "start": 142,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 84,
+        "bottom": 118
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "layouts",
+    "width": 1728,
+    "summary": "新建文章，开始排版",
+    "refresh": 1,
+    "overflow": false,
+    "start": 144,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 86,
+        "bottom": 120
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "publishing",
+    "width": 1440,
+    "summary": "先选一条作品",
+    "refresh": 1,
+    "overflow": false,
+    "start": 142,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 84,
+        "bottom": 118
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "publishing",
+    "width": 1728,
+    "summary": "先选一条作品",
+    "refresh": 1,
+    "overflow": false,
+    "start": 144,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 86,
+        "bottom": 120
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "inbox",
+    "width": 1440,
+    "summary": "42 条待回复，其中商单 1 条",
+    "refresh": 1,
+    "overflow": false,
+    "start": 142,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "inbox": "已存消息387待回复会话 / 评论42尚未同步的问题与观点53待识别 / 识别失败0",
+    "primary": [
+      {
+        "top": 84,
+        "bottom": 118
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "inbox",
+    "width": 1728,
+    "summary": "42 条待回复，其中商单 1 条",
+    "refresh": 1,
+    "overflow": false,
+    "start": 144,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "inbox": "已存消息387待回复会话 / 评论42尚未同步的问题与观点53待识别 / 识别失败0",
+    "primary": [
+      {
+        "top": 86,
+        "bottom": 120
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "deals",
+    "width": 1440,
+    "summary": "1 条待处理",
+    "refresh": 1,
+    "overflow": false,
+    "start": 142,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 84,
+        "bottom": 118
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  },
+  {
+    "name": "deals",
+    "width": 1728,
+    "summary": "1 条待处理",
+    "refresh": 1,
+    "overflow": false,
+    "start": 144,
+    "centered": [],
+    "wrappedButtons": [],
+    "works": 0,
+    "primary": [
+      {
+        "top": 86,
+        "bottom": 120
+      }
+    ],
+    "retry": [],
+    "legacyText": false
+  }
+]

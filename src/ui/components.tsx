@@ -95,7 +95,14 @@ export function PageHeader({
       <p className="page-summary">{summary}</p>
       <div className="page-actions">
         {action}
-        <Button onClick={onRefresh} disabled={refreshing} disabledReason="正在处理，请稍后刷新。">
+        <Button
+          onClick={() => {
+            onRefresh();
+            window.dispatchEvent(new Event('workspace:refresh-pickers'));
+          }}
+          disabled={refreshing}
+          disabledReason="正在处理，请稍后刷新。"
+        >
           刷新
         </Button>
       </div>

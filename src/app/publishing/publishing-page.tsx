@@ -552,7 +552,15 @@ export default function PublishingPage({
       <WorkspaceHeader current="/publishing" date={today} syncWindow={syncWindow} />
       <PageHeader
         title="发布中心"
-        summary={`${draft.settings.length} 个目标平台，${data.batches.length} 条发布记录`}
+        summary={
+          !draft.contentId
+            ? '先选一条作品'
+            : issues.length
+              ? `还差 ${issues.length} 项就能上传`
+              : canUpload
+                ? '准备完成，可以上传'
+                : '查看当前发布进度，完成下一步确认'
+        }
         onRefresh={() => {
           setLoadedScreenshots([]);
           setScreenshotAttempt((n) => n + 1);

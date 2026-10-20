@@ -395,7 +395,7 @@
 .image-upload-stage > h3,
 .image-upload-stage > .upload-mark {
   width: 100%;
-  text-align: center;
+  text-align: left;
 }
 .image-upload-stage h3 {
   margin: 0;

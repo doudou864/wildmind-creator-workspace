@@ -1033,7 +1033,7 @@ dialog::backdrop {
   background-color: var(--ink-2);
 }
 .workspace .button:not(.nav-key) {
-  white-space: normal;
+  white-space: nowrap;
 }
 .workspace .segments .button,
 .workspace .page-actions .button {
@@ -1061,4 +1061,93 @@ dialog::backdrop {
 }
 .workspace .retry {
   white-space: nowrap;
+}
+
+/* Navigable rows are distinct from verb-action buttons. */
+.workspace .list-row.button,
+.workspace a.list-row {
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  border-radius: 0;
+}
+.workspace .list-row.button:hover,
+.workspace a.list-row:hover {
+  background: var(--hover);
+  text-decoration: none;
+}
+.workspace .list-row.button[aria-pressed='true'] {
+  background: var(--hover);
+  color: var(--ink);
+}
+.workspace .work-title {
+  position: relative;
+  padding-right: 24px;
+}
+.workspace .work-title .row-arrow {
+  position: absolute;
+  right: 6px;
+  top: 10px;
+}
+.workspace .inbox-themes .list-row {
+  display: flex;
+  width: 100%;
+  justify-content: flex-start;
+  gap: 8px;
+  padding: 6px 0;
+  white-space: normal;
+}
+.workspace .inbox-themes .list-row strong {
+  flex: 1;
+  margin: 0;
+}
+.workspace .inbox-themes .list-row .small {
+  white-space: nowrap;
+}
+.workspace .action-row {
+  width: 100%;
+  justify-content: flex-start;
+}
+.workspace button,
+.workspace .button {
+  text-align: left;
+}
+
+.workspace .inbox-themes .list-row {
+  flex-direction: row;
+}
+.workspace .inbox-themes > .button-text {
+  flex-direction: row;
+  justify-content: flex-start;
+  border: 0;
+  padding: 6px 0;
+}
+.workspace .works tr[data-clickable] {
+  cursor: pointer;
+}
+.workspace tr[data-clickable]:hover {
+  background: var(--hover);
+}
+
+.workspace .button:not(.nav-key) {
+  justify-content: flex-start;
+}
+.workspace .fan-legend {
+  justify-content: flex-start;
+}
+.workspace .aspect-outline,
+.workspace .revision-original {
+  align-items: flex-start;
+  text-align: left;
+}
+.workspace .image-output-preview {
+  justify-content: flex-start;
+}
+.workspace .works-table tr[data-clickable] {
+  cursor: pointer;
+}
+
+.workspace .publish-batches button {
+  align-items: flex-start;
 }

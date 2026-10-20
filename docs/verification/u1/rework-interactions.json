@@ -1,0 +1,12 @@
+{
+  "expanded": 23,
+  "collapsed": 8,
+  "rowNavigation": "http://127.0.0.1:3000/data-center?post=55a8f603666595685fed0a187c2ba8f7501d4920a4f501811718a9c69574f6c7",
+  "pickerAutoReload": true,
+  "headerRefreshRequests": [
+    "/api/contents",
+    "/api/publishing",
+    "/api/publishing",
+    "/api/contents"
+  ]
+}

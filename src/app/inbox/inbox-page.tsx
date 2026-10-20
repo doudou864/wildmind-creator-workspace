@@ -49,6 +49,7 @@ export default function InboxPage({
   syncWindow: string;
 }) {
   const { data, error, refresh } = useResource('/api/inbox', initialData);
+  const [showAllThemes, setShowAllThemes] = useState(false);
   const [filters, setFilters] = useState<InboxFilters>({ ...blankFilters, ...initialFilters, themeId: initialThemeId });
   const [linkedMessageId, setLinkedMessageId] = useState(initialMessageId);
   const [requestedPage, setRequestedPage] = useState(1),
@@ -78,6 +79,9 @@ export default function InboxPage({
     platform: filters.platform,
     channel: filters.channel,
   });
+  const visibleThemes = data.themes.filter(
+    (t) => themeMessages(t, scoped).length > 0 || (filters.platform === 'all' && filters.channel === 'all'),
+  );
   const filtered = filterInbox(data.items, data.themes, filters).filter(
     (item) => !linkedMessageId || item.id === linkedMessageId,
   );
@@ -140,7 +144,16 @@ export default function InboxPage({
       <WorkspaceHeader current="/inbox" date={today} syncWindow={syncWindow} />
       <PageHeader
         title="互动收件箱"
-        summary={`${data.items.length} 条消息，${data.themes.length} 个需求主题`}
+        summary={
+          waitingCount(data.items, data.items)
+            ? `${waitingCount(data.items, data.items)} 条待回复，其中商单 ${waitingCount(
+                data.items.filter(
+                  (m) => m.classification.status === 'ready' && m.classification.result.category === 'deal',
+                ),
+                data.items,
+              )} 条`
+            : '查看消息，挑选值得送进选题的需求'
+        }
         onRefresh={() => void reload()}
         refreshing={refreshing}
         action={
@@ -316,24 +329,25 @@ export default function InboxPage({
           </Card>
           <Card title="需求主题">
             <div className="inbox-themes">
-              {data.themes
-                .filter(
-                  (t) =>
-                    themeMessages(t, scoped).length > 0 || (filters.platform === 'all' && filters.channel === 'all'),
-                )
-                .map((t) => (
-                  <Button
-                    key={t.id}
-                    className={filters.themeId === t.id ? 'active' : ''}
-                    aria-pressed={filters.themeId === t.id}
-                    onClick={() =>
-                      filter({ themeId: t.id, category: 'all', reply: 'all', classification: 'all', query: '' })
-                    }
-                  >
-                    <strong>{t.title}</strong>
-                    <span className="small">{themeMessages(t, scoped).length} 条当前范围来源</span>
-                  </Button>
-                ))}
+              {visibleThemes.slice(0, showAllThemes ? undefined : 8).map((t) => (
+                <Button
+                  key={t.id}
+                  className={`list-row ${filters.themeId === t.id ? 'active' : ''}`}
+                  aria-pressed={filters.themeId === t.id}
+                  onClick={() =>
+                    filter({ themeId: t.id, category: 'all', reply: 'all', classification: 'all', query: '' })
+                  }
+                >
+                  <strong>{t.title}</strong>
+                  <span className="small">{themeMessages(t, scoped).length} 条</span>
+                  <span aria-hidden="true">→</span>
+                </Button>
+              ))}
+              {visibleThemes.length > 8 && (
+                <Button variant="text" onClick={() => setShowAllThemes(!showAllThemes)}>
+                  {showAllThemes ? '收起' : `还有 ${visibleThemes.length - 8} 个`}
+                </Button>
+              )}
             </div>
             {!data.themes.length ? (
               <Empty>暂无已汇总的需求主题</Empty>

@@ -435,7 +435,7 @@ export default function ImagesPage({
       <WorkspaceHeader current="/images" date={today} syncWindow={syncWindow} />
       <PageHeader
         title="生图中心"
-        summary={`${data.assets.length} 张素材，${data.drafts.length} 份草稿`}
+        summary={'新建任务，选择作品并准备配图'}
         onRefresh={() => void refresh()}
         action={
           <Button

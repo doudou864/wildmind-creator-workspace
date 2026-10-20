@@ -55,7 +55,7 @@ export default function DataCenterPage({
       <WorkspaceHeader current="/data-center" date={today} syncWindow={syncWindow} />
       <PageHeader
         title="数据中心"
-        summary={`${data.posts.length} 条作品可分析`}
+        summary={data.posts.length ? '选择作品，查看表现并生成解读' : '先采集作品数据，再查看表现'}
         onRefresh={() => router.refresh()}
         action={
           <Button
