@@ -17,7 +17,15 @@ export const layoutConfigSchema = z.object({
     headingSize: z.number().min(16).max(32),
   }),
   platforms: z
-    .array(z.object({ id: layoutPlatformSchema, name: z.string(), code: z.string(), preview: z.string() }))
+    .array(
+      z.object({
+        id: layoutPlatformSchema,
+        name: z.string(),
+        code: z.string(),
+        preview: z.string(),
+        manualPublishing: z.boolean().optional(),
+      }),
+    )
     .length(3)
     .refine((items) => new Set(items.map((item) => item.id)).size === 3),
   wechatCoverRatios: z.tuple([ratioSchema, ratioSchema]),

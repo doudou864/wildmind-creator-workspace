@@ -1,5 +1,7 @@
 'use client';
 import Link from 'next/link';
+import { usePathname, useRouter } from 'next/navigation';
+import { AutoTextarea } from '@/ui/auto-textarea';
 import { resumableLayout } from '@/ui/work-flow';
 import { ContentPicker } from '@/ui/content-picker';
 import { AutosaveStatus } from '@/ui/autosave-status';
@@ -51,6 +53,9 @@ export default function LayoutsPage({
 }) {
   const { data, error, refresh } = useResource('/api/layouts', initialData);
   const resumable = resumableLayout(data.documents, initialContent);
+  const [activePlatform, setActivePlatform] = useState<LayoutPlatform>(config.platforms[0].id);
+  const pathname = usePathname();
+  const router = useRouter();
   const [source, setSource] = useState('');
   const [contentId, setContentId] = useState<string | null>(initialContent);
   const [document, setDocument] = useState<LayoutDocument | null>(
@@ -199,6 +204,12 @@ export default function LayoutsPage({
             : '该版本已退回，可继续修改。',
       );
       await refresh();
+      if (action === 'confirm-send' && saved.contentId)
+        router.push(
+          pathname === '/create'
+            ? `/create?step=publish&content=${encodeURIComponent(saved.contentId)}&kind=layout`
+            : `/publishing?content=${encodeURIComponent(saved.contentId)}&kind=layout`,
+        );
     } catch (e) {
       setFeedback(e instanceof Error ? e.message : '操作失败，当前稿件已保留。');
       await refresh();
@@ -213,6 +224,23 @@ export default function LayoutsPage({
   const available = data.assets
     .filter((a) => (!ratio || fitsRatio(a, ratio)) && a.title.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => Number(b.selected) - Number(a.selected) || b.version - a.version);
+  const currentVariant = document?.variants[activePlatform];
+  const currentIssues = currentVariant ? layoutIssues(currentVariant, activePlatform, data.assets, config) : [];
+  const confirmReason = !currentVariant
+    ? '请先粘贴文章并排版。'
+    : currentVariant.status === 'sent'
+      ? '当前平台已有确认稿。'
+      : !contentValid
+        ? '请关联图文作品。'
+        : currentIssues.length
+          ? currentIssues.join('；')
+          : !document?.id || dirty
+            ? '请等待稿件保存完成。'
+            : busy
+              ? '正在处理，请稍候。'
+              : !data.handoffReady
+                ? '当前无法保存确认稿。'
+                : '';
   return (
     <main className="workspace layouts-workspace">
       <AutosaveStatus statuses={[autosave]} />
@@ -224,12 +252,23 @@ export default function LayoutsPage({
         refreshing={busy}
         action={
           document ? (
-            <Link
-              className="button button-primary"
-              href={`/publishing?content=${encodeURIComponent(document.contentId ?? contentId ?? '')}&kind=layout`}
-            >
-              准备发布 →
-            </Link>
+            currentVariant?.status === 'sent' ? (
+              <Link
+                className="button button-primary"
+                href={`/publishing?content=${encodeURIComponent(document.contentId ?? '')}&kind=layout`}
+              >
+                查看发布准备 →
+              </Link>
+            ) : (
+              <Button
+                variant="primary"
+                disabled={!!confirmReason}
+                disabledReason={confirmReason}
+                onClick={() => setConfirmation({ platform: activePlatform, action: 'confirm-send' })}
+              >
+                确认并送去发布
+              </Button>
+            )
           ) : null
         }
       />
@@ -286,7 +325,7 @@ export default function LayoutsPage({
           <div className="layout-source-grid">
             <label>
               粘贴文章
-              <textarea
+              <AutoTextarea
                 aria-label="文章原文"
                 maxLength={100000}
                 rows={5}
@@ -317,321 +356,332 @@ export default function LayoutsPage({
         )}
       </Card>
       {document && (
-        <div className="layout-columns">
-          {config.platforms.map((platform, index) => {
-            const v = document?.variants[platform.id];
-            const locked = v?.status === 'sent';
-            const issues = v ? layoutIssues(v, platform.id, data.assets, config) : [];
-            const persisted = !!document?.id && !dirty;
-            if (v && !contentValid) issues.push('请关联可用的图文作品');
-            const canSend = !!v && canSendLayout(v) && persisted && data.handoffReady && !issues.length && !busy;
-            return (
-              <Card
-                key={platform.id}
-                title={platform.name}
-                meta={<span className="layout-status">{!v ? '待排版' : locked ? '已送出 · 锁定' : '待确认'}</span>}
-                className="layout-version"
-              >
-                <div className="layout-version-toolbar">
-                  <span className="eyebrow">{platform.preview}</span>
-                  <Segmented
-                    label={`${platform.name}视图`}
-                    value={modes[platform.id]}
-                    options={[
-                      { value: 'edit', label: '编辑' },
-                      { value: 'preview', label: '预览' },
-                    ]}
-                    onChange={(mode) => setModes({ ...modes, [platform.id]: mode })}
-                  />
-                </div>
-                {!v ? (
-                  <div className="layout-empty">
-                    <Empty>粘贴文章后，在这里编辑{platform.name}版本</Empty>
-                  </div>
-                ) : (
-                  <>
-                    {modes[platform.id] === 'preview' ? (
-                      <LayoutPreview variant={v} platform={platform.id} assets={data.assets} config={config} />
+        <>
+          <nav className="layout-platform-tabs" aria-label="排版平台">
+            {config.platforms.map((p) => {
+              const v = document.variants[p.id];
+              const issues = layoutIssues(v, p.id, data.assets, config);
+              const state =
+                v.status === 'sent'
+                  ? '已确认'
+                  : issues.length
+                    ? issues[0].replace('请选择 ', '缺 ').replace('封面', '头图')
+                    : '可确认';
+              return (
+                <Button key={p.id} aria-pressed={activePlatform === p.id} onClick={() => setActivePlatform(p.id)}>
+                  {p.name} · {state}
+                  {p.manualPublishing ? ' · 目前需手动发布' : ''}
+                </Button>
+              );
+            })}
+          </nav>
+          <div className="layout-columns">
+            {config.platforms
+              .filter((p) => p.id === activePlatform)
+              .map((platform, index) => {
+                const v = document?.variants[platform.id];
+                const locked = v?.status === 'sent';
+                const issues = v ? layoutIssues(v, platform.id, data.assets, config) : [];
+                const persisted = !!document?.id && !dirty;
+                if (v && !contentValid) issues.push('请关联可用的图文作品');
+                const canSend = !!v && canSendLayout(v) && persisted && data.handoffReady && !issues.length && !busy;
+                return (
+                  <Card
+                    key={platform.id}
+                    title={platform.name}
+                    meta={<span className="layout-status">{!v ? '待排版' : locked ? '已送出 · 锁定' : '待确认'}</span>}
+                    className="layout-version"
+                  >
+                    <div className="layout-version-toolbar">
+                      <span className="eyebrow">{platform.preview}</span>
+                      <Segmented
+                        label={`${platform.name}视图`}
+                        value={modes[platform.id]}
+                        options={[
+                          { value: 'edit', label: '编辑' },
+                          { value: 'preview', label: '预览' },
+                        ]}
+                        onChange={(mode) => setModes({ ...modes, [platform.id]: mode })}
+                      />
+                    </div>
+                    {!v ? (
+                      <div className="layout-empty">
+                        <Empty>粘贴文章后，在这里编辑{platform.name}版本</Empty>
+                      </div>
                     ) : (
-                      <fieldset className="layout-editor" disabled={locked || busy}>
-                        <label className="layout-title-label">
-                          标题
-                          <input
-                            aria-label={`${platform.name}标题`}
-                            maxLength={200}
-                            value={v.title}
-                            onChange={(e) => edit(platform.id, { title: e.target.value })}
-                          />
-                        </label>
-                        <div className="layout-blocks">
-                          {v.blocks.map((block, i) => (
-                            <div key={block.id} className="layout-block">
-                              <div className="layout-block-head">
-                                <span className="mono">{String(i + 1).padStart(2, '0')}</span>
-                                {block.type === 'image' ? (
-                                  <span>配图</span>
-                                ) : (
-                                  <select
-                                    aria-label={`${platform.name}第${i + 1}块类型`}
-                                    value={block.type}
-                                    onChange={(e) =>
-                                      updateBlock(platform.id, block.id, {
-                                        type: e.target.value as LayoutBlock['type'],
-                                      })
-                                    }
-                                  >
-                                    {Object.entries(blockNames)
-                                      .filter(([type]) => type !== 'image' && (platform.id !== 'x' || type !== 'quote'))
-                                      .map(([type, name]) => (
-                                        <option key={type} value={type}>
-                                          {name}
-                                        </option>
-                                      ))}
-                                  </select>
-                                )}
-                                <div>
-                                  <Button
-                                    aria-label={`${platform.name}第${i + 1}块上移`}
-                                    disabled={i === 0}
-                                    disabledReason="已在首位，或正在处理，暂不能前移。"
-                                    onClick={() => move(platform.id, block.id, -1)}
-                                  >
-                                    ↑
-                                  </Button>
-                                  <Button
-                                    aria-label={`${platform.name}第${i + 1}块下移`}
-                                    disabled={i === v.blocks.length - 1}
-                                    disabledReason="已在末位，不能下移。"
-                                    onClick={() => move(platform.id, block.id, 1)}
-                                  >
-                                    ↓
-                                  </Button>
-                                  <Button
-                                    aria-label={`${platform.name}删除第${i + 1}块`}
-                                    onClick={() =>
-                                      edit(platform.id, { blocks: v.blocks.filter((b) => b.id !== block.id) })
-                                    }
-                                  >
-                                    移除
-                                  </Button>
-                                </div>
-                              </div>
-                              {block.type === 'image' ? (
-                                <>
-                                  <AssetImage
-                                    className="layout-edit-image"
-                                    src={`/api/images/assets/${encodeURIComponent(block.assetId ?? '')}/file`}
-                                    alt={data.assets.find((a) => a.id === block.assetId)?.title ?? '未找到配图'}
-                                  />
-                                  <Button
-                                    onClick={() => {
-                                      setSearch('');
-                                      setPicker({ platform: platform.id, replace: block.id });
-                                    }}
-                                  >
-                                    替换配图
-                                  </Button>
-                                </>
-                              ) : null}
-                              <textarea
-                                aria-label={`${platform.name}第${i + 1}块${block.type === 'image' ? '说明' : '内容'}`}
-                                maxLength={100000}
-                                rows={block.type === 'image' ? 1 : 3}
-                                value={block.text}
-                                placeholder={
-                                  block.type === 'image'
-                                    ? '图片说明（可选）'
-                                    : block.type === 'list'
-                                      ? '每行一项'
-                                      : '输入内容'
-                                }
-                                onChange={(e) => updateBlock(platform.id, block.id, { text: e.target.value })}
+                      <>
+                        {modes[platform.id] === 'preview' ? (
+                          <LayoutPreview variant={v} platform={platform.id} assets={data.assets} config={config} />
+                        ) : (
+                          <fieldset className="layout-editor" disabled={locked || busy}>
+                            <label className="layout-title-label">
+                              标题
+                              <input
+                                aria-label={`${platform.name}标题`}
+                                maxLength={200}
+                                value={v.title}
+                                onChange={(e) => edit(platform.id, { title: e.target.value })}
                               />
-                              {block.type !== 'image' && platform.id !== 'douyin' && (
-                                <Button
-                                  className="layout-insert"
-                                  onClick={() => {
-                                    setSearch('');
-                                    setPicker({ platform: platform.id, after: block.id });
-                                  }}
-                                >
-                                  在此段后配图
-                                </Button>
-                              )}
+                            </label>
+                            <div className="layout-blocks">
+                              {v.blocks.map((block, i) => (
+                                <div key={block.id} className="layout-block">
+                                  <div className="layout-block-head">
+                                    <span className="mono">{String(i + 1).padStart(2, '0')}</span>
+                                    {block.type === 'image' ? (
+                                      <span>配图</span>
+                                    ) : (
+                                      <select
+                                        aria-label={`${platform.name}第${i + 1}块类型`}
+                                        value={block.type}
+                                        onChange={(e) =>
+                                          updateBlock(platform.id, block.id, {
+                                            type: e.target.value as LayoutBlock['type'],
+                                          })
+                                        }
+                                      >
+                                        {Object.entries(blockNames)
+                                          .filter(
+                                            ([type]) => type !== 'image' && (platform.id !== 'x' || type !== 'quote'),
+                                          )
+                                          .map(([type, name]) => (
+                                            <option key={type} value={type}>
+                                              {name}
+                                            </option>
+                                          ))}
+                                      </select>
+                                    )}
+                                    <div>
+                                      <Button
+                                        aria-label={`${platform.name}第${i + 1}块上移`}
+                                        disabled={i === 0}
+                                        disabledReason="已在首位，或正在处理，暂不能前移。"
+                                        onClick={() => move(platform.id, block.id, -1)}
+                                      >
+                                        ↑
+                                      </Button>
+                                      <Button
+                                        aria-label={`${platform.name}第${i + 1}块下移`}
+                                        disabled={i === v.blocks.length - 1}
+                                        disabledReason="已在末位，不能下移。"
+                                        onClick={() => move(platform.id, block.id, 1)}
+                                      >
+                                        ↓
+                                      </Button>
+                                      <Button
+                                        aria-label={`${platform.name}删除第${i + 1}块`}
+                                        onClick={() =>
+                                          edit(platform.id, { blocks: v.blocks.filter((b) => b.id !== block.id) })
+                                        }
+                                      >
+                                        移除
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  {block.type === 'image' ? (
+                                    <>
+                                      <AssetImage
+                                        className="layout-edit-image"
+                                        src={`/api/images/assets/${encodeURIComponent(block.assetId ?? '')}/file`}
+                                        alt={data.assets.find((a) => a.id === block.assetId)?.title ?? '未找到配图'}
+                                      />
+                                      <Button
+                                        onClick={() => {
+                                          setSearch('');
+                                          setPicker({ platform: platform.id, replace: block.id });
+                                        }}
+                                      >
+                                        替换配图
+                                      </Button>
+                                    </>
+                                  ) : null}
+                                  <AutoTextarea
+                                    aria-label={`${platform.name}第${i + 1}块${block.type === 'image' ? '说明' : '内容'}`}
+                                    maxLength={100000}
+                                    rows={block.type === 'image' ? 1 : 3}
+                                    value={block.text}
+                                    placeholder={
+                                      block.type === 'image'
+                                        ? '图片说明（可选）'
+                                        : block.type === 'list'
+                                          ? '每行一项'
+                                          : '输入内容'
+                                    }
+                                    onChange={(e) => updateBlock(platform.id, block.id, { text: e.target.value })}
+                                  />
+                                  {block.type !== 'image' && platform.id !== 'douyin' && (
+                                    <Button
+                                      className="layout-insert"
+                                      onClick={() => {
+                                        setSearch('');
+                                        setPicker({ platform: platform.id, after: block.id });
+                                      }}
+                                    >
+                                      在此段后配图
+                                    </Button>
+                                  )}
+                                </div>
+                              ))}
                             </div>
-                          ))}
-                        </div>
-                        <div className="layout-add">
-                          <Button
-                            onClick={() =>
-                              edit(platform.id, {
-                                blocks: [
-                                  ...v.blocks,
-                                  { id: crypto.randomUUID(), type: 'paragraph', text: '', assetId: null },
-                                ],
-                              })
-                            }
-                          >
-                            ＋ 段落
-                          </Button>
-                          <Button
-                            disabled={
-                              platform.id === 'douyin' &&
-                              v.blocks.filter((b) => b.type === 'image').length >= config.douyinMaxImages
-                            }
-                            disabledReason="已达到此平台的配图数量上限。"
-                            onClick={() => {
-                              setSearch('');
-                              setPicker({ platform: platform.id });
-                            }}
-                          >
-                            ＋ 素材库配图
-                          </Button>
-                          <span className="small">
-                            {v.blocks.filter((b) => b.type === 'image').length} 张
-                            {platform.id === 'douyin' ? ` / 上限 ${config.douyinMaxImages}` : ''}
-                          </span>
-                        </div>
-                      </fieldset>
-                    )}
-                    {platform.id === 'wechat' && (
-                      <div className="layout-covers">
-                        {config.wechatCoverRatios.map((r) => {
-                          const asset = data.assets.find((a) => a.id === v.covers[r]);
-                          return (
-                            <div key={r}>
-                              <span className="small">
-                                {r} {r === config.wechatCoverRatios[0] ? '头图' : '转发卡片'}
-                              </span>
-                              {asset && (
-                                <AssetImage
-                                  src={`/api/images/assets/${encodeURIComponent(asset.id)}/file`}
-                                  alt={asset.title}
-                                />
-                              )}
+                            <div className="layout-add">
                               <Button
-                                disabled={locked || busy}
-                                disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
+                                onClick={() =>
+                                  edit(platform.id, {
+                                    blocks: [
+                                      ...v.blocks,
+                                      { id: crypto.randomUUID(), type: 'paragraph', text: '', assetId: null },
+                                    ],
+                                  })
+                                }
+                              >
+                                ＋ 段落
+                              </Button>
+                              <Button
+                                disabled={
+                                  platform.id === 'douyin' &&
+                                  v.blocks.filter((b) => b.type === 'image').length >= config.douyinMaxImages
+                                }
+                                disabledReason="已达到此平台的配图数量上限。"
                                 onClick={() => {
                                   setSearch('');
-                                  setPicker({ platform: platform.id, cover: r });
+                                  setPicker({ platform: platform.id });
                                 }}
                               >
-                                {asset ? '替换封面' : '选择封面'}
+                                ＋ 素材库配图
                               </Button>
+                              <span className="small">
+                                {v.blocks.filter((b) => b.type === 'image').length} 张
+                                {platform.id === 'douyin' ? ` / 上限 ${config.douyinMaxImages}` : ''}
+                              </span>
                             </div>
-                          );
-                        })}
+                          </fieldset>
+                        )}
+                        {platform.id === 'wechat' && (
+                          <div className="layout-covers">
+                            {config.wechatCoverRatios.map((r) => {
+                              const asset = data.assets.find((a) => a.id === v.covers[r]);
+                              return (
+                                <div key={r}>
+                                  <span className="small">
+                                    {r} {r === config.wechatCoverRatios[0] ? '头图' : '转发卡片'}
+                                  </span>
+                                  {asset && (
+                                    <AssetImage
+                                      src={`/api/images/assets/${encodeURIComponent(asset.id)}/file`}
+                                      alt={asset.title}
+                                    />
+                                  )}
+                                  <Button
+                                    disabled={locked || busy}
+                                    disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
+                                    onClick={() => {
+                                      setSearch('');
+                                      setPicker({ platform: platform.id, cover: r });
+                                    }}
+                                  >
+                                    {asset ? '替换封面' : '选择封面'}
+                                  </Button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        <div className="layout-ai">
+                          <label>
+                            用自然语言修改这一版
+                            <AutoTextarea
+                              aria-label={`${platform.name}修改要求`}
+                              rows={2}
+                              maxLength={10000}
+                              disabled={locked || busy}
+                              value={instructions[platform.id]}
+                              onChange={(e) => setInstructions({ ...instructions, [platform.id]: e.target.value })}
+                              placeholder="例如：精简第二段，保留关键结论"
+                            />
+                          </label>
+                          <Button
+                            disabled={
+                              !data.aiReady || !persisted || !instructions[platform.id].trim() || locked || busy
+                            }
+                            disabledReason={
+                              !data.aiReady
+                                ? 'AI 修改暂不可用。'
+                                : locked
+                                  ? '请先退回修改。'
+                                  : !instructions[platform.id].trim()
+                                    ? '请填写修改要求。'
+                                    : '请等待稿件保存或当前操作完成。'
+                            }
+                            onClick={() => void act(platform.id, 'ai')}
+                          >
+                            应用修改
+                          </Button>
+                        </div>
+                      </>
+                    )}
+                    <div className="layout-confirm">
+                      <div className="small">{v && issues.length > 0 ? issues.join(' · ') : null}</div>
+                      <div className="layout-confirm-buttons">
+                        {v && (
+                          <Button
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(
+                                  [
+                                    v.title,
+                                    ...v.blocks
+                                      .filter((b) => b.type !== 'image')
+                                      .map((b) =>
+                                        b.type === 'heading'
+                                          ? `## ${b.text}`
+                                          : b.type === 'quote'
+                                            ? `> ${b.text}`
+                                            : b.type === 'list'
+                                              ? b.text
+                                                  .split('\n')
+                                                  .map((line) => `- ${line}`)
+                                                  .join('\n')
+                                              : b.text,
+                                      ),
+                                  ].join('\n\n'),
+                                );
+                                setFeedback('已复制标题和正文；图片请从素材库下载后上传。');
+                              } catch {
+                                setFeedback('复制失败，请在预览中手动选取正文。');
+                              }
+                            }}
+                          >
+                            复制标题与正文
+                          </Button>
+                        )}
+
+                        {locked && document?.contentId && (
+                          <Link
+                            className="button"
+                            href={`/publishing?content=${encodeURIComponent(document.contentId)}&kind=layout`}
+                          >
+                            查看发布准备 →
+                          </Link>
+                        )}
+                        {locked && (
+                          <Button
+                            disabled={!persisted || !data.handoffReady || busy}
+                            disabledReason={
+                              !data.handoffReady ? '发布交接暂不可用。' : '请等待稿件保存或当前操作完成。'
+                            }
+                            onClick={() => setConfirmation({ platform: platform.id, action: 'revise' })}
+                          >
+                            退回修改
+                          </Button>
+                        )}
                       </div>
-                    )}
-
-                    <div className="layout-ai">
-                      <label>
-                        用自然语言修改这一版
-                        <textarea
-                          aria-label={`${platform.name}修改要求`}
-                          rows={2}
-                          maxLength={10000}
-                          disabled={locked || busy}
-                          value={instructions[platform.id]}
-                          onChange={(e) => setInstructions({ ...instructions, [platform.id]: e.target.value })}
-                          placeholder="例如：精简第二段，保留关键结论"
-                        />
-                      </label>
-                      <Button
-                        disabled={!data.aiReady || !persisted || !instructions[platform.id].trim() || locked || busy}
-                        disabledReason={
-                          !data.aiReady
-                            ? 'AI 修改暂不可用。'
-                            : locked
-                              ? '请先退回修改。'
-                              : !instructions[platform.id].trim()
-                                ? '请填写修改要求。'
-                                : '请等待稿件保存或当前操作完成。'
-                        }
-                        onClick={() => void act(platform.id, 'ai')}
-                      >
-                        应用修改
-                      </Button>
                     </div>
-                  </>
-                )}
-                <div className="layout-confirm">
-                  <div className="small">{v && issues.length > 0 ? issues.join(' · ') : null}</div>
-                  <div className="layout-confirm-buttons">
-                    {v && (
-                      <Button
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(
-                              [
-                                v.title,
-                                ...v.blocks
-                                  .filter((b) => b.type !== 'image')
-                                  .map((b) =>
-                                    b.type === 'heading'
-                                      ? `## ${b.text}`
-                                      : b.type === 'quote'
-                                        ? `> ${b.text}`
-                                        : b.type === 'list'
-                                          ? b.text
-                                              .split('\n')
-                                              .map((line) => `- ${line}`)
-                                              .join('\n')
-                                          : b.text,
-                                  ),
-                              ].join('\n\n'),
-                            );
-                            setFeedback('已复制标题和正文；图片请从素材库下载后上传。');
-                          } catch {
-                            setFeedback('复制失败，请在预览中手动选取正文。');
-                          }
-                        }}
-                      >
-                        复制标题与正文
-                      </Button>
-                    )}
-
-                    <Button
-                      disabled={!canSend}
-                      disabledReason={
-                        !data.handoffReady
-                          ? '发布交接暂不可用。'
-                          : issues.length
-                            ? issues.join('；')
-                            : !v
-                              ? '请先排版文章。'
-                              : locked
-                                ? '这一版已送出，请先退回修改。'
-                                : '请等待稿件保存完成。'
-                      }
-                      onClick={() => setConfirmation({ platform: platform.id, action: 'confirm-send' })}
-                    >
-                      确认并送去发布
-                    </Button>
-                    {locked && document?.contentId && (
-                      <Link
-                        className="button"
-                        href={`/publishing?content=${encodeURIComponent(document.contentId)}&kind=layout`}
-                      >
-                        查看发布准备 →
-                      </Link>
-                    )}
-                    {locked && (
-                      <Button
-                        disabled={!persisted || !data.handoffReady || busy}
-                        disabledReason={!data.handoffReady ? '发布交接暂不可用。' : '请等待稿件保存或当前操作完成。'}
-                        onClick={() => setConfirmation({ platform: platform.id, action: 'revise' })}
-                      >
-                        退回修改
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            );
-          })}
-        </div>
+                  </Card>
+                );
+              })}
+          </div>
+        </>
       )}
       <div className="page-tools">
         <Link

@@ -440,3 +440,16 @@
   max-height: 450px;
   overflow: auto;
 }
+.no-confirmed-draft {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 16px;
+}
+.no-confirmed-draft h1 {
+  font-size: 20px;
+}
+.publish-upload-reason {
+  color: var(--ink-2);
+  margin: 0 0 12px;
+}

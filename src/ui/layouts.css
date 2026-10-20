@@ -378,3 +378,40 @@
 .layout-slide {
   touch-action: pan-y;
 }
+.layout-columns {
+  display: block;
+}
+.layout-platform-tabs {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.layout-platform-tabs [aria-pressed='true'] {
+  background: var(--ink);
+  color: var(--card);
+}
+.layouts-workspace .layout-blocks,
+.layouts-workspace .layout-editor {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+.layouts-workspace .layout-block textarea,
+.layouts-workspace .layout-ai textarea {
+  min-height: 60px;
+  max-height: none;
+}
+.layouts-workspace .disabled-control::after {
+  content: attr(data-disabled-reason);
+  display: block;
+  font-size: 12px;
+  color: var(--ink-2);
+  padding-top: 4px;
+  max-width: 350px;
+}
+.layouts-workspace .page-actions {
+  align-items: flex-start;
+}
+.layout-platform-tabs .button {
+  text-align: left;
+}

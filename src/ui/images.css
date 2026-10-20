@@ -563,3 +563,6 @@
     top: 50%;
   }
 }
+.images-workspace .image-workarea {
+  min-height: 0;
+}

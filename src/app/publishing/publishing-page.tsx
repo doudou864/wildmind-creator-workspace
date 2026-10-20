@@ -549,6 +549,19 @@ export default function PublishingPage({
     setInstruction('');
     setNotice('已载入最新发布状态。');
   }
+  if (draft.kind === 'layout' && draft.contentId && !data.snapshots.some((s) => s.contentId === draft.contentId)) {
+    return (
+      <main className="workspace publishing-workspace">
+        <WorkspaceHeader current="/publishing" date={today} syncWindow={syncWindow} />
+        <section className="card no-confirmed-draft">
+          <h1>这条作品还没有确认稿</h1>
+          <Link className="button button-primary" href={`/layouts?content=${encodeURIComponent(draft.contentId)}`}>
+            去排版确认 →
+          </Link>
+        </section>
+      </main>
+    );
+  }
   return (
     <main className="workspace publishing-workspace">
       <AutosaveStatus statuses={[autosave, mediaAutosave]} />
@@ -593,6 +606,17 @@ export default function PublishingPage({
           </Button>
         }
       />
+      {!canUpload && (
+        <p className="publish-upload-reason">
+          {issues.length
+            ? `还需完成：${issues.join('；')}`
+            : !data.uploadReady
+              ? '平台上传目前未启用，先准备材料。'
+              : busy
+                ? '正在处理，请稍候。'
+                : '请等待保存完成，并核对发布状态。'}
+        </p>
+      )}
       <nav className="creation-steps" aria-label="发布准备步骤">
         <a href="#publish-source">选成片 / 确认稿 →</a>
         <a href="#publish-platforms">选平台 →</a>

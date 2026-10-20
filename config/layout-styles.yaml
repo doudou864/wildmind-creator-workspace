@@ -7,9 +7,9 @@ style:
   paragraphGap: 18
   headingSize: 20
 platforms:
-  - { id: wechat, name: 公众号, code: GZH, preview: 手机端文章 }
+  - { id: wechat, name: 公众号, code: GZH, preview: 手机端文章, manualPublishing: true }
   - { id: douyin, name: 抖音图文, code: DY, preview: 左右滑动图集 }
-  - { id: x, name: X 长文, code: X, preview: 长文阅读 }
+  - { id: x, name: X 长文, code: X, preview: 长文阅读, manualPublishing: true }
 wechatCoverRatios: ['2.35:1', '1:1']
 douyinImageRatio: '3:4'
 douyinMaxImages: 9

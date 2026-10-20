@@ -1,5 +1,5 @@
 'use client';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEditSession } from './use-edit-session';
 import { useEffect, useState } from 'react';
 import { contentInputSchema, contentSchema, contentMatches, type Content, type ContentData } from '@/lib/content-model';
@@ -35,6 +35,16 @@ export function ContentPicker({
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState('');
   const pathname = usePathname();
+  const router = useRouter();
+  function choose(id: string | null, content?: Content) {
+    onChange(id, content);
+    if (pathname === '/create') {
+      const params = new URLSearchParams(window.location.search);
+      if (id) params.set('content', id);
+      else params.delete('content');
+      router.replace('/create?' + params.toString());
+    }
+  }
   useEditSession(
     `new-content:${pathname}:${sessionId}:${topicId ?? 'none'}`,
     { title, topic, kind, date },
@@ -75,7 +85,7 @@ export function ContentPicker({
       if (Object.entries(input.data).some(([key, v]) => result[key as keyof Content] !== v))
         throw new Error('作品保存结果与提交内容不一致，请刷新核对。');
       setCreated((list) => [...list, result]);
-      onChange(result.id, result);
+      choose(result.id, result);
       setOpen(false);
       await refresh();
     } catch (e) {
@@ -97,7 +107,7 @@ export function ContentPicker({
           disabled={disabled}
           value={value ?? ''}
           onChange={(e) =>
-            onChange(
+            choose(
               e.target.value || null,
               items.find((c) => c.id === e.target.value),
             )

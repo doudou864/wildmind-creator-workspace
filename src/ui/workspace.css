@@ -1771,3 +1771,57 @@ dialog.asset-drawer {
   margin: 8px 0;
   font-size: 20px;
 }
+.creation-current {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  margin: 12px 0;
+  padding: 12px 18px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+.creation-current span {
+  color: var(--ink-2);
+}
+.creation-current a {
+  margin-left: auto;
+}
+.creation-stage-tabs {
+  display: flex;
+  gap: 12px;
+  margin: 12px 0;
+}
+.creation-stage-tabs a {
+  padding: 8px 18px;
+  border-radius: 4px;
+}
+.creation-stage-tabs a:hover {
+  background: var(--line-soft);
+}
+.creation-stage-tabs a[aria-current='step'] {
+  color: var(--card);
+  background: var(--ink);
+}
+.creation-stage > .workspace {
+  padding: 0;
+  min-width: 0;
+}
+.creation-stage > .workspace > .topbar {
+  display: none;
+}
+.topics-v2-grid.topics-no-detail {
+  grid-template-columns: 1fr;
+}
+.topic-history {
+  margin-top: 16px;
+}
+.creation-steps a {
+  text-decoration: none;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.creation-steps a:hover {
+  background: var(--line-soft);
+}

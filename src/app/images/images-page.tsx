@@ -107,6 +107,7 @@ export default function ImagesPage({
   const [purposeFilter, setPurposeFilter] = useState('all');
   const [sourceFilter, setSourceFilter] = useState('all');
   const [selectedOnly, setSelectedOnly] = useState(false);
+  const [allWorks, setAllWorks] = useState(false);
   const [search, setSearch] = useState('');
   const [pickSlot, setPickSlot] = useState<string | null>(null);
   const [tab, setTab] = useState<'outputs' | 'library'>('outputs');
@@ -143,6 +144,7 @@ export default function ImagesPage({
   const parentAsset = data.assets.find((a) => a.id === draft.parentAssetId);
   const assets = data.assets.filter(
     (a) =>
+      (allWorks || !draft.contentId || a.contentId === draft.contentId) &&
       (purposeFilter === 'all' || a.purposeId === purposeFilter) &&
       (sourceFilter === 'all' || a.source === sourceFilter) &&
       (!selectedOnly || a.selected) &&
@@ -445,7 +447,7 @@ export default function ImagesPage({
         onRefresh={() => void refresh()}
         action={
           <Button disabled={busy} disabledReason="正在处理图片，请稍候。" onClick={() => requestLoad('new')}>
-            新建任务
+            清空要求，另做一张
           </Button>
         }
       />
@@ -507,11 +509,13 @@ export default function ImagesPage({
         </div>
         {draft.contentId && (
           <div className="creation-next">
-            <Link
-              href={`/layouts?content=${encodeURIComponent(draft.contentId)}${draft.topicId ? `&topic=${encodeURIComponent(draft.topicId)}` : ''}`}
-            >
-              去排版 →
-            </Link>
+            {linkedContent?.form !== '视频' && (
+              <Link
+                href={`/layouts?content=${encodeURIComponent(draft.contentId)}${draft.topicId ? `&topic=${encodeURIComponent(draft.topicId)}` : ''}`}
+              >
+                去排版 →
+              </Link>
+            )}
             <Link
               href={`/publishing?content=${encodeURIComponent(draft.contentId)}&kind=${linkedContent?.form === '视频' ? 'video' : 'layout'}`}
             >
@@ -546,24 +550,7 @@ export default function ImagesPage({
                   rows={5}
                 />
               </label>
-              <div className="image-submit">
-                <Button
-                  variant="primary"
-                  disabled={!canGenerate}
-                  disabledReason={
-                    !data.generationReady
-                      ? '生图服务暂不可用。'
-                      : !data.storageReady
-                        ? '素材保存暂不可用。'
-                        : busy
-                          ? '正在生成，请稍候。'
-                          : associationIssue || '请填写内容与要求，选择输出比例；已有图片可直接复用。'
-                  }
-                  onClick={() => void generate()}
-                >
-                  生成{slots.length ? ` ${slots.length - reused.length} 张图片` : '图片'}
-                </Button>
-              </div>
+
               {!isUpload && (
                 <>
                   <label htmlFor="image-style">
@@ -590,18 +577,26 @@ export default function ImagesPage({
                       </select>
                     </label>
                   )}
-                  <div className="image-fixed-ratios">
-                    <span className="small">{purpose.contentMode === 'free' ? '输出比例' : '固定输出比例'}</span>
-                    <div>
-                      {(purpose.contentMode === 'free' ? [draft.ratio] : purpose.ratios).map((r) => (
-                        <span className="ratio-chip mono" key={r}>
-                          {r}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
                 </>
               )}
+              <div className="image-submit">
+                <Button
+                  variant="primary"
+                  disabled={!canGenerate}
+                  disabledReason={
+                    !data.generationReady
+                      ? '生图服务暂不可用。'
+                      : !data.storageReady
+                        ? '素材保存暂不可用。'
+                        : busy
+                          ? '正在生成，请稍候。'
+                          : associationIssue || '请填写内容与要求，选择输出比例；已有图片可直接复用。'
+                  }
+                  onClick={() => void generate()}
+                >
+                  生成{slots.length ? ` ${slots.length - reused.length} 张图片` : '图片'}
+                </Button>
+              </div>
             </div>
           </Card>
         </aside>
@@ -615,7 +610,7 @@ export default function ImagesPage({
                 onChange={setTab}
                 options={[
                   { value: 'outputs', label: '输出安排' },
-                  { value: 'library', label: `素材库 ${data.assets.length}` },
+                  { value: 'library', label: `素材库 ${assets.length}` },
                 ]}
               />
             }
@@ -730,6 +725,12 @@ export default function ImagesPage({
             ) : (
               <>
                 <div className="asset-filters">
+                  {draft.contentId && (
+                    <label>
+                      <input type="checkbox" checked={allWorks} onChange={(e) => setAllWorks(e.target.checked)} />
+                      查看其他作品素材
+                    </label>
+                  )}
                   <input
                     type="search"
                     aria-label="搜索素材"
