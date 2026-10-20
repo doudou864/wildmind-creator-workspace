@@ -1151,3 +1151,198 @@ dialog::backdrop {
 .workspace .publish-batches button {
   align-items: flex-start;
 }
+
+/* U2: task-first dashboard, two balanced reading columns. */
+.dashboard-two-columns {
+  display: grid;
+  grid-template-columns: minmax(360px, 0.85fr) minmax(0, 1.65fr);
+  gap: 12px;
+  align-items: start;
+}
+.dashboard-left,
+.dashboard-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.dashboard-v2 .card {
+  padding: 14px 18px;
+}
+.dashboard-v2 .card-header {
+  margin-bottom: 8px;
+}
+.dashboard-v2 .today-primary h2 {
+  font-size: 20px;
+}
+.dashboard-v2 .today-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 0;
+  gap: 12px;
+  border-bottom: 1px dashed var(--line-soft);
+  color: var(--ink);
+  text-decoration: none;
+}
+.today-action strong {
+  font-size: 15px;
+}
+.today-action b {
+  margin-left: 8px;
+}
+.today-action small {
+  display: block;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.dashboard-v2 .compact-deals {
+  font-size: 13px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.dashboard-v2 .health-warning {
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line-soft);
+  font-size: 12px;
+}
+.health-warning > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.health-warning p {
+  margin: 6px 0;
+  line-height: 1.6;
+}
+.health-warning .button {
+  margin-top: 5px;
+}
+.health-incomplete {
+  display: block;
+  margin-top: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.theme-action {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  font-size: 12px;
+}
+.theme-action > a {
+  flex: 1;
+}
+.theme-action > span {
+  color: var(--ink-2);
+}
+.trend-reading {
+  display: flex;
+  align-items: center;
+  gap: 25px;
+}
+.trend-reading > strong {
+  font-size: 32px;
+}
+.trend-reading > span {
+  font-size: 12px;
+  line-height: 1.8;
+}
+.dashboard-v2 .trend-compact .chart {
+  height: 150px;
+  min-height: 0;
+}
+.dashboard-v2 .fan-numbers {
+  display: flex;
+  gap: 36px;
+  font-size: 12px;
+}
+.fan-numbers strong {
+  display: block;
+  font-size: 23px;
+  margin-top: 4px;
+}
+.dashboard-v2 .fan-charts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+.dashboard-v2 .fan-charts .chart {
+  height: 110px;
+  min-height: 0;
+}
+.recent-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: 12px;
+}
+.recent-table th:first-child {
+  width: 45%;
+}
+.recent-table th:last-child {
+  width: 20px;
+}
+.recent-table th {
+  text-align: left;
+  padding: 5px 0;
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.recent-table td {
+  padding: 10px 6px 10px 0;
+  border-top: 1px dashed var(--line-soft);
+}
+.recent-table tr[role='link'] {
+  cursor: pointer;
+}
+.recent-table tr[role='link']:hover {
+  background: var(--hover);
+}
+.recent-table td strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.recent-table small {
+  display: block;
+  font-size: 11px;
+  margin-top: 3px;
+}
+.collapsed-note {
+  font-size: 12px;
+}
+.accent {
+  color: var(--accent);
+}
+
+.dashboard-v2 .topbar .clock {
+  min-width: 240px;
+}
+.dashboard-v2 .trend-compact .segments {
+  flex-wrap: wrap;
+}
+
+.dashboard-v2 .health-warning {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: 5px;
+  align-items: center;
+}
+.dashboard-v2 .health-warning > div {
+  display: contents;
+}
+.dashboard-v2 .health-warning p {
+  grid-column: 1/-1;
+  grid-row: 2;
+}
+.dashboard-v2 .health-warning > .disabled-control {
+  grid-column: 3;
+  grid-row: 1;
+}
+.dashboard-v2 .health-warning .button {
+  margin: 0;
+}

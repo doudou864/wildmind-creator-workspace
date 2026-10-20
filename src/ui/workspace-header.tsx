@@ -15,10 +15,12 @@ export function WorkspaceHeader({
   current,
   date,
   syncWindow,
+  updatedLabel,
 }: {
   current: '/data-center' | '/' | '/topics' | '/images' | '/layouts' | '/publishing' | '/inbox' | '/deals';
   date: string;
   syncWindow: string;
+  updatedLabel?: string;
 }) {
   const weekday = new Date(`${date}T12:00:00+08:00`)
     .toLocaleDateString('en-US', { weekday: 'short', timeZone: 'Asia/Shanghai' })
@@ -51,7 +53,7 @@ export function WorkspaceHeader({
         <time dateTime={date}>
           {date} {weekday}
         </time>
-        <span>SYNC {syncWindow}</span>
+        {updatedLabel ? <span>{updatedLabel}</span> : <Link href="/#data-health">查看更新状态 →</Link>}
       </div>
     </header>
   );

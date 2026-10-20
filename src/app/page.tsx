@@ -4,6 +4,8 @@ import { loadDealConfig } from '@/lib/deal-config';
 import { loadInboxConfig } from '@/lib/inbox-config';
 import { readDashboard, readDeals } from '@/lib/workspace-service';
 import Dashboard from './dashboard';
+import { usingDatabase } from '@/lib/media-store';
+import { dashboardRead } from '@/ui/dashboard-read';
 export const dynamic = 'force-dynamic';
 export default async function Page() {
   const [config, dealConfig, inbox, dealData] = await Promise.all([
@@ -20,6 +22,7 @@ export default async function Page() {
   }).format(new Date());
   return (
     <Dashboard
+      presentation={await usingDatabase((db) => dashboardRead(db, config))}
       dataCenterPlatformId={(await loadDataCenterConfig()).platformId}
       dealConfig={dealConfig}
       dealChannels={inbox.channels}
