@@ -1,5 +1,6 @@
 'use client';
 import type { CSSProperties } from 'react';
+import { documentHTML } from '@/lib/rich-document';
 import { useRef, useState } from 'react';
 import type { Asset } from '@/lib/image-model';
 import type { LayoutConfig, LayoutPlatform, LayoutVariant, LayoutBlock } from '@/lib/layout-model';
@@ -107,16 +108,20 @@ export function LayoutPreview({
           </div>
         </div>
       )}
-      <article>
-        <h2>{variant.title || '尚未填写标题'}</h2>
-        {variant.blocks.length ? (
-          variant.blocks
-            .filter((b) => platform !== 'douyin' || b.type !== 'image')
-            .map((b) => <Block key={b.id} block={b} assets={assets} />)
-        ) : (
-          <Empty>尚未填写正文</Empty>
-        )}
-      </article>
+      {variant.document ? (
+        <div dangerouslySetInnerHTML={{ __html: documentHTML(variant, config) }} />
+      ) : (
+        <article>
+          <h2>{variant.title || '尚未填写标题'}</h2>
+          {variant.blocks.length ? (
+            variant.blocks
+              .filter((b) => platform !== 'douyin' || b.type !== 'image')
+              .map((b) => <Block key={b.id} block={b} assets={assets} />)
+          ) : (
+            <Empty>尚未填写正文</Empty>
+          )}
+        </article>
+      )}
     </div>
   );
 }

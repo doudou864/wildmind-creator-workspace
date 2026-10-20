@@ -415,3 +415,71 @@
 .layout-platform-tabs .button {
   text-align: left;
 }
+
+.free-document {
+  max-width: 960px;
+}
+.free-document-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 18px;
+}
+.free-document-toolbar label {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.free-document-toolbar input[type='file'] {
+  max-width: 200px;
+}
+.layouts-workspace .free-document-title {
+  font-size: 24px;
+  font-weight: 600;
+  border: 0 !important;
+  background: transparent;
+  width: 100%;
+}
+.free-document-body {
+  min-height: 360px;
+  outline: none;
+  font-size: 16px;
+  line-height: 1.8;
+  padding: 16px 0;
+}
+.free-document-body p {
+  margin: 0 0 16px;
+}
+.free-document-body ul {
+  list-style: disc;
+  padding-left: 24px;
+}
+.free-document-body ol {
+  list-style: decimal;
+  padding-left: 24px;
+}
+.free-document-body h2 {
+  font-size: 22px;
+  margin: 20px 0 12px;
+}
+.free-document-body blockquote {
+  border-left: 3px solid var(--line);
+  padding-left: 16px;
+}
+.free-document-body img {
+  max-width: 100%;
+  height: auto;
+}
+.free-document-body [data-resize-handle] {
+  background: var(--ink);
+  border: 2px solid var(--card);
+  width: 12px;
+  height: 12px;
+}
+.free-image-library {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}

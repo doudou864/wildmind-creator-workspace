@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { blocksFromDocument } from './rich-document.ts';
 import { and, eq } from 'drizzle-orm';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import { layouts, contents, assets, publishSnapshots } from '../db/schema.ts';
@@ -13,6 +14,9 @@ import { loadLayoutConfig } from './layout-config.ts';
 import { CodexJudgment, type Judgment } from '../ai/structured.ts';
 export function saveLayout(db: WorkspaceDatabase, raw: unknown, id?: string): LayoutDocument {
   const input = layoutSaveSchema.parse(raw);
+  for (const variant of Object.values(input.variants)) {
+    if (variant.document) variant.blocks = blocksFromDocument(variant.document);
+  }
   const content = input.contentId ? db.db.select().from(contents).where(eq(contents.id, input.contentId)).get() : null;
   if (!content || content.form !== '图文') throw new Error('请选择图文作品后保存。');
   return db.db.transaction((tx) => {
@@ -39,7 +43,13 @@ export function saveLayout(db: WorkspaceDatabase, raw: unknown, id?: string): La
   });
 }
 function previousContent(v: LayoutDocument['variants']['x']) {
-  return { title: v.title, blocks: v.blocks, covers: v.covers };
+  return {
+    title: v.title,
+    blocks: v.blocks,
+    covers: v.covers,
+    ...(v.document ? { document: v.document } : {}),
+    ...(v.theme ? { theme: v.theme } : {}),
+  };
 }
 export async function actOnLayout(
   db: WorkspaceDatabase,

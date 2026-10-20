@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { richNodeSchema, blocksFromDocument } from './rich-document.ts';
 import type { Content } from './content-model';
 import type { Asset } from './image-model';
 export const layoutPlatformSchema = z.enum(['wechat', 'douyin', 'x']);
@@ -50,6 +51,8 @@ export const layoutContentSchema = z
       .max(1000)
       .refine((blocks) => new Set(blocks.map((b) => b.id)).size === blocks.length),
     covers: z.record(z.string(), z.string()),
+    document: richNodeSchema.refine((d) => d.type === 'doc', '文档必须使用 doc 根节点').optional(),
+    theme: z.enum(['none', 'editorial']).optional(),
   })
   .strict();
 export type LayoutContent = z.infer<typeof layoutContentSchema>;
@@ -151,7 +154,13 @@ export function editLayout(document: LayoutDocument, platform: LayoutPlatform, c
   };
 }
 export function layoutPayload(document: LayoutDocument) {
-  const content = (v: LayoutVariant) => ({ title: v.title, blocks: v.blocks, covers: v.covers });
+  const content = (v: LayoutVariant) => ({
+    title: v.title,
+    blocks: v.blocks,
+    covers: v.covers,
+    ...(v.document ? { document: v.document } : {}),
+    ...(v.theme ? { theme: v.theme } : {}),
+  });
   return {
     contentId: document.contentId,
     source: document.source,
