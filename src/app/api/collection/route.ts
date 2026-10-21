@@ -1,3 +1,4 @@
+import { isLocalOrigin } from '@/lib/local-origin';
 import { startCollection, collectionRunning } from '@/jobs/collection-control';
 import { usingDatabase } from '@/lib/media-store';
 import { crawlLogs } from '@/db/schema';
@@ -18,8 +19,7 @@ export async function GET() {
   });
 }
 export async function POST(request: Request) {
-  if (request.headers.get('origin') !== new URL(request.url).origin)
-    return Response.json({ error: '请从本机工作台启动采集' }, { status: 403 });
+  if (!isLocalOrigin(request)) return Response.json({ error: '请从本机工作台启动采集' }, { status: 403 });
   try {
     const body = await request.json();
     if (body.platform !== undefined && typeof body.platform !== 'string') throw Error('平台参数无效');
