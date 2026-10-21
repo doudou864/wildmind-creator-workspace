@@ -1,4 +1,5 @@
 'use client';
+import { TopicChannelEditor } from '@/ui/topic-channel-editor';
 import { ArchiveButton } from '@/ui/archive-controls';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -24,7 +25,7 @@ const humanText = (text: string) =>
     .replaceAll('history为空', '暂时没有历史记录');
 export default function TopicsPage({
   parameters,
-  channels,
+  channels: initialChannels,
   platforms,
   initialData,
   today,
@@ -35,6 +36,7 @@ export default function TopicsPage({
   initialData: TopicData;
   today: string;
 }) {
+  const [channels, setChannels] = useState(initialChannels);
   const { data, error, refresh } = useResource('/api/topics', initialData);
   const [status, setStatus] = useState<StatusFilter>('candidate');
   const [kind, setKind] = useState<KindFilter>('all');
@@ -122,6 +124,7 @@ export default function TopicsPage({
         action={candidateCount > 3 ? generateButton : null}
       />
       {(notice || error) && <p role="status">{error || notice}</p>}
+      <TopicChannelEditor onChanged={setChannels} />
       <div className={`topics-v2-grid ${!focused ? 'topics-no-detail' : ''}`}>
         <Card title="候选方向" className="topic-list-card">
           {candidateCount <= 3 && (
