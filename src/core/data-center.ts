@@ -114,3 +114,70 @@ export function comparison(
     ),
   };
 }
+
+export type WorkPlayback = {
+  id: string;
+  title: string;
+  value: number | null;
+  capturedAt: string | null;
+  approximate: boolean;
+};
+export type PlaybackDistribution = {
+  rows: WorkPlayback[];
+  median: number | null;
+  count: number;
+  min: number | null;
+  max: number | null;
+};
+// Calendar days in the workspace timezone: the publication date is D0.
+export function playbackDistribution(
+  selected: AnalysisPost,
+  posts: AnalysisPost[],
+  samples: ReviewSample[],
+  day: number,
+  asOf: number,
+  options: { timeZone: string; axisPadding: number },
+): PlaybackDistribution {
+  const date = (time: number) =>
+    new Intl.DateTimeFormat('en-CA', {
+      timeZone: options.timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(new Date(time));
+  const calendarAge = (post: AnalysisPost, time: number) =>
+    Math.round((Date.parse(date(time)) - Date.parse(date(publicationTime(post.publishedAt)))) / 86400000);
+  const rows = posts
+    .filter(
+      (p) => p.platformId === selected.platformId && p.form === selected.form && publicationTime(p.publishedAt) <= asOf,
+    )
+    .sort((a, b) => publicationTime(a.publishedAt) - publicationTime(b.publishedAt) || a.id.localeCompare(b.id))
+    .map((p) => {
+      const sample = samples
+        .filter(
+          (s) =>
+            s.postId === p.id &&
+            s.metricId === p.metricId &&
+            s.value !== null &&
+            Number.isFinite(s.value) &&
+            Date.parse(s.capturedAt) <= asOf &&
+            calendarAge(p, Date.parse(s.capturedAt)) === day,
+        )
+        .sort((a, b) => Date.parse(a.capturedAt) - Date.parse(b.capturedAt) || a.id.localeCompare(b.id))[0];
+      return {
+        id: p.id,
+        title: p.title,
+        value: sample?.value ?? null,
+        capturedAt: sample?.capturedAt ?? null,
+        approximate: (sample as (ReviewSample & { precision?: string }) | undefined)?.precision === 'display',
+      };
+    });
+  const values = rows.flatMap((r) => (r.value === null ? [] : [r.value]));
+  return {
+    rows,
+    count: values.length,
+    median: quantile(values, 0.5),
+    min: values.length ? Math.min(...values) - options.axisPadding : null,
+    max: values.length ? Math.max(...values) + options.axisPadding : null,
+  };
+}

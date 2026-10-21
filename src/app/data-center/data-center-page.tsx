@@ -35,6 +35,8 @@ export default function DataCenterPage({
   const data = visibleRecords(initialData);
   const router = useRouter();
   const [query, setQuery] = useState('');
+  const [playbackDay, setPlaybackDay] = useState(data.playbackDays[0]);
+  const distribution = data.playback[playbackDay];
   const [day, setDay] = useState(data.checkpoints.filter((d) => d <= data.age).at(-1) ?? data.checkpoints[0]);
   const [reports, setReports] = useState(data.interpretations);
   const [busy, setBusy] = useState(false);
@@ -44,8 +46,6 @@ export default function DataCenterPage({
   const shownRows = analysisRows(rows, metricPresentation);
   const keyRows = shownRows.filter((r) => metricPresentation.keyNames.includes(r.name));
   const current = selected ? readings[selected.id] : null;
-  const curve = data.curve.slice(0, data.age);
-  const missingDays = curve.flatMap((r, i) => (r.value == null ? [`D${i + 1}`] : []));
   const enough = rows.some((r) => r.count >= data.minimum);
   const conclusion =
     data.ratio == null
@@ -307,27 +307,38 @@ export default function DataCenterPage({
             )}
           </Card>
           <Card
-            title="累计播放 · 每日首次采样"
+            title="作品播放量与中位数"
             className="analysis-curve"
             meta={
-              <span className="small">
-                <span className="analysis-legend-current">━ 本条</span>
-                {enough && <>　┄ 历史中位数　▰ 正常范围</>}
-              </span>
+              <div className="segments" role="group" aria-label="播放量天数">
+                {data.playbackDays.map((d) => (
+                  <Button
+                    key={d}
+                    className={playbackDay === d ? 'selected' : ''}
+                    aria-pressed={playbackDay === d}
+                    onClick={() => setPlaybackDay(d)}
+                  >
+                    D{d}
+                  </Button>
+                ))}
+              </div>
             }
           >
-            <DataCenterChart
-              rows={curve}
-              checkpoints={data.checkpoints.filter((d) => d <= curve.length)}
-              minimum={data.minimum}
-            />
-            {missingDays.length > 0 && (
-              <p className="analysis-missing">缺少采样：{missingDays.join('、')}；没有数据的日子留空。</p>
+            {distribution?.count ? (
+              <>
+                <p className="small">
+                  {selected.form} · D{playbackDay} 中位数 <span className="mono">{display(distribution.median)}</span> ·{' '}
+                  {distribution.count} 条有记录
+                  {distribution.count < data.minimum ? ' · 样本不足，仅供参考' : ''}
+                  {distribution.rows.length > distribution.count
+                    ? ` · ${distribution.rows.length - distribution.count} 条暂无当天记录`
+                    : ''}
+                </p>
+                <DataCenterChart distribution={distribution} day={playbackDay} />
+              </>
+            ) : (
+              <Empty>暂无 D{playbackDay} 记录；采集到对应日期的数据后显示。</Empty>
             )}
-            <details>
-              <summary>为什么和最新累计值不同 →</summary>
-              <p>曲线保留每天第一次有效采样，用于同龄比较；页头显示最后保存的累计值。同一天稍晚采集的数值可能更高。</p>
-            </details>
           </Card>
         </>
       )}

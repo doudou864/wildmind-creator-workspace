@@ -4,7 +4,13 @@ import { eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import { posts, contents, topics, postSnapshots, reviewCheckpoints, dataInterpretations } from '../db/schema.ts';
-import { ageAt, comparison, type AnalysisPost, type AnalysisMetric } from '../core/data-center.ts';
+import {
+  ageAt,
+  comparison,
+  playbackDistribution,
+  type AnalysisPost,
+  type AnalysisMetric,
+} from '../core/data-center.ts';
 import { publicationTime } from '../core/review.ts';
 import type { WorkspaceConfig } from './config.ts';
 import type { DataCenterConfig } from './data-center-config.ts';
@@ -72,6 +78,8 @@ export function dataCenterData(
     endDay: settings.endDay,
     checkpoints: days,
     curve: [],
+    playbackDays: settings.playback.days,
+    playback: {},
     comparisons: {},
     fingerprints: {},
     interpretations: [],
@@ -82,6 +90,9 @@ export function dataCenterData(
     .from(postSnapshots)
     .all()
     .filter((s) => all.some((p) => p.id === s.postId));
+  for (const day of settings.playback.days) {
+    result.playback[day] = playbackDistribution(selected, all, samples, day, now.getTime(), settings.playback);
+  }
   const options = {
     minimum: config.parameters.baselineMinimum,
     limit: config.parameters.baselineSamples,

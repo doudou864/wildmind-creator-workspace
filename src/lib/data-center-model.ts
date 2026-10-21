@@ -1,4 +1,4 @@
-import type { AnalysisPost, Comparison } from '../core/data-center';
+import type { AnalysisPost, Comparison, PlaybackDistribution } from '../core/data-center';
 export type InterpretationInput = { day: number; minimum: number; rows: Comparison[] };
 export type Interpretation = {
   id: string;
@@ -20,6 +20,8 @@ export type DataCenterData = {
   endDay: number;
   checkpoints: number[];
   curve: Comparison[];
+  playbackDays: number[];
+  playback: Record<string, PlaybackDistribution>;
   comparisons: Record<string, Comparison[]>;
   fingerprints: Record<string, string>;
   interpretations: Interpretation[];

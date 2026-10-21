@@ -24,3 +24,8 @@ presentation:
     分享量: 分享率
     收藏量: 收藏率
     涨粉量: 涨粉率
+
+playback:
+  days: [1, 3, 7, 30]
+  timeZone: Asia/Shanghai
+  axisPadding: 1000

@@ -5,26 +5,21 @@ import { LineChart } from 'echarts/charts';
 import { GridComponent, TooltipComponent, MarkLineComponent } from 'echarts/components';
 import { SVGRenderer } from 'echarts/renderers';
 import { chartTheme } from './chart-theme';
-import type { Comparison } from '@/core/data-center';
+import { workTitle } from './data-freshness';
+import type { Comparison, PlaybackDistribution } from '@/core/data-center';
 import { displayAnalysisValue as display } from '@/lib/data-center-model';
 echarts.use([LineChart, GridComponent, TooltipComponent, MarkLineComponent, SVGRenderer]);
-export function DataCenterChart({
-  rows,
-  checkpoints,
-  minimum,
-}: {
-  rows: Comparison[];
-  checkpoints: number[];
-  minimum: number;
-}) {
+export function DataCenterChart({ distribution, day }: { distribution: PlaybackDistribution; day: number }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
     const theme = chartTheme(ref.current);
     const chart = echarts.init(ref.current, undefined, { renderer: 'svg' });
+    const escape = (text: string) =>
+      text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
     chart.setOption({
       animation: false,
-      grid: { left: 65, right: 25, top: 22, bottom: 28 },
+      grid: { left: 80, right: 35, top: 35, bottom: 150 },
       tooltip: {
         trigger: 'axis',
         confine: true,
@@ -32,69 +27,57 @@ export function DataCenterChart({
         borderColor: theme.line,
         textStyle: { color: theme.ink, fontFamily: theme.font, fontSize: 12 },
         formatter: (params: { dataIndex: number }[]) => {
-          const i = params[0]?.dataIndex ?? 0,
-            r = rows[i];
-          return `D${i + 1}<br/>本条：${r.approximate ? '约 ' : ''}${display(r.value)}<br/>中位数：${display(r.median)}<br/>正常范围：${display(r.p25)}–${display(r.p75)}<br/>参与作品：${r.count}${r.count < minimum ? `<br/>样本不足（${r.count}/${minimum}）` : ''}`;
+          const row = distribution.rows[params[0]?.dataIndex ?? 0];
+          return `${escape(row.title)}<br/>D${day} 播放量：${row.approximate ? '约 ' : ''}${display(row.value)}<br/>中位数：${display(distribution.median)}<br/>参与作品：${distribution.count}`;
         },
       },
       xAxis: {
         type: 'category',
-        data: rows.map((_, i) => `D${i + 1}`),
-        boundaryGap: false,
+        data: distribution.rows.map((r) => workTitle(r.title)),
+        boundaryGap: true,
         axisLine: { show: false },
         axisTick: { show: false },
-        axisLabel: { color: theme.muted, fontFamily: theme.font, fontSize: 11 },
+        axisLabel: {
+          interval: 0,
+          rotate: 35,
+          width: 170,
+          overflow: 'truncate',
+          color: theme.muted,
+          fontFamily: theme.font,
+          fontSize: 11,
+        },
       },
       yAxis: {
         type: 'value',
+        name: '播放量',
+        min: distribution.min,
+        max: distribution.max,
+        nameTextStyle: { color: theme.muted, fontFamily: theme.font },
         splitLine: { show: false },
-        axisLabel: { color: theme.muted, fontFamily: theme.font, fontSize: 11 },
+        axisLabel: {
+          color: theme.muted,
+          fontFamily: theme.font,
+          fontSize: 11,
+          formatter: (value: number) => display(value),
+          showMinLabel: true,
+          showMaxLabel: true,
+        },
       },
       series: [
         {
-          name: '下界',
+          name: '作品播放量',
           type: 'line',
-          stack: 'range',
-          data: rows.map((r) => r.p25),
-          symbol: 'none',
+          data: distribution.rows.map((r) => r.value),
           connectNulls: false,
-          lineStyle: { opacity: 0 },
-          areaStyle: { opacity: 0 },
-          silent: true,
-        },
-        {
-          name: '正常范围',
-          type: 'line',
-          stack: 'range',
-          data: rows.map((r) => (r.p25 == null || r.p75 == null ? null : r.p75 - r.p25)),
-          symbol: 'none',
-          connectNulls: false,
-          lineStyle: { opacity: 0 },
-          areaStyle: { color: theme.soft, opacity: 0.6 },
-          silent: true,
-        },
-        {
-          name: '历史中位数',
-          type: 'line',
-          data: rows.map((r) => r.median),
-          symbol: 'none',
-          connectNulls: false,
-          lineStyle: { color: theme.ink, width: 1, type: 'dashed' },
-        },
-        {
-          name: '本条作品',
-          type: 'line',
-          data: rows.map((r) => r.value),
-          connectNulls: false,
-          symbolSize: 5,
-          itemStyle: { color: theme.accent },
-          lineStyle: { color: theme.accent, width: 2 },
+          symbolSize: 6,
+          itemStyle: { color: theme.ink },
+          lineStyle: { color: theme.ink, width: 1 },
           markLine: {
             silent: true,
             symbol: 'none',
-            label: { color: theme.muted, fontSize: 10, formatter: '{b}' },
-            lineStyle: { color: theme.line, width: 1, type: 'solid' },
-            data: checkpoints.map((d) => ({ name: `D${d}`, xAxis: `D${d}` })),
+            label: { position: 'insideEndTop', color: theme.ink, formatter: `中位数 ${display(distribution.median)}` },
+            lineStyle: { color: theme.ink, width: 1, type: 'dashed' },
+            data: distribution.median === null ? [] : [{ yAxis: distribution.median }],
           },
         },
       ],
@@ -105,14 +88,17 @@ export function DataCenterChart({
       observer.disconnect();
       chart.dispose();
     };
-  }, [rows, checkpoints, minimum]);
+  }, [distribution, day]);
   return (
-    <div
-      className="data-center-chart"
-      ref={ref}
-      role="img"
-      aria-label="发布后逐日累计播放量；缺数断线，悬停查看同天龄中位数、正常范围和样本数"
-    />
+    <div style={{ overflowX: 'auto' }}>
+      <div
+        className="data-center-chart"
+        style={{ minWidth: Math.max(600, distribution.rows.length * 105), height: 410 }}
+        ref={ref}
+        role="img"
+        aria-label={`D${day}各作品播放量与中位数虚线`}
+      />
+    </div>
   );
 }
 export function MetricNeedle({ row }: { row: Comparison }) {

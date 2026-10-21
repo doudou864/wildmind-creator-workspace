@@ -59,6 +59,10 @@ test('打开页面只读不生成；按按钮生成后缓存；刷新不重调AI
       },
     } as unknown as Judgment;
     const data = dataCenterData(db, config, settings, 'p');
+    expect(data.playbackDays).toEqual([1, 3, 7, 30]);
+    expect(data.playback[7]).toMatchObject({ count: 0, median: null });
+    expect(data.playback[7].rows[0].value).toBeNull();
+    expect(data.playback[30].count).toBe(0);
     expect(db.db.select().from(dataInterpretations).all()).toHaveLength(0);
     const input = { day: 7, fingerprint: data.fingerprints[7] };
     const first = await generateInterpretation(db, config, settings, 'p', input, judgment);

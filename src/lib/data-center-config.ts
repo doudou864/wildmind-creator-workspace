@@ -2,6 +2,11 @@ import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
 import { z } from 'zod';
 export const dataCenterConfigSchema = z.object({
+  playback: z.object({
+    days: z.array(z.number().int().positive()).min(1),
+    timeZone: z.string(),
+    axisPadding: z.number().positive(),
+  }),
   platformId: z.string(),
   endDay: z.number().int().positive(),
   per: z.number().positive(),
