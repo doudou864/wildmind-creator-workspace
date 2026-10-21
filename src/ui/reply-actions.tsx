@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { isMessageArchived, type InboxMessage } from '@/lib/inbox-model';
 import { Button } from './components';
 import { request } from './use-resource';
@@ -121,7 +122,7 @@ export function ReplyToast() {
     };
   }, []);
   if (!notice) return null;
-  return (
+  return createPortal(
     <div className="undo-toast" role="status">
       {notice.text}
       {notice.canUndo && (
@@ -148,6 +149,7 @@ export function ReplyToast() {
           撤销
         </Button>
       )}
-    </div>
+    </div>,
+    document.querySelector('dialog[open]') ?? document.body,
   );
 }

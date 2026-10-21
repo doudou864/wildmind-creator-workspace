@@ -2,24 +2,22 @@
 import { ReplyDraft } from '@/ui/reply-draft';
 import { MessageNavigation } from '@/ui/message-navigation';
 import { inboxSummary } from '@/ui/inbox-summary';
+import { groupInbox, inboxGroupKey } from '@/ui/inbox-groups';
 import { ReplyActions, ReplyToast, type ReplyDestinations } from '@/ui/reply-actions';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import type { Platform } from '@/lib/config';
 import {
   isMessageArchived,
   canSyncTopic,
   filterInbox,
-  inboxPage,
   inboxTime,
-  themeMessages,
-  waitingCount,
   type InboxConfig,
   type InboxData,
   type InboxFilters,
   type InboxMessage,
 } from '@/lib/inbox-model';
-import { PageHeader, Button, Card, Empty, Segmented } from '@/ui/components';
+import { PageHeader, Button, Dialog, Empty, Segmented } from '@/ui/components';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { request, useResource } from '@/ui/use-resource';
 const blankFilters: InboxFilters = {
@@ -64,8 +62,6 @@ export default function InboxPage({
 }) {
   const { data, error, refresh } = useResource('/api/inbox', initialData);
   const [priority, setPriority] = useState(initialPriority);
-  const [special, setSpecial] = useState<'all' | 'topics' | 'unclassified'>('all');
-  const [showAllThemes, setShowAllThemes] = useState(false);
   const [filters, setFilters] = useState<InboxFilters>({
     ...blankFilters,
     ...initialFilters,
@@ -73,82 +69,42 @@ export default function InboxPage({
     themeId: initialThemeId,
   });
   const [linkedMessageId, setLinkedMessageId] = useState(initialMessageId);
-  const [requestedPage, setRequestedPage] = useState(1),
-    [selectedId, setSelectedId] = useState<string | null>(initialMessageId);
+  const initialMessage = initialData.items.find((m) => m.id === initialMessageId);
+  const [selected, setSelected] = useState<{ key: string; title: string; platformId: string } | null>(
+    initialMessage
+      ? {
+          key: inboxGroupKey(initialMessage),
+          title: initialMessage.contentTitle ?? '关联消息',
+          platformId: initialMessage.platformId,
+        }
+      : null,
+  );
   const [busyId, setBusyId] = useState<string | null>(null),
     [refreshing, setRefreshing] = useState(false),
     [notice, setNotice] = useState('');
   const [syncReceipts, setSyncReceipts] = useState<Record<string, string>>({});
-  const platformName = (id: string) => platforms.find((p) => p.id === id)?.name ?? `${id}（历史平台）`;
+  const platformName = (id: string) => platforms.find((p) => p.id === id)?.name ?? id;
   const channelName = (id: string) => config.channels.find((c) => c.id === id)?.name ?? id;
-  function messageCategory(item: InboxMessage) {
-    const classification = item.classification;
-    return classification.status === 'ready'
-      ? classification.result.category === 'idea'
-        ? '问题与观点'
-        : (config.categories.find((c) => c.id === classification.result.category)?.name ?? '分类不可用')
-      : classification.status === 'pending'
-        ? '待识别'
-        : '识别失败';
-  }
   const allPlatforms = [
     ...platforms.map((p) => ({ id: p.id, name: p.name })),
-    ...Array.from(new Set(data.items.map((item) => item.platformId)))
+    ...Array.from(new Set(data.items.map((m) => m.platformId)))
       .filter((id) => !platforms.some((p) => p.id === id))
       .map((id) => ({ id, name: platformName(id) })),
   ];
-  const scoped = filterInbox(
-    data.items.filter((item) => !isMessageArchived(item)),
-    data.themes,
-    {
-      ...blankFilters,
-      platform: filters.platform,
-      channel: filters.channel,
-    },
-  );
-  const visibleThemes = data.themes.filter((t) => themeMessages(t, scoped).length > 0);
   const summary = inboxSummary(data.items);
   const valuableIds = new Set(summary.valuable.map((m) => m.id));
-  const filtered = filterInbox(data.items, data.themes, filters)
-    .filter(
-      (item) =>
-        (filters.reply === 'archived' ? isMessageArchived(item) : !isMessageArchived(item)) &&
-        (!linkedMessageId || item.id === linkedMessageId) &&
-        (!priority || valuableIds.has(item.id)) &&
-        (special !== 'topics' || (canSyncTopic(item) && !syncReceipts[item.id])) &&
-        (special !== 'unclassified' || item.classification.status !== 'ready'),
-    )
-    .sort((a, b) => {
-      const rank = (m: InboxMessage) =>
-        m.classification.status === 'ready' ? { deal: 0, idea: 1, other: 2 }[m.classification.result.category] : 3;
-      return rank(a) - rank(b);
-    });
-  const page = inboxPage(filtered, requestedPage, config.pageSize);
-  const active = page.items.find((item) => item.id === selectedId) ?? page.items[0] ?? null;
-  const assessments = summary.assessments;
-  const assessment = active ? assessments.get(active.id) : null;
-  const theme = filters.themeId ? data.themes.find((t) => t.id === filters.themeId) : null;
-  const displayCount = (value: number) => (data.recordsReady ? value.toLocaleString('en-US') : '--');
-  const unclassified = data.items.filter(
-    (item) => !isMessageArchived(item) && item.classification.status !== 'ready',
-  ).length;
-  const topics = data.items.filter(
-    (item) =>
-      !isMessageArchived(item) &&
-      item.classification.status === 'ready' &&
-      item.classification.result.category === 'idea' &&
-      !item.topicSignalId &&
-      !syncReceipts[item.id],
-  ).length;
-  useEffect(() => {
-    if (page.page !== requestedPage) setRequestedPage(page.page);
-  }, [page.page, requestedPage]);
+  const filtered = filterInbox(data.items, data.themes, filters).filter(
+    (m) =>
+      (filters.reply === 'archived' ? isMessageArchived(m) : !isMessageArchived(m)) &&
+      (!linkedMessageId || m.id === linkedMessageId) &&
+      (!priority || valuableIds.has(m.id)),
+  );
+  const groups = groupInbox(filtered, data.items);
+  const selectedGroup = groups.find((g) => g.key === selected?.key);
   function filter(patch: Partial<InboxFilters>) {
-    setPriority(false);
-    setSpecial('all');
     setLinkedMessageId(null);
+    setSelected(null);
     setFilters((current) => ({ ...current, ...patch }));
-    setRequestedPage(1);
   }
   async function reload() {
     if (refreshing) return;
@@ -169,20 +125,17 @@ export default function InboxPage({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ expectedRevision: item.revision }),
       });
-      if (result.item?.id !== item.id || !result.item.topicSignalId) throw new Error('同步结果未确认，请刷新后核对。');
+      if (result.item?.id !== item.id || !result.item.topicSignalId) throw Error('同步结果未确认，请刷新后核对。');
       setSyncReceipts((current) => ({ ...current, [item.id]: result.item.topicSignalId! }));
-      setNotice('已同步为选题输入。待回复状态保持不变，不会向平台发送消息。');
+      setNotice('已送进选题');
       await refresh();
     } catch (e) {
-      setNotice(e instanceof Error ? e.message : '同步失败，原消息已保留。');
+      setNotice(e instanceof Error ? e.message : '同步失败');
       await refresh();
     } finally {
       setBusyId(null);
     }
   }
-  const categoryOf = active?.classification.status === 'ready' ? active.classification.result.category : null;
-  const signalId = active ? (active.topicSignalId ?? syncReceipts[active.id]) : null;
-  const evidence = assessment?.observed.reply;
   return (
     <main className="workspace inbox-workspace">
       <WorkspaceHeader current="/inbox" date={today} syncWindow={syncWindow} />
@@ -190,18 +143,17 @@ export default function InboxPage({
       <ReplyToast />
       <PageHeader
         title="互动收件箱"
-        summary={summary.valuableWaiting ? '先回复商单，再看问题与观点' : '查看消息，挑选值得送进选题的需求'}
+        summary="按平台选作品，集中处理值得回复的评论"
         onRefresh={() => void reload()}
         refreshing={refreshing}
         action={
           <Button
             variant="primary"
-            onClick={() => {
-              filter({ ...blankFilters, reply: 'waiting' });
-              setPriority(true);
-            }}
+            disabled={!groups.length}
+            disabledReason="当前没有符合条件的消息"
+            onClick={() => setSelected(groups[0] ?? null)}
           >
-            查看值得回复的消息
+            开始处理
           </Button>
         }
       />
@@ -240,43 +192,6 @@ export default function InboxPage({
           <Empty>尚无评论或私信读取记录</Empty>
         )}
       </details>
-      <div className="inbox-overview" aria-label="消息统计">
-        <Button
-          aria-pressed={priority}
-          onClick={() => {
-            filter({ ...blankFilters, reply: 'waiting' });
-            setPriority(true);
-          }}
-        >
-          有价值消息待回复 <strong>{summary.valuableWaiting}</strong>
-        </Button>
-        <Button onClick={() => filter({ ...blankFilters, reply: 'waiting' })}>
-          全部待回复会话 / 评论 <strong>{summary.waiting}</strong>
-        </Button>
-        <Button
-          onClick={() => {
-            filter(blankFilters);
-            setSpecial('topics');
-          }}
-        >
-          可送入选题 <strong>{topics}</strong>
-        </Button>
-        <Button
-          onClick={() => {
-            filter(blankFilters);
-            setSpecial('unclassified');
-          }}
-        >
-          待识别 / 失败 <strong>{unclassified}</strong>
-        </Button>
-        <Button onClick={() => filter({ ...blankFilters, reply: 'archived' })}>
-          已归档 {data.items.filter(isMessageArchived).length}
-        </Button>
-        <Button className="stored-count" onClick={() => filter(blankFilters)}>
-          全部已存消息 {data.items.length}
-        </Button>
-      </div>
-      <p className="inbox-view-name">{priority ? '待回复的有价值消息' : '按当前条件查看消息'}</p>
       <details
         className="inbox-filter-disclosure"
         open={
@@ -284,7 +199,8 @@ export default function InboxPage({
           filters.channel !== 'all' ||
           !!filters.query ||
           filters.classification !== 'all' ||
-          (!priority && filters.reply !== 'all')
+          filters.reply === 'archived' ||
+          filters.reply === 'unknown'
         }
       >
         <summary>
@@ -295,6 +211,38 @@ export default function InboxPage({
           {filters.query ? ` · ${filters.query}` : ''}
         </summary>
         <div className="inbox-filters">
+          <label>
+            消息范围
+            <select
+              aria-label="消息范围"
+              value={priority ? 'valuable' : 'all'}
+              onChange={(e) => {
+                setPriority(e.target.value === 'valuable');
+                setLinkedMessageId(null);
+                setSelected(null);
+              }}
+            >
+              <option value="valuable">有价值消息</option>
+              <option value="all">全部消息</option>
+            </select>
+          </label>
+          {data.themes.length > 0 && (
+            <label>
+              需求主题
+              <select
+                aria-label="需求主题"
+                value={filters.themeId ?? ''}
+                onChange={(e) => filter({ themeId: e.target.value || null })}
+              >
+                <option value="">全部主题</option>
+                {data.themes.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           <label>
             分类
             <select
@@ -366,302 +314,132 @@ export default function InboxPage({
               placeholder="发送者、消息原文、关联作品"
             />
           </label>
-          <Button
-            onClick={() => {
-              setFilters(blankFilters);
-              setPriority(false);
-              setSpecial('all');
-              setLinkedMessageId(null);
-              setRequestedPage(1);
-            }}
-          >
-            重置筛选
-          </Button>
+          <Button onClick={() => filter(blankFilters)}>重置筛选</Button>
         </div>
       </details>
+
       {linkedMessageId && (
         <div className="deal-linked">
-          <span>正在查看关联的原始消息</span>
+          <span>正在查看关联消息</span>
           <Button
             onClick={() => {
               setLinkedMessageId(null);
-              setSelectedId(null);
+              setSelected(null);
             }}
           >
             查看全部消息
           </Button>
         </div>
       )}
-      {notice && (
-        <p className="topic-feedback" role="status">
-          {notice}
-        </p>
-      )}
-      {error && (
-        <p className="topic-feedback" role="alert">
-          {error}
-        </p>
-      )}
-      <div className="inbox-grid">
-        <details className="card inbox-themes-disclosure" open={!!filters.themeId}>
-          <summary>需求主题</summary>
-
-          <div className="inbox-themes">
-            {visibleThemes.slice(0, showAllThemes ? undefined : 8).map((t) => (
-              <Button
-                key={t.id}
-                className={`list-row ${filters.themeId === t.id ? 'active' : ''}`}
-                aria-pressed={filters.themeId === t.id}
-                onClick={() =>
-                  filter({ themeId: t.id, category: 'all', reply: 'all', classification: 'all', query: '' })
-                }
-              >
-                <strong>{t.title}</strong>
-                <span className="small">{themeMessages(t, scoped).length} 条</span>
-                <span aria-hidden="true">→</span>
-              </Button>
-            ))}
-            {visibleThemes.length > 8 && (
-              <Button variant="text" onClick={() => setShowAllThemes(!showAllThemes)}>
-                {showAllThemes ? '收起' : `还有 ${visibleThemes.length - 8} 个`}
-              </Button>
-            )}
-          </div>
-          {!data.themes.length ? (
-            <Empty>暂无已汇总的需求主题</Empty>
-          ) : !data.themes.some((t) => themeMessages(t, scoped).length) &&
-            !(filters.platform === 'all' && filters.channel === 'all') ? (
-            <Empty>当前范围没有需求主题来源</Empty>
-          ) : null}
-          {filters.themeId && <Button onClick={() => filter({ themeId: null })}>清除主题筛选</Button>}
-        </details>
-        <Card title="消息列表" className="inbox-list-card">
-          {theme && (
-            <div className="inbox-theme-summary">
-              <strong>{theme.title}</strong>
-              <p>{theme.summary}</p>
-              {theme.messageIds.some((id) => !data.items.some((item) => item.id === id)) && (
-                <span className="small">部分来源记录暂不可用</span>
-              )}
-            </div>
-          )}
-          <div className="inbox-message-list">
-            {page.items.length ? (
-              page.items.map((item) => {
-                const state = assessments.get(item.id)?.state ?? 'unknown';
-                return (
-                  <article className="message-item" key={item.id}>
-                    <Button
-                      className={`inbox-message list-row ${active?.id === item.id ? 'active' : ''}`}
-                      aria-pressed={active?.id === item.id}
-                      onClick={() => {
-                        setSelectedId(item.id);
-                        setNotice('');
-                      }}
-                    >
-                      <div className="inbox-message-meta">
-                        <span>
-                          {platformName(item.platformId)} · {channelName(item.channel)}
-                        </span>
-                        <time className="mono" dateTime={item.sentAt ?? undefined}>
-                          {inboxTime(item.sentAt)}
-                        </time>
-                      </div>
-                      <div className="inbox-message-title">
-                        <strong>{item.author || '发送者未识别'}</strong>
-                        <span className="inbox-reply-state">{item.newReply ? '有新消息' : replyLabels[state]}</span>
-                      </div>
-                      <p className="inbox-message-body">{item.body || '原文未读取完整'}</p>
-                      <div className="inbox-message-tags">
-                        <span>{messageCategory(item)}</span>
-                        {item.dealId && <span>已进入商单</span>}
-                        {(item.topicSignalId || syncReceipts[item.id]) && <span>已同步选题输入</span>}
-                        {item.contentTitle && <span className="inbox-message-work">{item.contentTitle}</span>}
-                      </div>
-                    </Button>
-                    {active?.id === item.id && <ReplyActions message={item} destinations={destinations} />}
-                  </article>
-                );
-              })
-            ) : (
-              <Empty>
-                {!data.recordsReady
-                  ? '暂无消息记录，完成读取后出现'
-                  : linkedMessageId
-                    ? '关联消息暂不可用，请刷新或返回全部消息'
-                    : data.items.length
-                      ? '没有符合当前筛选的消息'
-                      : '暂无已读取的评论或私信'}
-              </Empty>
-            )}
-          </div>
-          {page.pages > 1 && (
-            <div className="inbox-pagination">
-              <span className="small">按消息时间倒序 · 每页 {config.pageSize} 条</span>
-              <Button
-                aria-label="上一页消息"
-                disabled={page.page === 1}
-                disabledReason="已经是第一页。"
-                onClick={() => setRequestedPage(page.page - 1)}
-              >
-                ←
-              </Button>
-              <span className="mono">{data.recordsReady ? `${page.page} / ${page.pages}` : '-- / --'}</span>
-              <Button
-                aria-label="下一页消息"
-                disabled={page.page === page.pages}
-                disabledReason="已经是最后一页。"
-                onClick={() => setRequestedPage(page.page + 1)}
-              >
-                →
-              </Button>
-            </div>
-          )}
-        </Card>
-        <aside className="inbox-detail-column">
-          <Card title="消息详情" className="inbox-detail">
-            {!active ? (
-              <Empty>没有符合条件的消息</Empty>
-            ) : (
-              <>
-                <div className="inbox-detail-heading">
-                  <strong>{active.author || '发送者未识别'}</strong>
-                  <span className="small">
-                    {platformName(active.platformId)} · {channelName(active.channel)} · {inboxTime(active.sentAt)}
-                  </span>
-                </div>
-                <ReplyActions message={active} destinations={destinations} />
-                {active.classification.status === 'ready' && active.classification.result.category !== 'other' && (
-                  <ReplyDraft key={active.id} id={active.id} />
-                )}
-                <p className="inbox-original">{active.body || '原文尚未读取完整'}</p>
-                <dl className="inbox-evidence">
-                  <div>
-                    <dt>关联作品</dt>
-                    <dd>{active.contentTitle ?? '未关联'}</dd>
+      {notice && !selected && <p role="status">{notice}</p>}
+      {error && <p role="alert">{error}</p>}
+      <div className="inbox-platform-sections">
+        {allPlatforms.map((platform) => {
+          const works = groups.filter((g) => g.platformId === platform.id);
+          if (!works.length) return null;
+          return (
+            <section className="inbox-platform-section" key={platform.id} aria-label={platform.name}>
+              <h2>{platform.name}</h2>
+              <div className="inbox-work-cards">
+                {works.map((group) => (
+                  <button
+                    type="button"
+                    className="inbox-work-card"
+                    key={group.key}
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      setSelected(group);
+                      setNotice('');
+                    }}
+                  >
+                    <strong>{group.title}</strong>
+                    <span className="inbox-work-count">
+                      {filters.reply === 'waiting' ? (
+                        <>
+                          <b className="mono">{group.waiting}</b>{' '}
+                          {group.channel === 'dm' ? '个会话待回复' : '条评论待回复'}
+                        </>
+                      ) : (
+                        <>
+                          <b className="mono">{group.items.length}</b> 条
+                          {filters.reply === 'archived' ? '已归档消息' : '消息'}
+                        </>
+                      )}
+                    </span>
+                    <span aria-hidden="true">→</span>
+                  </button>
+                ))}
+              </div>
+            </section>
+          );
+        })}
+        {!groups.length && (
+          <Empty>{data.recordsReady ? '当前没有符合条件的消息' : '尚未读取消息，完成读取后出现'}</Empty>
+        )}
+      </div>
+      {selected && (
+        <Dialog className="inbox-comments-drawer" title={selected.title} onClose={() => setSelected(null)}>
+          <p className="inbox-drawer-summary">
+            {platformName(selected.platformId)} · {selectedGroup?.items.length ?? 0} 条{priority ? '有价值' : ''}
+            {selectedGroup?.channel === 'dm' ? '私信' : '评论'}
+          </p>
+          {notice && <p role="status">{notice}</p>}
+          <div className="inbox-comment-stack">
+            {selectedGroup?.items.map((item) => {
+              const state = summary.assessments.get(item.id)?.state ?? 'unknown';
+              const category = item.classification.status === 'ready' ? item.classification.result.category : null;
+              const signalId = item.topicSignalId ?? syncReceipts[item.id];
+              return (
+                <article className="inbox-comment" key={item.id}>
+                  <header>
+                    <strong className="inbox-account">
+                      {item.author.startsWith('@') ? item.author : `@${item.author || '发送者未识别'}`}
+                    </strong>
+                    <time className="mono">{inboxTime(item.sentAt)}</time>
+                    <span>{item.newReply ? '有新消息' : replyLabels[state]}</span>
+                  </header>
+                  <p className="inbox-comment-body">{item.body || '原文未读取完整'}</p>
+                  <ReplyActions message={item} destinations={destinations} />
+                  <div className="inbox-comment-tools">
+                    {(category === 'idea' || category === 'deal') && <ReplyDraft id={item.id} />}
+                    {category === 'idea' &&
+                      (signalId ? (
+                        <Link href="/topics">已送进选题 →</Link>
+                      ) : (
+                        <Button
+                          disabled={!data.topicSyncReady || !!busyId}
+                          disabledReason={!data.topicSyncReady ? '选题同步暂不可用' : '正在同步'}
+                          onClick={() => void syncTopic(item)}
+                        >
+                          {busyId === item.id ? '正在同步…' : '送进选题'}
+                        </Button>
+                      ))}
+                    {category === 'deal' && (
+                      <Link href={item.dealId ? `/deals?deal=${encodeURIComponent(item.dealId)}` : '/deals'}>
+                        看商单 →
+                      </Link>
+                    )}
                   </div>
-                  <div>
-                    <dt>本条读取时间</dt>
-                    <dd className="mono">{inboxTime(active.capturedAt)}</dd>
-                  </div>
-                  <div>
-                    <dt>回复状态</dt>
-                    <dd>{replyLabels[assessment?.state ?? 'unknown']}</dd>
-                  </div>
-                  <div>
-                    <dt>状态依据读取于</dt>
-                    <dd className="mono">{inboxTime(assessment?.observed.capturedAt ?? null)}</dd>
-                  </div>
-                </dl>
-                <details>
-                  <summary>查看回复依据 →</summary>
-                  <p className="inbox-reply-explanation">
-                    {assessment?.state === 'unknown'
-                      ? '回复证据不足或不一致，暂不能判定是否待回复。'
-                      : evidence?.kind === 'dm'
-                        ? `本会话最后一条由${evidence.lastSender === 'self' ? '我方' : '对方'}发送；以最近一次已核实的会话读取为准。`
-                        : evidence?.kind === 'comment' && evidence.ownReplyFound
-                          ? '已在该评论下识别到我方回复。'
-                          : '已完整读取评论回复范围，尚未发现我方回复。'}
-                  </p>
-                </details>
-                {evidence?.kind === 'dm' && (
-                  <p className="small">
-                    会话末条时间：<span className="mono">{inboxTime(evidence.lastMessageAt)}</span>
-                  </p>
-                )}
-                {active.reply.kind === 'comment' && (
-                  <p className="small">
-                    评论互动：点赞 <span className="mono">{active.reply.likes ?? '--'}</span> · 回复{' '}
-                    <span className="mono">{active.reply.replyCount ?? '--'}</span>
-                  </p>
-                )}
-                <div className="inbox-classification">
-                  <strong>{messageCategory(active)}</strong>
-                  <p>
-                    {active.classification.status === 'ready'
-                      ? active.classification.result.reason
-                      : (active.classification.reason ?? '等待分类服务处理')}
-                  </p>
-                </div>
-                <details className="inbox-context">
-                  <summary>
-                    {active.channel === 'dm' ? '会话上下文' : '评论上下文'} ·{' '}
-                    {active.contextComplete ? '已读完整' : '可能不完整'}
-                  </summary>
-                  {active.context.length ? (
-                    <div>
-                      {active.context.map((entry) => (
-                        <div className={`inbox-context-entry ${entry.sender === 'self' ? 'self' : ''}`} key={entry.id}>
-                          <header>
-                            <strong>{entry.sender === 'self' ? '我方' : entry.author || '发送者未识别'}</strong>
-                            <time className="mono">{inboxTime(entry.sentAt)}</time>
-                          </header>
-                          <p>{entry.body || '内容未识别'}</p>
+                  {!!item.context.length && (
+                    <details className="inbox-context">
+                      <summary>查看上下文</summary>
+                      {item.context.map((entry) => (
+                        <div className="inbox-context-entry" key={entry.id}>
+                          <strong className="inbox-account">
+                            {entry.sender === 'self' ? '我方' : entry.author || '发送者未识别'}
+                          </strong>
+                          <p>{entry.body}</p>
                         </div>
                       ))}
-                    </div>
-                  ) : (
-                    <Empty>暂无可展示的上下文记录</Empty>
+                    </details>
                   )}
-                </details>
-                <div className="inbox-source-link">
-                  {active.sourceUrl && /^https?:\/\//.test(active.sourceUrl) ? (
-                    <a href={active.sourceUrl} target="_blank" rel="noreferrer">
-                      查看原始平台页面 →
-                    </a>
-                  ) : (
-                    <span className="small">原始页面链接暂不可用</span>
-                  )}
-                </div>
-              </>
-            )}
-          </Card>
-          {active && (
-            <Card title="后续流转">
-              <div className="inbox-handoff">
-                {categoryOf === 'deal' ? (
-                  <>
-                    <strong>
-                      {active.dealId
-                        ? '已关联商单记录'
-                        : active.dealSync === 'failed'
-                          ? '商单入库失败'
-                          : '等待自动进入商单列表'}
-                    </strong>
-                    <p>{active.dealSyncReason ?? ''}</p>
-                    <Link href={active.dealId ? `/deals?deal=${encodeURIComponent(active.dealId)}` : '/deals'}>
-                      {active.dealId ? '查看关联商单 →' : '查看商单列表 →'}
-                    </Link>
-                  </>
-                ) : categoryOf === 'idea' ? (
-                  <>
-                    <strong>{signalId ? '已同步为选题输入' : '可作为选题输入'}</strong>
-
-                    {active.topicSyncedAt && <span className="small">同步于 {inboxTime(active.topicSyncedAt)}</span>}
-                    <Button
-                      disabled={!data.topicSyncReady || !!busyId || !!signalId}
-                      disabledReason={!data.topicSyncReady ? '选题同步暂不可用。' : '请等待当前同步完成。'}
-                      onClick={() => void syncTopic(active)}
-                    >
-                      {busyId === active.id ? '正在同步…' : signalId ? '已同步选题输入' : '同步到选题中心'}
-                    </Button>
-                    <Link href="/topics">去选题中心 →</Link>
-                  </>
-                ) : categoryOf === 'other' ? (
-                  <>
-                    <strong>不进入商单或选题流程</strong>
-                  </>
-                ) : (
-                  <>
-                    <strong>分类完成后再流转</strong>
-                  </>
-                )}
-              </div>
-            </Card>
-          )}
-        </aside>
-      </div>
+                </article>
+              );
+            })}
+          </div>
+          {!selectedGroup?.items.length && <Empty>这组消息已处理完，可关闭继续查看其他作品</Empty>}
+        </Dialog>
+      )}
     </main>
   );
 }

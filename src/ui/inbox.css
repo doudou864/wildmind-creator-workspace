@@ -421,3 +421,137 @@
 .inbox-themes-disclosure > summary {
   cursor: pointer;
 }
+
+/* Platform → work → comments. The drawer replaces the permanent detail column. */
+.inbox-platform-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  margin-top: 4px;
+}
+.inbox-platform-section h2 {
+  font-size: 18px;
+  margin: 0 0 12px;
+}
+.inbox-work-cards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.inbox-work-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  padding: 20px;
+  text-align: left;
+  background: var(--card);
+  color: var(--ink);
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.inbox-work-card:hover {
+  background: var(--hover);
+}
+.inbox-work-card:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.inbox-work-card strong {
+  grid-column: 1 / -1;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.inbox-work-count {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+.inbox-work-count b {
+  color: var(--ink);
+  font-size: 20px;
+  margin-right: 6px;
+}
+dialog.inbox-comments-drawer {
+  position: fixed;
+  inset: 0 0 0 auto;
+  margin: 0;
+  width: min(760px, 55vw);
+  max-width: none;
+  height: 100dvh;
+  max-height: 100dvh;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0;
+  background: var(--card);
+  padding: 0;
+}
+.inbox-comments-drawer .dialog-content {
+  padding: 24px;
+}
+.inbox-comments-drawer .dialog-content > header {
+  align-items: flex-start;
+  gap: 20px;
+}
+.inbox-comments-drawer h2 {
+  font-size: 20px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.inbox-drawer-summary {
+  color: var(--ink-2);
+  font-size: 12px;
+  margin: 12px 0;
+}
+.inbox-comment {
+  padding: 22px 0;
+  border-top: 1px solid var(--line-soft);
+}
+.inbox-comment > header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  font-size: 12px;
+}
+.inbox-comment > header time {
+  margin-left: auto;
+  color: var(--ink-2);
+}
+.inbox-account {
+  display: inline-block;
+  background: var(--bg);
+  color: var(--ink);
+  border: 0;
+  border-radius: 2px;
+  padding: 5px 9px;
+  font-size: 13px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+.inbox-comment-body {
+  font-size: 15px;
+  line-height: 1.9;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 16px 0;
+}
+.inbox-comment-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 12px;
+}
+.inbox-comment-tools .reply-draft {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+.inbox-comment-tools a {
+  font-size: 12px;
+}
+
+.inbox-comment-tools .reply-draft textarea {
+  width: 100%;
+  min-width: 320px;
+}
