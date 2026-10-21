@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TopicChannel } from '@/lib/topic-channels';
 import { Button, Card } from './components';
 import { request } from './use-resource';
@@ -16,6 +16,8 @@ export function TopicChannelEditor({
     [rows, setRows] = useState<Row[]>([]),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState('');
+  const [active, setActive] = useState<string | null>(null);
+  const list = useRef<HTMLDivElement>(null);
   useEffect(() => {
     onPendingChange?.(busy || rows.some((r) => r.dirty));
   }, [busy, rows, onPendingChange]);
@@ -81,6 +83,7 @@ export function TopicChannelEditor({
                 : r,
             ),
       );
+      setActive(null);
       setNotice(remove ? '已删除，已有选题保留' : '已保存，下次生成选题时使用');
     } catch (e) {
       setNotice(e instanceof Error ? e.message : '保存失败，输入已保留');
@@ -89,68 +92,112 @@ export function TopicChannelEditor({
     }
   }
   return (
-    <Card title="选题渠道" className="topic-channel-editor">
+    <Card title="选题渠道" meta={`${rows.length} 条`} className="topic-channel-editor compact-channels">
       <Button
         disabled={busy || !data}
         disabledReason={busy ? '正在保存' : '正在读取渠道'}
-        onClick={() =>
-          setRows((current) => [...current, { key: crypto.randomUUID(), title: '', link: '', dirty: true }])
-        }
+        onClick={() => {
+          const key = crypto.randomUUID();
+          setRows((current) => [{ key, title: '', link: '', dirty: true }, ...current]);
+          setActive(key);
+          setNotice('');
+          if (list.current) list.current.scrollTop = 0;
+        }}
       >
         增加一行
       </Button>
-      <div className="topic-channel-rows">
-        {rows.map((row, index) => (
-          <form
-            key={row.key}
-            className="topic-channel-fields"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void save(row);
-            }}
-          >
-            <label>
-              标题
-              <input
-                aria-label={`渠道 ${index + 1} 标题`}
-                required
-                maxLength={200}
-                disabled={busy}
-                value={row.title}
-                onChange={(e) => change(row.key, { title: e.target.value })}
-                placeholder="创作者或网站名称"
-              />
-            </label>
-            <label>
-              链接
-              <input
-                aria-label={`渠道 ${index + 1} 链接`}
-                required
-                type="url"
-                disabled={busy}
-                value={row.link}
-                onChange={(e) => change(row.key, { link: e.target.value })}
-                placeholder="https://…"
-              />
-            </label>
-            <div className="channel-row-actions">
-              {row.dirty ? (
-                <Button
-                  type="submit"
-                  disabled={busy || !row.title.trim() || !row.link.trim()}
-                  disabledReason={busy ? '正在保存' : '请填完整标题和链接'}
-                >
-                  保存渠道
-                </Button>
-              ) : (
-                <span className="small">已保存</span>
-              )}
-              <Button type="button" disabled={busy} disabledReason="正在保存" onClick={() => void save(row, true)}>
-                删除行
+      <div className="topic-channel-rows" ref={list}>
+        {rows.map((row, index) =>
+          active !== row.key ? (
+            <div className="channel-compact-row" key={row.key}>
+              <a
+                href={row.id && /^https?:\/\//.test(row.link) ? row.link : undefined}
+                target="_blank"
+                rel="noreferrer"
+                title={row.link}
+              >
+                {row.title || '新渠道'}
+                {row.dirty ? ' · 未保存' : ' →'}
+              </a>
+              <Button disabled={busy} disabledReason="正在保存" onClick={() => setActive(row.key)}>
+                修改
+              </Button>
+              <Button disabled={busy} disabledReason="正在保存" onClick={() => void save(row, true)}>
+                删除
               </Button>
             </div>
-          </form>
-        ))}
+          ) : (
+            <form
+              key={row.key}
+              className="topic-channel-fields"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void save(row);
+              }}
+            >
+              <label>
+                <span className="sr-only">标题</span>
+                <input
+                  aria-label={`渠道 ${index + 1} 标题`}
+                  required
+                  maxLength={200}
+                  disabled={busy}
+                  value={row.title}
+                  onChange={(e) => change(row.key, { title: e.target.value })}
+                  placeholder="创作者或网站名称"
+                />
+              </label>
+              <label>
+                <span className="sr-only">链接</span>
+                <input
+                  aria-label={`渠道 ${index + 1} 链接`}
+                  required
+                  type="url"
+                  disabled={busy}
+                  value={row.link}
+                  onChange={(e) => change(row.key, { link: e.target.value })}
+                  placeholder="https://…"
+                />
+              </label>
+              <div className="channel-row-actions">
+                {row.dirty ? (
+                  <Button
+                    type="submit"
+                    disabled={busy || !row.title.trim() || !row.link.trim()}
+                    disabledReason={busy ? '正在保存' : '请填完整标题和链接'}
+                  >
+                    保存渠道
+                  </Button>
+                ) : (
+                  <span className="small">已保存</span>
+                )}
+                <Button type="button" disabled={busy} disabledReason="正在保存" onClick={() => void save(row, true)}>
+                  删除
+                </Button>
+                <Button
+                  type="button"
+                  disabled={busy}
+                  disabledReason="正在保存"
+                  onClick={() => {
+                    const original = data?.channels.find((c) => c.id === row.id);
+                    setRows((current) =>
+                      original
+                        ? current.map((r) =>
+                            r.key === row.key
+                              ? { ...r, title: original.name, link: original.location, dirty: false }
+                              : r,
+                          )
+                        : current.filter((r) => r.key !== row.key),
+                    );
+                    setActive(null);
+                  }}
+                >
+                  取消
+                </Button>
+              </div>
+            </form>
+          ),
+        )}
       </div>
       {notice && <p role="status">{notice}</p>}
       {!data && (

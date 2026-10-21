@@ -575,3 +575,51 @@
 .topics-channel-layout > .topics-v2-grid {
   min-width: 0;
 }
+
+.compact-channels .topic-channel-rows {
+  max-height: calc(100vh - 340px);
+}
+.channel-compact-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.channel-compact-row > a {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-size: 12px;
+}
+.channel-compact-row > .button {
+  padding: 3px 6px;
+  font-size: 11px;
+}
+.compact-channels .topic-channel-fields {
+  margin: 0 0 8px;
+  padding: 8px 0;
+  gap: 6px;
+}
+.compact-channels .topic-channel-fields label {
+  gap: 0;
+}
+.compact-channels .topic-channel-fields input {
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: 12px;
+}
+.compact-channels .channel-row-actions {
+  justify-content: flex-start;
+  gap: 6px;
+}
+.compact-channels .channel-row-actions .button {
+  padding: 4px 7px;
+  font-size: 11px;
+}
+.compact-channels > p {
+  margin: 8px 0 0;
+  font-size: 11px;
+}
