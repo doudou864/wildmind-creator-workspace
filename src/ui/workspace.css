@@ -1855,3 +1855,53 @@ dialog.asset-drawer {
   background: var(--card);
   font: inherit;
 }
+
+.collection-strip {
+  margin-bottom: 16px;
+}
+.collection-strip-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.collection-platforms {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+.collection-platform {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.collection-platform > div {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.collection-platform span,
+.collection-platform small {
+  font-size: 12px;
+}
+.collection-platform small {
+  color: var(--ink-2);
+}
+.collection-success {
+  color: var(--collection-success);
+}
+.collection-failed {
+  color: var(--collection-failed);
+}
+.collection-platform details {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 900px) {
+  .collection-platforms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

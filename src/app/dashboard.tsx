@@ -1,5 +1,5 @@
 'use client';
-import { TodayAttention } from '@/ui/today-attention';
+import { CollectionStrip } from '@/ui/collection-strip';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
@@ -54,12 +54,6 @@ export default function Dashboard({
     .filter((v): v is string => !!v)
     .sort()
     .at(-1);
-  const unhealthy = activePlatforms.filter(
-    (p) =>
-      workspace.platforms[p.id]?.status !== 'success' ||
-      !workspace.platforms[p.id]?.lastSuccess ||
-      dataDate(workspace.platforms[p.id].lastSuccess!) !== today,
-  );
   const failed = activePlatforms.filter((p) => workspace.platforms[p.id]?.status === 'failed');
   const planned = workspace.plannedContents.filter((c) => c.plannedDate === today);
   const pendingDeals = deals.items.filter((d) => summary.assessments.get(d.source.messageId)?.state === 'waiting');
@@ -188,7 +182,16 @@ export default function Dashboard({
           </Link>
         }
       />
-      <TodayAttention />
+      <CollectionStrip
+        platforms={activePlatforms.map((p) => ({
+          ...workspace.platforms[p.id],
+          reason: workspace.platforms[p.id]?.error,
+          id: p.id,
+          name: p.name,
+        }))}
+        today={today}
+        onUpdate={refresh}
+      />
       {(error || dealError || notice) && <p role="status">{error || dealError || notice}</p>}
       <div className="dashboard-two-columns">
         <div className="dashboard-left">
@@ -216,47 +219,11 @@ export default function Dashboard({
           <Link className="card compact-deals list-row" href="/deals">
             商单　待处理 {counts.pending} · 跟进中 {counts.following} · 已完成 {counts.completed} →
           </Link>
-          <Card
-            title="数据健康"
-            meta={<span className="small">数据{freshness(latestUpdate, today)}</span>}
-            className="health-compact"
-          >
-            <div id="data-health">
-              {!unhealthy.length ? (
-                <p>
-                  {activePlatforms.length} 个平台已更新 · {freshness(latestUpdate, today)}
-                </p>
-              ) : (
-                unhealthy.map((p) => (
-                  <div className="health-warning" key={p.id}>
-                    <div>
-                      <strong>{p.name}</strong>
-                      <span className="small">
-                        最近成功{' '}
-                        {workspace.platforms[p.id]?.lastSuccess
-                          ? dataDate(workspace.platforms[p.id].lastSuccess!).slice(5)
-                          : '尚无'}
-                      </span>
-                    </div>
-                    {workspace.platforms[p.id]?.status === 'failed' && (
-                      <p className="accent">
-                        本次采集失败，没有读到完整数据。
-                        <Button variant="text" onClick={() => setDetail(`source:${p.id}`)}>
-                          查看原因
-                        </Button>
-                      </p>
-                    )}
-                  </div>
-                ))
-              )}
-              <p className="small">手动重抓：在项目终端运行 npm run collect。</p>
-              {summary.incomplete.length > 0 && (
-                <Link className="list-row health-incomplete" href="/inbox?reply=unknown">
-                  {summary.incomplete.length} 条有价值消息的回复状态没读全，去平台核对有无回复 →
-                </Link>
-              )}
-            </div>
-          </Card>
+          {summary.incomplete.length > 0 && (
+            <Link className="list-row health-incomplete" href="/inbox?reply=unknown">
+              {summary.incomplete.length} 条有价值消息的回复状态没读全，去平台核对有无回复 →
+            </Link>
+          )}
           {anomalies.length > 0 && (
             <Card title="作品表现异常">
               {anomalies.map((a) => (

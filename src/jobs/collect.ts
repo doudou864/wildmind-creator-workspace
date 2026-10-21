@@ -1,3 +1,4 @@
+import { existingCollectionSpace } from '../browser/collection-space.ts';
 import { collectPlatformInbox } from '../collectors/platform-inbox.ts';
 import { refreshReviews } from '../lib/review-store.ts';
 import { loadConfig } from '../lib/config.ts';
@@ -24,7 +25,11 @@ import { startCrawl, finishCrawl } from './crawl-log.ts';
 import { requireAttention, notifyAttention, pendingAttention, resolveAttention } from './attention.ts';
 import { checkConfirmations } from './confirmations.ts';
 import { loadSchedule, scheduleForDay, dueSlot, shanghaiDate } from './schedule.ts';
-export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spaceOverride?: number) {
+export async function runCollection(
+  mode: 'manual' | 'scheduled' | 'resume',
+  spaceOverride?: number,
+  selectedPlatform?: string,
+) {
   await mkdir('data/jobs', { recursive: true, mode: 0o700 });
   const release = await acquireJobLock('data/jobs/collect.pid');
   if (!release) {
@@ -46,6 +51,7 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
     }
     if (mode === 'scheduled' && readState(database, 'browser:paused')?.paused) return;
     const schedule = await loadSchedule();
+    if (selectedPlatform && !schedule.platforms.includes(selectedPlatform)) throw Error('平台不在采集配置中');
     const collectors = new Map<string, (...args: Parameters<typeof collectDouyin>) => Promise<object>>([
       [(await loadDouyinConfig()).platformId, collectDouyin],
       ['bilibili', collectBilibili],
@@ -63,80 +69,93 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
     };
     writeState(database, key, state);
     // Poll only confirmation tasks, never click the login button repeatedly.
-    await checkConfirmations(database, async (platformId, spaceId, page) => {
-      database.db
-        .update(accounts)
-        .set({
-          loginState: 'logged_in',
-          reason: null,
-          checkedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })
-        .where(eq(accounts.platformId, platformId))
-        .run();
-      if (schedule.platforms.includes(platformId)) {
-        const collector = collectors.get(platformId);
-        if (collector) {
-          const paths: string[] = [];
-          const id = startCrawl(database, platformId);
-          try {
-            await collector(database, new CollectionSession(spaceId, page), new CodexJudgment(), paths);
-            await collectPlatformInbox(
-              database,
-              platformId,
-              new CollectionSession(spaceId, page),
-              new CodexJudgment(),
-              paths,
-            );
-            await finishCrawl(database, id, { status: 'success', archivePaths: paths });
-            const current = readState(database, key) ?? state;
-            const prior = Array.isArray(current.successfulPlatforms) ? (current.successfulPlatforms as string[]) : [];
-            writeState(database, key, { ...current, successfulPlatforms: [...new Set([...prior, platformId])] });
-          } catch (error) {
-            await finishCrawl(database, id, {
-              status: 'failed',
-              reason: error instanceof Error ? error.message : '恢复采集失败',
-              archivePaths: paths,
-            });
-            throw error;
+    if (!selectedPlatform)
+      await checkConfirmations(database, async (platformId, spaceId, page) => {
+        database.db
+          .update(accounts)
+          .set({
+            loginState: 'logged_in',
+            reason: null,
+            checkedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(accounts.platformId, platformId))
+          .run();
+        if (schedule.platforms.includes(platformId)) {
+          const collector = collectors.get(platformId);
+          if (collector) {
+            const paths: string[] = [];
+            const id = startCrawl(database, platformId);
+            try {
+              await collector(database, new CollectionSession(spaceId, page), new CodexJudgment(), paths);
+              await collectPlatformInbox(
+                database,
+                platformId,
+                new CollectionSession(spaceId, page),
+                new CodexJudgment(),
+                paths,
+              );
+              await finishCrawl(database, id, { status: 'success', archivePaths: paths });
+              const current = readState(database, key) ?? state;
+              const prior = Array.isArray(current.successfulPlatforms) ? (current.successfulPlatforms as string[]) : [];
+              writeState(database, key, { ...current, successfulPlatforms: [...new Set([...prior, platformId])] });
+            } catch (error) {
+              await finishCrawl(database, id, {
+                status: 'failed',
+                reason: error instanceof Error ? error.message : '恢复采集失败',
+                archivePaths: paths,
+              });
+              throw error;
+            }
           }
-        }
-      } else console.log(`${platformId}：已检测到登录成功；该平台采集器按 ROADMAP 第3步接入`);
-    });
+        } else console.log(`${platformId}：已检测到登录成功；该平台采集器按 ROADMAP 第3步接入`);
+      });
     const attempted = Array.isArray(state.attempted) ? (state.attempted as string[]) : [];
     const slot =
       mode === 'scheduled' ? dueSlot(now, Number(state.chosen), schedule.retries, attempted, !!state.succeeded) : mode;
     if (!slot) return;
+    writeState(database, 'collection:last-error', {});
     const pending = pendingAttention(database).filter((x) => x.kind !== 'capacity');
     const refreshed = readState(database, key) ?? state;
     const successful = new Set(
       Array.isArray(refreshed.successfulPlatforms) ? (refreshed.successfulPlatforms as string[]) : [],
     );
-    const ids =
+    const candidates =
       mode === 'resume'
         ? [...new Set(pending.filter((x) => x.kind !== 'confirmation').map((x) => x.platformId))]
-        : schedule.platforms.filter(
-            (id) => !pending.some((x) => x.platformId === id) && (mode === 'manual' || !successful.has(id)),
+        : schedule.platforms.filter((id) =>
+            mode === 'manual'
+              ? !pending.some((x) => x.platformId === id && x.kind === 'confirmation')
+              : !pending.some((x) => x.platformId === id) && !successful.has(id),
           );
+    const ids = candidates.filter((id) => !selectedPlatform || id === selectedPlatform);
     const platformConfig = await loadBrowserConfig();
     ids.sort(
       (a, b) =>
         Number(!!platformConfig.find((p) => p.id === a)?.confirmation) -
         Number(!!platformConfig.find((p) => p.id === b)?.confirmation),
     );
-    if (!ids.length) return;
+    if (!ids.length) {
+      if (mode !== 'scheduled') throw Error('所选平台需要先处理登录或浏览器确认，请查看待处理原因');
+      return;
+    }
     if (mode === 'scheduled')
-      writeState(database, key, { ...state, attempted: [...attempted, ...(slot === 'main' ? [] : ['main']), slot] });
+      writeState(database, key, {
+        ...state,
+        attempted: [...new Set([...attempted, ...(slot === 'main' ? [] : ['main']), slot])],
+      });
     const resumeSpace =
       mode === 'resume' ? pending.find((item) => ids.includes(item.platformId) && item.spaceId)?.spaceId : undefined;
     if (resumeSpace) {
       await runEgo(`const t=await takeOverTaskSpace(${resumeSpace});console.log('WORKSPACE_RESULT:true');`);
       writeState(database, 'browser:paused', { paused: false });
     }
+    const cachedSpace = readState(database, 'browser:retry-space')?.id as number | undefined;
+    const retrySpace = cachedSpace ? await existingCollectionSpace(cachedSpace) : undefined;
     activeSpace =
       spaceOverride ??
       resumeSpace ??
-      (readState(database, 'browser:retry-space')?.id as number | undefined) ??
+      retrySpace ??
       ((await runEgo(
         `const t=await taskSpace(${JSON.stringify('工作台采集 ' + randomUUID())});console.log('WORKSPACE_RESULT:'+JSON.stringify(t.spaceId));`,
       )) as number);
@@ -227,6 +246,7 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
       }
     }
     if (allSucceeded) {
+      if (mode !== 'scheduled') writeState(database, 'browser:paused', { paused: false });
       writeState(database, 'browser:retry-space', {});
       if (schedule.platforms.every((id) => successful.has(id)))
         writeState(database, key, { ...readState(database, key), succeeded: true });
@@ -241,6 +261,13 @@ export async function runCollection(mode: 'manual' | 'scheduled' | 'resume', spa
     }
     await notifyAttention(database);
     if (!allSucceeded && mode !== 'scheduled') process.exitCode = 1;
+  } catch (error) {
+    writeState(database, 'collection:last-error', {
+      reason: error instanceof Error ? error.message : '采集启动失败',
+      at: new Date().toISOString(),
+      platform: selectedPlatform ?? 'all',
+    });
+    throw error;
   } finally {
     try {
       if (activeSpace && !spaceOverride && !keepForConfirmation && !browserFailed && !collectionFailed)

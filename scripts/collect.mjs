@@ -7,7 +7,11 @@ const mode = process.argv.includes('--resume')
     ? 'scheduled'
     : 'manual';
 try {
-  await runCollection(mode, process.env.WORKSPACE_EGO_SPACE ? Number(process.env.WORKSPACE_EGO_SPACE) : undefined);
+  await runCollection(
+    mode,
+    process.env.WORKSPACE_EGO_SPACE ? Number(process.env.WORKSPACE_EGO_SPACE) : undefined,
+    process.argv.includes('--platform') ? process.argv[process.argv.indexOf('--platform') + 1] : undefined,
+  );
 } finally {
   const db = openDatabase();
   try {
