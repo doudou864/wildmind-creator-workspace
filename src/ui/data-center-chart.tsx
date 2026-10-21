@@ -70,8 +70,19 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
           data: distribution.rows.map((r) => r.value),
           connectNulls: false,
           symbolSize: 6,
-          itemStyle: { color: theme.ink },
-          lineStyle: { color: theme.ink, width: 1 },
+          itemStyle: { color: theme.accent },
+          lineStyle: { color: theme.accent, width: 2 },
+          label: {
+            show: true,
+            position: 'top',
+            color: theme.accent,
+            fontFamily: theme.font,
+            fontSize: 11,
+            formatter: ({ dataIndex }: { dataIndex: number }) => {
+              const row = distribution.rows[dataIndex];
+              return row.value == null ? '' : `${row.approximate ? '约 ' : ''}${display(row.value)}`;
+            },
+          },
           markLine: {
             silent: true,
             symbol: 'none',
