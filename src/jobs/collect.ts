@@ -1,3 +1,4 @@
+import { throwIfCollectionCancelled, CollectionCancelled, collectionSignal } from './cancellation.ts';
 import { existingCollectionSpace } from '../browser/collection-space.ts';
 import { collectPlatformInbox } from '../collectors/platform-inbox.ts';
 import { refreshReviews } from '../lib/review-store.ts';
@@ -69,6 +70,10 @@ export async function runCollection(
       ['channels', collectChannels],
       ['youtube', collectYoutube],
     ]);
+    if (mode === 'manual') {
+      writeState(database, `${selectedPlatform}:list-stage`, {});
+      writeState(database, `${selectedPlatform}:detail-stage`, {});
+    }
     const now = new Date();
     const date = shanghaiDate(now);
     const key = `schedule:${date}:${selectedPlatform}`;
@@ -227,6 +232,7 @@ export async function runCollection(
         if (login.state !== 'logged_in') throw new Error(login.reason);
         const collector = collectors.get(id);
         if (!collector) throw new Error('该平台采集器尚未接入，未伪造成功');
+        throwIfCollectionCancelled();
         const result = await collector(
           database,
           new CollectionSession(activeSpace, activePage),
@@ -240,6 +246,7 @@ export async function runCollection(
           new CodexJudgment(),
           paths,
         );
+        throwIfCollectionCancelled();
         refreshReviews(database, await loadConfig());
         await finishCrawl(database, crawlId, { status: 'success', archivePaths: paths });
         resolveAttention(database, id);
@@ -250,7 +257,8 @@ export async function runCollection(
         allSucceeded = false;
         collectionFailed = true;
         writeState(database, retryKey, { id: activeSpace });
-        const reason = error instanceof Error ? error.message : '采集失败';
+        const cancelled = error instanceof CollectionCancelled || collectionSignal()?.aborted;
+        const reason = cancelled ? '已停止本次采集' : error instanceof Error ? error.message : '采集失败';
         if (error instanceof AttentionRequired) telemetry()!.attention = true;
         if (
           error instanceof AttentionRequired &&
@@ -265,6 +273,7 @@ export async function runCollection(
           });
         await finishCrawl(database, crawlId, { status: 'failed', reason, archivePaths: paths });
         console.error(`${id}：${reason}`);
+        if (cancelled) break;
         if (/控制权|ego 操作失败|浏览器操作超时/.test(reason)) {
           browserFailed = true;
           requireAttention(database, { platformId: id, kind: 'risk', reason, spaceId: activeSpace, page: activePage });

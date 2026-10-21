@@ -1,3 +1,5 @@
+import { collectDouyinComments } from './douyin/comments.ts';
+import { throwIfCollectionCancelled } from '../jobs/cancellation.ts';
 import { collectDouyinDM } from './douyin/inbox.ts';
 import { collectChannelsComments } from './channels/inbox.ts';
 import { collectChannelsDM } from './channels/inbox-dm.ts';
@@ -18,7 +20,10 @@ export async function collectPlatformInbox(
   paths: string[],
 ) {
   try {
-    if (platformId === 'channels') {
+    if (platformId === 'douyin') {
+      await collectDouyinComments(db, session, judgment, paths);
+      await collectDouyinDM(db, session, judgment, paths);
+    } else if (platformId === 'channels') {
       await collectChannelsComments(db, session, judgment, paths);
       await collectChannelsDM(db, session, judgment, paths);
     } else if (platformId === 'bilibili') {
@@ -28,10 +33,10 @@ export async function collectPlatformInbox(
       await collectYoutubeInbox(db, session, judgment, paths);
     } else {
       await collectInbox(db, platformId, session, judgment, paths);
-      if (platformId === 'douyin') await collectDouyinDM(db, session, judgment, paths);
       if (platformId === 'xiaohongshu') await collectXiaohongshuDM(db, session, judgment, paths);
     }
   } catch (error) {
+    throwIfCollectionCancelled();
     const reason = error instanceof Error ? error.message : '互动采集失败';
     for (const channel of ['comment', 'dm'] as const)
       inboxSource(db, { platformId, channel, status: 'failed', capturedAt: new Date().toISOString(), reason });

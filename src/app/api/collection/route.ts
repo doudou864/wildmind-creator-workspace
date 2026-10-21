@@ -1,7 +1,7 @@
 import { crawlLogs } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { isLocalOrigin } from '@/lib/local-origin';
-import { startCollection, runningPlatforms, legacyCollectionRunning } from '@/jobs/collection-control';
+import { startCollection, runningPlatforms, legacyCollectionRunning, stopCollection } from '@/jobs/collection-control';
 import { usingDatabase } from '@/lib/media-store';
 import { loadSchedule } from '@/jobs/schedule';
 import { readState } from '@/collectors/state';
@@ -36,8 +36,12 @@ export async function POST(request: Request) {
   if (!isLocalOrigin(request)) return Response.json({ error: '请从本机工作台启动采集' }, { status: 403 });
   try {
     const body = await request.json();
+    if (body.action !== undefined && body.action !== 'stop') throw Error('采集操作无效');
     if (body.platform !== undefined && typeof body.platform !== 'string') throw Error('平台参数无效');
-    return Response.json(await startCollection(body.platform), { status: 202 });
+    return Response.json(
+      body.action === 'stop' ? await stopCollection(body.platform) : await startCollection(body.platform),
+      { status: 202 },
+    );
   } catch (e) {
     return Response.json({ error: e instanceof Error ? e.message : '无法启动采集' }, { status: 409 });
   }

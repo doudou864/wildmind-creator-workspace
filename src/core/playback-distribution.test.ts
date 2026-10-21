@@ -20,7 +20,7 @@ const sample = (id: string, capturedAt: string, value: number | null, postId = '
   backfillKind: 'none',
 });
 const now = Date.parse('2026-11-02T00:00:00+08:00');
-test('发布当天D0；北京时间跨午夜即D1，选当天首次有效采样，不受24小时和UTC日期影响', () => {
+test('发布当天D0；北京时间跨午夜即D1，同日以最后完成采样覆盖，不受24小时和UTC日期影响', () => {
   const result = playbackDistribution(
     post('a'),
     [post('a')],
@@ -34,8 +34,8 @@ test('发布当天D0；北京时间跨午夜即D1，选当天首次有效采样�
     now,
     options,
   );
-  expect(result.rows[0].value).toBe(2000);
-  expect(result).toMatchObject({ count: 1, median: 2000, min: 1000, max: 3000 });
+  expect(result.rows[0].value).toBe(3000);
+  expect(result).toMatchObject({ count: 1, median: 3000, min: 2000, max: 4000 });
 });
 test('中位数包括当前作品，排除其他平台形式；缺失不补抓、不补零，真实0参与中位数', () => {
   const all = [

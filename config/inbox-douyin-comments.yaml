@@ -1,0 +1,18 @@
+# 2026-10-21 真实作品详情的评论管理页已只读核验。
+platformId: douyin
+listUrl: https://creator.douyin.com/creator-micro/content/manage
+search: 'input[placeholder="搜索作品"]'
+searchSubmit: '[class*="manage-v2-search-icon-"]'
+title: '[class*="info-title-text-"]'
+tab: 'text="评论管理"'
+row: '[class^="list-"] > [class^="comment-item-"]'
+main: ':scope > [class^="comment-main-"]'
+author: ':scope > [class^="username-"]'
+time: ':scope > [class^="time-"]'
+body: ':scope > [class^="text-"]'
+likes: ':scope > [class^="comment-operation-wrap-"] [class^="operations-"] > button:first-child'
+expand: ':scope > [class^="load-reply-"]'
+reply: ':scope > [class^="replies-"] > [class^="comment-item-"]'
+owner: '[class^="username-"] [class^="tag-"]'
+endText: 没有更多评论
+maxScreens: 100

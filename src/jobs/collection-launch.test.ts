@@ -4,13 +4,14 @@ const mocks = vi.hoisted(() => ({ spawn: vi.fn(), readFile: vi.fn(), writeFile: 
 vi.mock('node:child_process', () => ({ spawn: mocks.spawn }));
 vi.mock('node:fs/promises', () => ({
   mkdir: vi.fn(),
+  rm: vi.fn(),
   readFile: mocks.readFile,
   writeFile: mocks.writeFile,
   open: async () => ({ fd: 12, close: vi.fn() }),
 }));
 vi.mock('./lock.ts', () => ({ acquireJobLock: async () => mocks.release }));
 vi.mock('./schedule.ts', () => ({ loadSchedule: async () => ({ platforms: ['douyin', 'bilibili'] }) }));
-import { startCollection } from './collection-control';
+import { startCollection, stopCollection } from './collection-control';
 beforeEach(() => {
   mocks.readFile.mockRejectedValue(Error('no process'));
   mocks.spawn.mockImplementation(() => {
@@ -52,4 +53,22 @@ test('旧版整批任务未结束前不重复采集', async () => {
   });
   await expect(startCollection()).rejects.toThrow('上一版');
   expect(mocks.spawn).not.toHaveBeenCalled();
+});
+
+test('停止只写目标平台信号，不终止其他平台或发起新采集', async () => {
+  const result = await stopCollection('douyin');
+  expect(result.stopping).toEqual(['douyin']);
+  expect(mocks.spawn).not.toHaveBeenCalled();
+  expect(mocks.writeFile.mock.calls.map((c) => c[0])).toEqual(['data/jobs/stop-douyin.json']);
+  await expect(stopCollection('../invalid')).rejects.toThrow('配置');
+});
+test('停止后当天定时器不重启它，手动重启仍可用，其他平台正常运行', async () => {
+  const { shanghaiDate } = await import('../browser/policy');
+  mocks.readFile.mockImplementation(async (file) => {
+    if (file === 'data/jobs/stop-douyin.json')
+      return JSON.stringify({ date: shanghaiDate(), requestedAt: new Date().toISOString() });
+    throw Error('not found');
+  });
+  expect((await startCollection(undefined, 'scheduled')).startedPlatforms).toEqual(['bilibili']);
+  expect((await startCollection('douyin')).startedPlatforms).toEqual(['douyin']);
 });

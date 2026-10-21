@@ -1,3 +1,4 @@
+import { collectionSignal, throwIfCollectionCancelled, CollectionCancelled } from '../jobs/cancellation.ts';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { loadBrowserPolicy, pause, randomBetween, consumePage } from './policy.ts';
@@ -17,6 +18,7 @@ export function egoFailure(output: string) {
 
 // The CLI owns the browser; no platform HTTP/API calls occur here.
 export function runEgo(script: string): Promise<unknown> {
+  throwIfCollectionCancelled();
   return new Promise((resolve, reject) => {
     const child = spawn('ego-browser', ['nodejs'], { stdio: ['pipe', 'pipe', 'pipe'] });
     let output = '';
@@ -24,6 +26,14 @@ export function runEgo(script: string): Promise<unknown> {
       child.kill();
       reject(new Error('浏览器操作超时；请查看 ego 窗口，未自动重试'));
     }, 90_000);
+    const signal = collectionSignal();
+    const abort = () => {
+      child.kill();
+      reject(new CollectionCancelled());
+    };
+    signal?.addEventListener('abort', abort, { once: true });
+    child.once('close', () => signal?.removeEventListener('abort', abort));
+    if (signal?.aborted) abort();
     child.stdout.on('data', (chunk) => {
       output += chunk.toString();
     });

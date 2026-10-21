@@ -1,3 +1,4 @@
+import { throwIfCollectionCancelled } from '../jobs/cancellation.ts';
 import { readHandledMessages } from './message-actions.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
@@ -91,6 +92,7 @@ export async function storeInboxReading(
 ) {
   const parsed = inboxReadingSchema.parse(reading);
   const config = await loadInboxConfig();
+  throwIfCollectionCancelled();
   const ids: string[] = [];
   const knownRows = db.db.select().from(messages).all();
   const identity = (raw: z.infer<typeof incomingMessageSchema>) =>
@@ -167,6 +169,7 @@ export async function storeInboxReading(
       classificationFailure = error;
     }
 
+  throwIfCollectionCancelled();
   for (const raw of parsed.messages) {
     if (raw.reply.kind !== channel) throw Error('消息渠道与回复证据不一致');
     const id = identity(raw);

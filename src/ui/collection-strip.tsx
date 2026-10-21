@@ -20,7 +20,8 @@ export function CollectionStrip({
     issue: { reason?: string; at?: string } | null;
   }>('/api/collection', { running: false, issue: null }, true);
   const [starting, setStarting] = useState<string | null>(null),
-    [notice, setNotice] = useState('');
+    [notice, setNotice] = useState(''),
+    [stopping, setStopping] = useState<string[]>([]);
   useEffect(() => {
     const timer = setInterval(() => {
       void refresh();
@@ -28,9 +29,30 @@ export function CollectionStrip({
     }, 5000);
     return () => clearInterval(timer);
   }, [refresh, onUpdate]);
+  useEffect(() => {
+    if (stopping.length && stopping.every((id) => !data.activePlatforms?.includes(id)) && !data.legacyRunning) {
+      setNotice('已停止，已完成的数据保留');
+      setStopping([]);
+    }
+  }, [data.activePlatforms, data.legacyRunning, stopping]);
+  async function stop(platform?: string) {
+    try {
+      await request('/api/collection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'stop', platform }),
+      });
+      setStopping((current) => [...new Set([...current, ...(platform ? [platform] : platforms.map((p) => p.id))])]);
+      setNotice('已发送停止请求，已完成的数据保留');
+      await refresh();
+    } catch (e) {
+      setNotice(e instanceof Error ? e.message : '停止失败');
+    }
+  }
   async function start(platform?: string) {
     setStarting(platform ?? 'all');
     setNotice('');
+    setStopping([]);
     try {
       const result = await request<{
         startedPlatforms: string[];
@@ -59,6 +81,7 @@ export function CollectionStrip({
     <section id="data-health" className="card collection-strip" aria-label="平台采集状态">
       <div className="collection-strip-heading">
         <strong>平台采集</strong>
+        {data.running && <Button onClick={() => void stop()}>停止全部采集</Button>}
         <Button
           disabled={
             !!data.legacyRunning || starting !== null || platforms.every((p) => data.activePlatforms?.includes(p.id))
@@ -78,7 +101,18 @@ export function CollectionStrip({
               <div>
                 <strong>{p.name}</strong>
                 <span className={running ? '' : ok ? 'collection-success' : 'collection-failed'}>
-                  ● {running ? '采集中' : ok ? '采集成功' : p.status === 'failed' ? '采集失败' : '今天未更新'}
+                  ●{' '}
+                  {running
+                    ? stopping.includes(p.id)
+                      ? '正在停止'
+                      : '采集中'
+                    : p.reason === '已停止本次采集'
+                      ? '已停止'
+                      : ok
+                        ? '采集成功'
+                        : p.status === 'failed'
+                          ? '采集失败'
+                          : '今天未更新'}
                 </span>
               </div>
               <small>{p.lastSuccess ? freshness(p.lastSuccess, today) : '尚无成功记录'}</small>
@@ -91,7 +125,16 @@ export function CollectionStrip({
               >
                 重新采集
               </Button>
-              {p.reason && p.status === 'failed' && (
+              {running && (
+                <Button
+                  disabled={stopping.includes(p.id)}
+                  disabledReason="停止请求已发送"
+                  onClick={() => void stop(p.id)}
+                >
+                  {data.legacyRunning ? '停止本轮采集' : '停止采集'}
+                </Button>
+              )}
+              {p.reason && p.status === 'failed' && p.reason !== '已停止本次采集' && (
                 <details>
                   <summary>失败原因</summary>
                   <p>{p.reason}</p>
@@ -105,6 +148,7 @@ export function CollectionStrip({
         <p role="status">
           {error ||
             data.issue?.reason ||
+            notice ||
             (data.legacyRunning
               ? '旧版整批采集仍在运行，完成后可按平台并行；选题取材已可独立使用'
               : data.running

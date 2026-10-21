@@ -1,13 +1,13 @@
 import { contents, topics, posts, postSnapshots, reviewCheckpoints } from '../db/schema';
 import type { WorkspaceDatabase } from '../db/database';
 import type { WorkspaceConfig } from '../lib/config';
-import { firstPublications, publicationTime, type ReviewPost } from '../core/review';
+import { firstPublications, latestDailySamples, publicationTime, type ReviewPost } from '../core/review';
 // Server presentation data, not an API or a new metric. All values come from saved readings.
 export function dashboardRead(database: WorkspaceDatabase, config: WorkspaceConfig) {
   const allPosts = database.db.select().from(posts).all(),
     allContents = database.db.select().from(contents).all(),
     allTopics = database.db.select().from(topics).all();
-  const samples = database.db.select().from(postSnapshots).all(),
+  const samples = latestDailySamples(database.db.select().from(postSnapshots).all()),
     points = database.db.select().from(reviewCheckpoints).all();
   const review: ReviewPost[] = allPosts.flatMap((p) => {
     const c = allContents.find((c) => c.id === p.contentId),

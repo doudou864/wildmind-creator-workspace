@@ -22,9 +22,23 @@ export type FrozenPoint = Checkpoint & { snapshotId: string; baselinePostIds: st
 export type ReviewOptions = { baselineSamples: number; baselineMinimum: number; hitThreshold: number };
 export const publicationTime = (value: string) => Date.parse(value.length === 10 ? `${value}T00:00:00+08:00` : value);
 const dayMs = 86400000;
+/** One effective reading per Beijing calendar day; retained historical rows stay auditable. */
+export function latestDailySamples<T extends ReviewSample>(samples: T[], asOf = Infinity): T[] {
+  const days = new Map<string, T>();
+  for (const row of samples) {
+    const time = Date.parse(row.capturedAt);
+    if (!Number.isFinite(time) || time > asOf) continue;
+    const date = new Date(time + 8 * 3600000).toISOString().slice(0, 10);
+    const key = JSON.stringify([row.postId, row.metricId, date]);
+    const old = days.get(key);
+    if (!old || time > Date.parse(old.capturedAt) || (time === Date.parse(old.capturedAt) && row.id > old.id))
+      days.set(key, row);
+  }
+  return [...days.values()];
+}
 export function firstSample(post: ReviewPost, samples: ReviewSample[], day: number, asOf: number) {
   const due = publicationTime(post.publishedAt) + day * dayMs;
-  return samples
+  return latestDailySamples(samples, asOf)
     .filter(
       (s) =>
         s.postId === post.id &&

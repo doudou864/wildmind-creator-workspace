@@ -1,5 +1,6 @@
+import { throwIfCollectionCancelled } from '../jobs/cancellation.ts';
 import { createHash, randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import {
@@ -178,6 +179,7 @@ export function persistCollection(
     )
   )
     throw new Error('作品早于起号日或在未来，禁止建档和建立历史选题');
+  throwIfCollectionCancelled();
   const now = options.now.toISOString();
   database.sqlite
     .transaction(() => {
@@ -254,28 +256,41 @@ export function persistCollection(
             if (!definition) continue;
             const value = parseDisplayedNumber(metric.raw);
             const historical = options.history ? historicalKind(age, options.historyRange) : 'none';
-            database.db
-              .insert(postSnapshots)
-              .values({
-                id: randomUUID(),
-                postId: match.postId,
-                capturedAt: capture.capturedAt,
-                captureDate: shanghaiDate(new Date(capture.capturedAt)),
-                dayAfterPublish: historical === 'historical' ? options.historyRange[0] : age,
-                metricId: definition.id,
-                value,
-                precision: displayedPrecision(metric.raw),
-                rawValue: metric.raw,
-                backfillKind:
-                  historical === 'historical'
-                    ? 'historical'
-                    : capture.kind === 'detail' && (options.completed[key] ?? []).some((d) => d < age)
-                      ? 'checkpoint'
-                      : 'none',
-                updatedAt: now,
-              })
-              .onConflictDoNothing()
-              .run();
+            const values = {
+              postId: match.postId,
+              capturedAt: capture.capturedAt,
+              captureDate: shanghaiDate(new Date(capture.capturedAt)),
+              dayAfterPublish: historical === 'historical' ? options.historyRange[0] : age,
+              metricId: definition.id,
+              value,
+              precision: displayedPrecision(metric.raw),
+              rawValue: metric.raw,
+              backfillKind:
+                historical === 'historical'
+                  ? ('historical' as const)
+                  : capture.kind === 'detail' && (options.completed[key] ?? []).some((d) => d < age)
+                    ? ('checkpoint' as const)
+                    : ('none' as const),
+              updatedAt: now,
+            };
+            const previous = database.db
+              .select()
+              .from(postSnapshots)
+              .where(
+                and(
+                  eq(postSnapshots.postId, match.postId),
+                  eq(postSnapshots.captureDate, values.captureDate),
+                  eq(postSnapshots.metricId, definition.id),
+                ),
+              )
+              .orderBy(desc(postSnapshots.capturedAt))
+              .get();
+            if (previous) database.db.update(postSnapshots).set(values).where(eq(postSnapshots.id, previous.id)).run();
+            else
+              database.db
+                .insert(postSnapshots)
+                .values({ id: randomUUID(), ...values })
+                .run();
           }
         }
         if (capture.reading.account.metrics.length) {

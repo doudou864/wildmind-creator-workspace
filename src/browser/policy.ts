@@ -1,3 +1,5 @@
+import { collectionSignal } from '../jobs/cancellation.ts';
+import { setTimeout as delay } from 'node:timers/promises';
 import { countPage } from '../jobs/telemetry.ts';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -23,7 +25,7 @@ export function randomBetween(range: [number, number], random = Math.random) {
   return Math.floor(range[0] + random() * (range[1] - range[0] + 1));
 }
 export function pause(ms: number) {
-  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+  return delay(ms, undefined, { signal: collectionSignal() });
 }
 export function shanghaiDate(now = new Date()) {
   return new Intl.DateTimeFormat('en-CA', {

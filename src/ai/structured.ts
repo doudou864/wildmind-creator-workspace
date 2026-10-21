@@ -1,3 +1,4 @@
+import { collectionSignal, throwIfCollectionCancelled } from '../jobs/cancellation.ts';
 import { countAI } from '../jobs/telemetry.ts';
 import { Codex } from '@openai/codex-sdk';
 import { readFile, mkdir } from 'node:fs/promises';
@@ -9,6 +10,7 @@ export interface Judgment {
 }
 export class CodexJudgment implements Judgment {
   async read<T extends z.ZodType>(schema: T, prompt: string, images: string[] = []): Promise<z.output<T>> {
+    throwIfCollectionCancelled();
     const config = z
       .object({
         model: z.string().nullable(),
@@ -44,8 +46,15 @@ export class CodexJudgment implements Judgment {
         },
         ...images.map((file) => ({ type: 'local_image' as const, path: path.resolve(file) })),
       ],
-      { outputSchema: z.toJSONSchema(schema), signal: AbortSignal.timeout(config.timeoutMs) },
+      {
+        outputSchema: z.toJSONSchema(schema),
+        signal: AbortSignal.any([
+          AbortSignal.timeout(config.timeoutMs),
+          ...[collectionSignal()].filter((s): s is AbortSignal => !!s),
+        ]),
+      },
     );
+    throwIfCollectionCancelled();
     if (
       result.items.some((item) =>
         ['command_execution', 'mcp_tool_call', 'file_change', 'web_search'].includes(item.type),

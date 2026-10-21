@@ -1,4 +1,4 @@
-import { publicationTime, firstSample, type ReviewSample } from './review.ts';
+import { publicationTime, firstSample, latestDailySamples, type ReviewSample } from './review.ts';
 import { quantile } from './statistics.ts';
 export type AnalysisPost = {
   id: string;
@@ -153,7 +153,7 @@ export function playbackDistribution(
     )
     .sort((a, b) => publicationTime(a.publishedAt) - publicationTime(b.publishedAt) || a.id.localeCompare(b.id))
     .map((p) => {
-      const sample = samples
+      const sample = latestDailySamples(samples, asOf)
         .filter(
           (s) =>
             s.postId === p.id &&

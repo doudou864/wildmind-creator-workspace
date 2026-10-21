@@ -1,4 +1,5 @@
-import { test, expect } from 'vitest';
+import * as cancellation from '../jobs/cancellation';
+import { test, expect, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -94,6 +95,43 @@ test('真实零和未知分开；失败回滚，不导入超30天历史作品，
       2,
     );
     expect(repeat.get(key)?.contentId).toBe('content');
+    // A later completed capture replaces this day's values, never adds another daily sample.
+    const fresh = structuredClone(captures[0]);
+    fresh.capturedAt = '2026-10-17T14:00:00Z';
+    fresh.reading.posts[0].metrics[0].raw = '120';
+    fresh.reading.account.metrics[0].raw = '9';
+    persistCollection(db, 'douyin', incoming, [fresh], repeat, config, options);
+    expect(db.sqlite.prepare('SELECT count(*) n FROM post_snapshots').get()).toEqual({ n: 2 });
+    expect(
+      db.sqlite.prepare("SELECT value,captured_at FROM post_snapshots WHERE metric_id='douyin_视频_播放量'").get(),
+    ).toEqual({ value: 120, captured_at: fresh.capturedAt });
+    expect(db.sqlite.prepare("SELECT value FROM account_daily WHERE metric_id='new_followers'").get()).toEqual({
+      value: 9,
+    });
+    const failed = structuredClone(fresh);
+    failed.reading.posts[0].metrics[0].raw = '999';
+    failed.reading.account.dataDate = null;
+    expect(() => persistCollection(db, 'douyin', incoming, [failed], repeat, config, options)).toThrow('日期');
+    expect(db.sqlite.prepare("SELECT value FROM post_snapshots WHERE metric_id='douyin_视频_播放量'").get()).toEqual({
+      value: 120,
+    });
+    const guard = vi.spyOn(cancellation, 'throwIfCollectionCancelled').mockImplementation(() => {
+      throw new cancellation.CollectionCancelled();
+    });
+    try {
+      expect(() => persistCollection(db, 'douyin', incoming, [fresh], repeat, config, options)).toThrow('已停止');
+      expect(db.sqlite.prepare('SELECT count(*) n FROM post_snapshots').get()).toEqual({ n: 2 });
+    } finally {
+      guard.mockRestore();
+    }
+    const tomorrow = structuredClone(fresh);
+    tomorrow.capturedAt = '2026-10-18T06:00:00Z';
+    persistCollection(db, 'douyin', incoming, [tomorrow], repeat, config, {
+      ...options,
+      now: new Date(tomorrow.capturedAt),
+    });
+    expect(db.sqlite.prepare('SELECT count(*) n FROM post_snapshots').get()).toEqual({ n: 4 });
+
     const renamed = await prepareAssociations(
       db,
       'douyin',
