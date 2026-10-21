@@ -453,3 +453,32 @@
   color: var(--ink-2);
   margin: 0 0 12px;
 }
+
+.publish-local {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+  max-width: 960px;
+  margin: 16px 0;
+}
+.publish-local > label {
+  display: flex;
+  flex: 1;
+  min-width: 320px;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+}
+.publish-local input {
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  color: var(--ink);
+}
+.publish-local > p {
+  flex-basis: 100%;
+}

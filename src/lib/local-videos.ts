@@ -2,7 +2,7 @@ import { loadPublishingConfig } from './publishing-config.ts';
 import { loadConfig } from './config.ts';
 import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
-import { readFile, realpath, stat, readdir } from 'node:fs/promises';
+import { readFile, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -74,46 +74,6 @@ async function probe(file: string, settings: MediaSettings) {
   } catch {
     throw Error('无法读取视频时长或尺寸，请检查成片与本机 ffprobe 配置');
   }
-}
-export async function listLocalVideos(settings = undefined as MediaSettings | undefined) {
-  settings ??= await mediaSettings();
-  const candidates: { path: string; name: string; bytes: number; modifiedAt: string }[] = [];
-  const rows: ((typeof candidates)[number] & { duration: number; width: number; height: number })[] = [];
-  const errors: string[] = [],
-    seen = new Set<string>();
-  for (const root of settings.finishedVideoDirectories) {
-    try {
-      for (const entry of await readdir(root, { withFileTypes: true })) {
-        if (!entry.isFile() || !/\.(mp4|mov)$/i.test(entry.name)) continue;
-        try {
-          const file = await allowedVideo(path.join(root, entry.name), settings);
-          if (seen.has(file)) continue;
-          seen.add(file);
-          const info = await stat(file);
-          candidates.push({
-            path: file,
-            name: entry.name,
-            bytes: info.size,
-            modifiedAt: new Date(info.mtimeMs).toISOString(),
-          });
-        } catch (e) {
-          errors.push(`${entry.name}：${e instanceof Error ? e.message : '无法读取'}`);
-        }
-      }
-    } catch (e) {
-      errors.push(`${root}：${e instanceof Error ? e.message : '无法读取'}`);
-    }
-  }
-  for (const item of candidates
-    .sort((a, b) => b.modifiedAt.localeCompare(a.modifiedAt))
-    .slice(0, settings.videoListLimit)) {
-    try {
-      rows.push({ ...item, ...(await probe(item.path, settings)) });
-    } catch (e) {
-      errors.push(`${item.name}：${e instanceof Error ? e.message : '无法读取'}`);
-    }
-  }
-  return { directories: settings.finishedVideoDirectories, items: rows, errors };
 }
 export async function inspectLocalVideo(file: string, settings?: MediaSettings) {
   settings ??= await mediaSettings();

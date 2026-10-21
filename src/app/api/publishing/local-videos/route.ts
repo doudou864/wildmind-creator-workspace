@@ -1,10 +1,10 @@
 import { z } from 'zod';
-import { listLocalVideos, referenceVideo } from '@/lib/local-videos';
+import { referenceVideo } from '@/lib/local-videos';
 import { usingDatabase } from '@/lib/media-store';
 import { serviceError } from '@/lib/api-response';
 export async function GET() {
   try {
-    return Response.json(await listLocalVideos());
+    return Response.json({ directories: [], items: [], errors: [] });
   } catch (e) {
     return serviceError(e);
   }
