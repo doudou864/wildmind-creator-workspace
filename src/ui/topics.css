@@ -535,3 +535,43 @@
 .topic-channel-editor > p {
   font-size: 12px;
 }
+
+.topics-channel-layout {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+.topics-channel-sidebar {
+  position: sticky;
+  top: 12px;
+  min-width: 0;
+}
+.topic-channel-editor > .button {
+  margin-top: 12px;
+}
+.topic-channel-rows {
+  max-height: calc(100vh - 340px);
+  overflow-y: auto;
+  margin-top: 12px;
+}
+.topic-channel-rows .topic-channel-fields {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 16px;
+}
+.topic-channel-rows .topic-channel-fields label {
+  min-width: 0;
+  flex: initial;
+}
+.channel-row-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.topics-channel-layout > .topics-v2-grid {
+  min-width: 0;
+}

@@ -37,6 +37,7 @@ export default function TopicsPage({
   today: string;
 }) {
   const [channels, setChannels] = useState(initialChannels);
+  const [channelsPending, setChannelsPending] = useState(false);
   const { data, error, refresh } = useResource('/api/topics', initialData);
   const [status, setStatus] = useState<StatusFilter>('candidate');
   const [kind, setKind] = useState<KindFilter>('all');
@@ -85,7 +86,7 @@ export default function TopicsPage({
     }
   }
   async function generate() {
-    if (!data.generationReady || busy) return;
+    if (!data.generationReady || busy || channelsPending) return;
     setBusy(true);
     try {
       await request('/api/topics/generate', { method: 'POST' });
@@ -101,8 +102,14 @@ export default function TopicsPage({
   const generateButton = (
     <Button
       variant="primary"
-      disabled={!data.generationReady || busy}
-      disabledReason={!data.generationReady ? '目前无法生成候选，请稍后再试。' : '正在处理，请稍候。'}
+      disabled={!data.generationReady || busy || channelsPending}
+      disabledReason={
+        channelsPending
+          ? '请先保存或删除左侧未保存的渠道行。'
+          : !data.generationReady
+            ? '目前无法生成候选，请稍后再试。'
+            : '正在处理，请稍候。'
+      }
       onClick={() => void generate()}
     >
       生成 {parameters.topicCandidateCount} 个候选
@@ -124,169 +131,173 @@ export default function TopicsPage({
         action={candidateCount > 3 ? generateButton : null}
       />
       {(notice || error) && <p role="status">{error || notice}</p>}
-      <TopicChannelEditor onChanged={setChannels} />
-      <div className={`topics-v2-grid ${!focused ? 'topics-no-detail' : ''}`}>
-        <Card title="候选方向" className="topic-list-card">
-          {candidateCount <= 3 && (
-            <div className="candidate-low">
-              <strong>{candidateCount === 0 ? '候选用完了' : '候选快用完了'}</strong>
-              {generateButton}
-            </div>
-          )}
-          {exhausted && selectedTopic && (
-            <Link href={`/images?topic=${encodeURIComponent(selectedTopic.id)}`}>
-              继续已选方向：{selectedTopic.title} →
-            </Link>
-          )}
-          {!exhausted && (
-            <>
-              <Segmented<StatusFilter>
-                label="选题状态"
-                value={status}
-                onChange={(value) => {
-                  setStatus(value);
-                  setChannelId('all');
-                  setKind('all');
-                  setQuery('');
-                }}
-                options={[
-                  ...(['candidate', 'selected', 'skipped', 'published'] as const).map((value) => ({
-                    value,
-                    label: `${topicStatusLabels[value]} ${topics.filter((t) => t.status === value).length}`,
-                  })),
-                  { value: 'all', label: `全部 ${topics.length}` },
-                ]}
-              />
-              <div className="topic-channel-row" role="group" aria-label="输入渠道">
-                <Button aria-pressed={channelId === 'all'} onClick={() => setChannelId('all')}>
-                  本范围来源 {channelScope.length}
-                </Button>
-                {sourceIds
-                  .filter((id) => channelScope.some((t) => t.channelId === id))
-                  .map((id) => (
-                    <Button key={id} aria-pressed={channelId === id} onClick={() => setChannelId(id)}>
-                      {sourceName(id)} {channelScope.filter((t) => t.channelId === id).length}
-                    </Button>
-                  ))}
+      <div className="topics-channel-layout">
+        <aside className="topics-channel-sidebar">
+          <TopicChannelEditor onChanged={setChannels} onPendingChange={setChannelsPending} />
+        </aside>
+        <div className={`topics-v2-grid ${!focused ? 'topics-no-detail' : ''}`}>
+          <Card title="候选方向" className="topic-list-card">
+            {candidateCount <= 3 && (
+              <div className="candidate-low">
+                <strong>{candidateCount === 0 ? '候选用完了' : '候选快用完了'}</strong>
+                {generateButton}
               </div>
-              <div className="topic-search">
-                <input
-                  aria-label="搜索选题"
-                  placeholder="搜索方向或线索"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                />
-                <Segmented<KindFilter>
-                  label="选题类型"
-                  value={kind}
-                  onChange={setKind}
+            )}
+            {exhausted && selectedTopic && (
+              <Link href={`/images?topic=${encodeURIComponent(selectedTopic.id)}`}>
+                继续已选方向：{selectedTopic.title} →
+              </Link>
+            )}
+            {!exhausted && (
+              <>
+                <Segmented<StatusFilter>
+                  label="选题状态"
+                  value={status}
+                  onChange={(value) => {
+                    setStatus(value);
+                    setChannelId('all');
+                    setKind('all');
+                    setQuery('');
+                  }}
                   options={[
-                    { value: 'all', label: `全部 ${kindScope.length}` },
-                    {
-                      value: 'fire',
-                      label: `历史表现支持 ${kindScope.filter((t) => topicFire(t, fireEnabled)).length}`,
-                    },
-                    { value: 'explore', label: `探索 ${kindScope.filter((t) => t.exploration).length}` },
+                    ...(['candidate', 'selected', 'skipped', 'published'] as const).map((value) => ({
+                      value,
+                      label: `${topicStatusLabels[value]} ${topics.filter((t) => t.status === value).length}`,
+                    })),
+                    { value: 'all', label: `全部 ${topics.length}` },
                   ]}
                 />
-              </div>
-              <div className="topic-list" aria-label="候选选题列表">
-                {visible.map((topic) => (
-                  <article
-                    className={`topic-row ${focused?.id === topic.id ? 'focused' : ''}`}
-                    key={topic.id}
-                    data-topic-id={topic.id}
-                  >
-                    <div className="topic-row-content">
-                      <div className="topic-row-title">
-                        <button className="topic-title list-row" onClick={() => setFocusId(topic.id)}>
-                          {topic.title} →
-                        </button>
-                        <div className="topic-row-actions">
-                          <ArchiveButton kind="topic" id={topic.id} />
-                          {topic.status === 'candidate' ? (
-                            <>
-                              <Button
-                                disabled={!canChange}
-                                disabledReason="当前无法保存，请稍后再试。"
-                                onClick={() => void updateTopic(topic, 'selected')}
-                              >
-                                选中
-                              </Button>
-                              <Button
-                                disabled={!canChange}
-                                disabledReason="当前无法保存，请稍后再试。"
-                                onClick={() => void updateTopic(topic, 'skipped')}
-                              >
-                                跳过
-                              </Button>
-                            </>
-                          ) : (
-                            <>
-                              <span>{topicStatusLabels[topic.status]}</span>
-                              {topic.status !== 'published' && (
+                <div className="topic-channel-row" role="group" aria-label="输入渠道">
+                  <Button aria-pressed={channelId === 'all'} onClick={() => setChannelId('all')}>
+                    本范围来源 {channelScope.length}
+                  </Button>
+                  {sourceIds
+                    .filter((id) => channelScope.some((t) => t.channelId === id))
+                    .map((id) => (
+                      <Button key={id} aria-pressed={channelId === id} onClick={() => setChannelId(id)}>
+                        {sourceName(id)} {channelScope.filter((t) => t.channelId === id).length}
+                      </Button>
+                    ))}
+                </div>
+                <div className="topic-search">
+                  <input
+                    aria-label="搜索选题"
+                    placeholder="搜索方向或线索"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                  />
+                  <Segmented<KindFilter>
+                    label="选题类型"
+                    value={kind}
+                    onChange={setKind}
+                    options={[
+                      { value: 'all', label: `全部 ${kindScope.length}` },
+                      {
+                        value: 'fire',
+                        label: `历史表现支持 ${kindScope.filter((t) => topicFire(t, fireEnabled)).length}`,
+                      },
+                      { value: 'explore', label: `探索 ${kindScope.filter((t) => t.exploration).length}` },
+                    ]}
+                  />
+                </div>
+                <div className="topic-list" aria-label="候选选题列表">
+                  {visible.map((topic) => (
+                    <article
+                      className={`topic-row ${focused?.id === topic.id ? 'focused' : ''}`}
+                      key={topic.id}
+                      data-topic-id={topic.id}
+                    >
+                      <div className="topic-row-content">
+                        <div className="topic-row-title">
+                          <button className="topic-title list-row" onClick={() => setFocusId(topic.id)}>
+                            {topic.title} →
+                          </button>
+                          <div className="topic-row-actions">
+                            <ArchiveButton kind="topic" id={topic.id} />
+                            {topic.status === 'candidate' ? (
+                              <>
                                 <Button
                                   disabled={!canChange}
                                   disabledReason="当前无法保存，请稍后再试。"
-                                  onClick={() => void updateTopic(topic, 'candidate')}
+                                  onClick={() => void updateTopic(topic, 'selected')}
                                 >
-                                  移回候选
+                                  选中
                                 </Button>
-                              )}
-                            </>
+                                <Button
+                                  disabled={!canChange}
+                                  disabledReason="当前无法保存，请稍后再试。"
+                                  onClick={() => void updateTopic(topic, 'skipped')}
+                                >
+                                  跳过
+                                </Button>
+                              </>
+                            ) : (
+                              <>
+                                <span>{topicStatusLabels[topic.status]}</span>
+                                {topic.status !== 'published' && (
+                                  <Button
+                                    disabled={!canChange}
+                                    disabledReason="当前无法保存，请稍后再试。"
+                                    onClick={() => void updateTopic(topic, 'candidate')}
+                                  >
+                                    移回候选
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                        <p className="topic-direction">{humanText(topic.direction)}</p>
+                        <div className="topic-row-footer">
+                          <span>{sourceName(topic.channelId)} · 热度未验证</span>
+                          {topic.exploration && <Tag>探索方向</Tag>}
+                          {topic.status === 'selected' && (
+                            <Link href={`/images?topic=${encodeURIComponent(topic.id)}`}>去做图 →</Link>
                           )}
                         </div>
                       </div>
-                      <p className="topic-direction">{humanText(topic.direction)}</p>
-                      <div className="topic-row-footer">
-                        <span>{sourceName(topic.channelId)} · 热度未验证</span>
-                        {topic.exploration && <Tag>探索方向</Tag>}
-                        {topic.status === 'selected' && (
-                          <Link href={`/images?topic=${encodeURIComponent(topic.id)}`}>去做图 →</Link>
-                        )}
-                      </div>
-                    </div>
-                  </article>
-                ))}
-                {!visible.length && (
-                  <Empty>{topics.length ? '当前筛选没有方向，换个筛选看看' : '暂无候选，生成后显示'}</Empty>
+                    </article>
+                  ))}
+                  {!visible.length && (
+                    <Empty>{topics.length ? '当前筛选没有方向，换个筛选看看' : '暂无候选，生成后显示'}</Empty>
+                  )}
+                </div>
+              </>
+            )}
+          </Card>
+          {focused && (
+            <aside>
+              <Card title="选题依据">
+                {focused ? (
+                  <>
+                    <h3>{focused.title}</h3>
+                    <p>{humanText(focused.direction)}</p>
+                    <h4>原始线索</h4>
+                    <blockquote>{humanText(focused.signal)}</blockquote>
+                    <p>{humanText(focused.sourceContext)}</p>
+                    {focused.sourceUrl && (
+                      <a href={focused.sourceUrl} target="_blank" rel="noreferrer">
+                        查看原始来源 →
+                      </a>
+                    )}
+                    {evidence && (
+                      <p>
+                        {humanText(evidence.reason)} · 同类 {evidence.count} 条，D21 平均 {evidence.d21.toFixed(1)} 倍
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p>还没有可查看的方向，生成候选后显示依据</p>
                 )}
+              </Card>
+              <div className="card collapsed-note">
+                {fireEnabled
+                  ? '历史表现推荐已开启'
+                  : `历史推荐：还差 ${Math.max(0, parameters.topicFireMinimum - (data.d21Samples ?? 0))} 条 D21 结果`}
               </div>
-            </>
+            </aside>
           )}
-        </Card>
-        {focused && (
-          <aside>
-            <Card title="选题依据">
-              {focused ? (
-                <>
-                  <h3>{focused.title}</h3>
-                  <p>{humanText(focused.direction)}</p>
-                  <h4>原始线索</h4>
-                  <blockquote>{humanText(focused.signal)}</blockquote>
-                  <p>{humanText(focused.sourceContext)}</p>
-                  {focused.sourceUrl && (
-                    <a href={focused.sourceUrl} target="_blank" rel="noreferrer">
-                      查看原始来源 →
-                    </a>
-                  )}
-                  {evidence && (
-                    <p>
-                      {humanText(evidence.reason)} · 同类 {evidence.count} 条，D21 平均 {evidence.d21.toFixed(1)} 倍
-                    </p>
-                  )}
-                </>
-              ) : (
-                <p>还没有可查看的方向，生成候选后显示依据</p>
-              )}
-            </Card>
-            <div className="card collapsed-note">
-              {fireEnabled
-                ? '历史表现推荐已开启'
-                : `历史推荐：还差 ${Math.max(0, parameters.topicFireMinimum - (data.d21Samples ?? 0))} 条 D21 结果`}
-            </div>
-          </aside>
-        )}
+        </div>
       </div>
     </main>
   );

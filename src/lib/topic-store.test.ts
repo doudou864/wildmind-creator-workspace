@@ -1,13 +1,13 @@
 import { readTopicSources } from '../browser/topic-source';
 vi.mock('../browser/topic-source', () => ({ readTopicSources: vi.fn(async () => []) }));
 import { expect, test, vi } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initializeDatabase } from '../db/database';
 import { topicSources, fireEvidence, generateTopics, decideTopic } from './topic-store';
 import { loadConfig } from './config';
-import { loadTopicChannels } from './topic-channels';
+import { loadTopicChannels, editTopicChannel } from './topic-channels';
 import { topics, topicSignals, topicGenerationTasks } from '../db/schema';
 import type { Judgment } from '../ai/structured';
 test('只用已启用渠道，重复采集同一词不重复算需求；未同步消息不是输入', async () => {
@@ -93,25 +93,24 @@ test('20候选原子保存、首选非FIRE定格，失败批次不留半批候�
   }
 });
 
-test('新增外部渠道只改文档，读取的原文必须可核对，渠道关闭不打开浏览器', async () => {
+test('面板保存的渠道经重新读取进入生成链路，候选保留该渠道与原文链接', async () => {
   const folder = await mkdtemp(path.join(tmpdir(), 'topics-external-'));
   const db = await initializeDatabase(path.join(folder, 'workspace.db'));
   try {
     const config = await loadConfig();
-    const channel = {
-      id: 'custom',
-      name: '自选来源',
-      kind: 'external' as const,
-      enabled: true,
-      type: '网站',
-      location: 'https://example.com/source',
-      focus: '创作',
-      frequency: '每次生成',
-      note: '',
-    };
+    const sourceFile = path.join(folder, 'channels.md');
+    await writeFile(sourceFile, '# fixture\n```yaml\nchannels: []\n```');
+    const empty = await loadTopicChannels(sourceFile);
+    await editTopicChannel(
+      { action: 'add', revision: empty.revision, title: '自选来源', link: 'https://example.com/source' },
+      sourceFile,
+      path.join(folder, 'backups'),
+    );
+    const saved = await loadTopicChannels(sourceFile);
+    const channel = saved.channels[0];
     vi.mocked(readTopicSources).mockResolvedValueOnce([
       {
-        id: 'custom',
+        id: channel.id,
         url: channel.location,
         text: '原文可核对的创作需求',
         screenshots: [path.resolve('data/topics/test/0.png')],
@@ -135,14 +134,15 @@ test('新增外部渠道只改文档，读取的原文必须可核对，渠道�
               })),
             },
     } as unknown as Judgment;
-    await generateTopics(db, judge, { config, channels: [channel], document: '测试自定义渠道' });
+    await generateTopics(db, judge, { config, ...saved });
     expect(readTopicSources).toHaveBeenLastCalledWith([channel], config.parameters.topicExternalMaxScreens);
+    expect(db.db.select().from(topics).all()).toHaveLength(20);
     expect(
       db.db
         .select()
         .from(topics)
         .all()
-        .every((t) => t.channelId === 'custom' && t.sourceUrl === channel.location),
+        .every((t) => t.channelId === channel.id && t.sourceUrl === channel.location),
     ).toBe(true);
     expect(topicSources(db.db.select().from(topicSignals).all(), [{ ...channel, enabled: false }])).toEqual([]);
   } finally {
