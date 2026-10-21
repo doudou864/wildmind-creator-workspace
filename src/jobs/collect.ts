@@ -8,7 +8,7 @@ import { telemetry } from './telemetry.ts';
 import { mkdir } from 'node:fs/promises';
 import { acquireJobLock } from './lock.ts';
 import { randomUUID } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { openDatabase } from '../db/database.ts';
 import { accounts, crawlLogs } from '../db/schema.ts';
 import { EgoBrowser, runEgo, collectionPage } from '../browser/ego.ts';
@@ -24,14 +24,19 @@ import { readState, writeState } from '../collectors/state.ts';
 import { startCrawl, finishCrawl } from './crawl-log.ts';
 import { requireAttention, notifyAttention, pendingAttention, resolveAttention } from './attention.ts';
 import { checkConfirmations } from './confirmations.ts';
-import { loadSchedule, scheduleForDay, dueSlot, shanghaiDate } from './schedule.ts';
+import { loadSchedule, scheduleForDay, dueSlot, shanghaiDate, platformSchedule } from './schedule.ts';
 export async function runCollection(
   mode: 'manual' | 'scheduled' | 'resume',
   spaceOverride?: number,
   selectedPlatform?: string,
 ) {
+  if (!selectedPlatform || !(await loadSchedule()).platforms.includes(selectedPlatform))
+    throw Error('每个采集任务必须指定配置中的一个平台');
+  const pausedKey = `browser:paused:${selectedPlatform}`;
+  const retryKey = `browser:retry-space:${selectedPlatform}`;
+  const errorKey = `collection:last-error:${selectedPlatform}`;
   await mkdir('data/jobs', { recursive: true, mode: 0o700 });
-  const release = await acquireJobLock('data/jobs/collect.pid');
+  const release = await acquireJobLock(`data/jobs/collect-${selectedPlatform}.pid`);
   if (!release) {
     console.log('已有采集任务在运行，本次退出');
     return;
@@ -42,14 +47,19 @@ export async function runCollection(
   let browserFailed = false;
   let collectionFailed = false;
   try {
-    for (const unfinished of database.db.select().from(crawlLogs).where(eq(crawlLogs.status, 'running')).all()) {
+    for (const unfinished of database.db
+      .select()
+      .from(crawlLogs)
+      .where(and(eq(crawlLogs.status, 'running'), eq(crawlLogs.platformId, selectedPlatform)))
+      .all()) {
       await finishCrawl(database, unfinished.id, {
         status: 'failed',
         reason: '上次采集进程中断，等待下一次重试',
         archivePaths: unfinished.archivePaths,
       });
     }
-    if (mode === 'scheduled' && readState(database, 'browser:paused')?.paused) return;
+    if (mode === 'scheduled' && (readState(database, pausedKey) ?? readState(database, 'browser:paused'))?.paused)
+      return;
     const schedule = await loadSchedule();
     if (selectedPlatform && !schedule.platforms.includes(selectedPlatform)) throw Error('平台不在采集配置中');
     const collectors = new Map<string, (...args: Parameters<typeof collectDouyin>) => Promise<object>>([
@@ -61,16 +71,28 @@ export async function runCollection(
     ]);
     const now = new Date();
     const date = shanghaiDate(now);
-    const key = `schedule:${date}`;
-    const state = readState(database, key) ?? {
-      chosen: scheduleForDay(schedule.start, schedule.end),
-      attempted: [],
-      succeeded: false,
-    };
+    const key = `schedule:${date}:${selectedPlatform}`;
+    // Keep the same daily random window for the batch; only retry/result state is per platform.
+    const scheduleRelease = await acquireJobLock('data/jobs/schedule-choice.pid');
+    let chosen = readState(database, `schedule:${date}`)?.chosen;
+    if (scheduleRelease) {
+      try {
+        chosen = readState(database, `schedule:${date}`)?.chosen ?? scheduleForDay(schedule.start, schedule.end);
+        if (!readState(database, `schedule:${date}`)) writeState(database, `schedule:${date}`, { chosen });
+      } finally {
+        await scheduleRelease();
+      }
+    }
+    if (chosen === undefined) return; // another worker is choosing; the next poll will resume
+
+    const state =
+      readState(database, key) ??
+      platformSchedule(readState(database, `schedule:${date}`), Number(chosen), selectedPlatform);
     writeState(database, key, state);
     // Poll only confirmation tasks, never click the login button repeatedly.
-    if (!selectedPlatform)
-      await checkConfirmations(database, async (platformId, spaceId, page) => {
+    await checkConfirmations(
+      database,
+      async (platformId, spaceId, page) => {
         database.db
           .update(accounts)
           .set({
@@ -109,13 +131,19 @@ export async function runCollection(
             }
           }
         } else console.log(`${platformId}：已检测到登录成功；该平台采集器按 ROADMAP 第3步接入`);
-      });
+      },
+      undefined,
+      undefined,
+      selectedPlatform,
+    );
     const attempted = Array.isArray(state.attempted) ? (state.attempted as string[]) : [];
     const slot =
       mode === 'scheduled' ? dueSlot(now, Number(state.chosen), schedule.retries, attempted, !!state.succeeded) : mode;
     if (!slot) return;
-    writeState(database, 'collection:last-error', {});
-    const pending = pendingAttention(database).filter((x) => x.kind !== 'capacity');
+    writeState(database, errorKey, {});
+    const pending = pendingAttention(database).filter(
+      (x) => x.platformId === selectedPlatform && x.kind !== 'capacity',
+    );
     const refreshed = readState(database, key) ?? state;
     const successful = new Set(
       Array.isArray(refreshed.successfulPlatforms) ? (refreshed.successfulPlatforms as string[]) : [],
@@ -148,16 +176,16 @@ export async function runCollection(
       mode === 'resume' ? pending.find((item) => ids.includes(item.platformId) && item.spaceId)?.spaceId : undefined;
     if (resumeSpace) {
       await runEgo(`const t=await takeOverTaskSpace(${resumeSpace});console.log('WORKSPACE_RESULT:true');`);
-      writeState(database, 'browser:paused', { paused: false });
+      writeState(database, pausedKey, { paused: false });
     }
-    const cachedSpace = readState(database, 'browser:retry-space')?.id as number | undefined;
+    const cachedSpace = readState(database, retryKey)?.id as number | undefined;
     const retrySpace = cachedSpace ? await existingCollectionSpace(cachedSpace) : undefined;
     activeSpace =
       spaceOverride ??
       resumeSpace ??
       retrySpace ??
       ((await runEgo(
-        `const t=await taskSpace(${JSON.stringify('工作台采集 ' + randomUUID())});console.log('WORKSPACE_RESULT:'+JSON.stringify(t.spaceId));`,
+        `const t=await taskSpace(${JSON.stringify('工作台采集 ' + selectedPlatform + ' ' + randomUUID())});console.log('WORKSPACE_RESULT:'+JSON.stringify(t.spaceId));`,
       )) as number);
     // A pending login owns its tab until confirmation/expiry; retries use a different tab in the same space.
     const reserved = pendingAttention(database)
@@ -221,7 +249,7 @@ export async function runCollection(
       } catch (error) {
         allSucceeded = false;
         collectionFailed = true;
-        writeState(database, 'browser:retry-space', { id: activeSpace });
+        writeState(database, retryKey, { id: activeSpace });
         const reason = error instanceof Error ? error.message : '采集失败';
         if (error instanceof AttentionRequired) telemetry()!.attention = true;
         if (
@@ -240,16 +268,15 @@ export async function runCollection(
         if (/控制权|ego 操作失败|浏览器操作超时/.test(reason)) {
           browserFailed = true;
           requireAttention(database, { platformId: id, kind: 'risk', reason, spaceId: activeSpace, page: activePage });
-          writeState(database, 'browser:paused', { paused: true });
+          writeState(database, pausedKey, { paused: true });
           break;
         }
       }
     }
     if (allSucceeded) {
-      if (mode !== 'scheduled') writeState(database, 'browser:paused', { paused: false });
-      writeState(database, 'browser:retry-space', {});
-      if (schedule.platforms.every((id) => successful.has(id)))
-        writeState(database, key, { ...readState(database, key), succeeded: true });
+      if (mode !== 'scheduled') writeState(database, pausedKey, { paused: false });
+      writeState(database, retryKey, {});
+      if (successful.has(selectedPlatform)) writeState(database, key, { ...readState(database, key), succeeded: true });
     }
     if (
       !browserFailed &&
@@ -262,7 +289,7 @@ export async function runCollection(
     await notifyAttention(database);
     if (!allSucceeded && mode !== 'scheduled') process.exitCode = 1;
   } catch (error) {
-    writeState(database, 'collection:last-error', {
+    writeState(database, errorKey, {
       reason: error instanceof Error ? error.message : '采集启动失败',
       at: new Date().toISOString(),
       platform: selectedPlatform ?? 'all',

@@ -1,21 +1,35 @@
-import { isLocalOrigin } from '@/lib/local-origin';
-import { startCollection, collectionRunning } from '@/jobs/collection-control';
-import { usingDatabase } from '@/lib/media-store';
 import { crawlLogs } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { isLocalOrigin } from '@/lib/local-origin';
+import { startCollection, runningPlatforms, legacyCollectionRunning } from '@/jobs/collection-control';
+import { usingDatabase } from '@/lib/media-store';
+import { loadSchedule } from '@/jobs/schedule';
 import { readState } from '@/collectors/state';
 export async function GET() {
+  const legacyRunning = await legacyCollectionRunning();
+  const activePlatforms = legacyRunning
+    ? await usingDatabase(async (db) =>
+        db.db
+          .select({ id: crawlLogs.platformId })
+          .from(crawlLogs)
+          .where(eq(crawlLogs.status, 'running'))
+          .all()
+          .map((r) => r.id),
+      )
+    : await runningPlatforms();
+  const issues = await usingDatabase(async (db) => {
+    const { platforms } = await loadSchedule();
+    return platforms.flatMap((platform) => {
+      const value = readState(db, `collection:last-error:${platform}`);
+      return value?.reason ? [{ platform, ...value }] : [];
+    });
+  });
   return Response.json({
-    running: await collectionRunning(),
-    activePlatforms: await usingDatabase(async (db) =>
-      db.db
-        .select({ platformId: crawlLogs.platformId })
-        .from(crawlLogs)
-        .where(eq(crawlLogs.status, 'running'))
-        .all()
-        .map((r) => r.platformId),
-    ),
-    issue: await usingDatabase(async (db) => readState(db, 'collection:last-error') ?? null),
+    running: legacyRunning || activePlatforms.length > 0,
+    legacyRunning,
+    activePlatforms,
+    issues,
+    issue: issues[0] ?? null,
   });
 }
 export async function POST(request: Request) {

@@ -44,3 +44,16 @@ export function dueSlot(now: Date, chosen: number, retries: string[], attempted:
   return latest && !attempted.includes(latest.id) ? latest.id : null;
 }
 export { shanghaiDate };
+
+// Preserve slots already attempted by the serial scheduler when upgrading mid-day.
+export function platformSchedule(legacy: Record<string, unknown> | null | undefined, chosen: number, platform: string) {
+  const successful = Array.isArray(legacy?.successfulPlatforms)
+    ? legacy.successfulPlatforms.filter((id) => id === platform)
+    : [];
+  return {
+    chosen,
+    attempted: Array.isArray(legacy?.attempted) ? legacy.attempted : [],
+    succeeded: !!legacy?.succeeded || successful.length > 0,
+    successfulPlatforms: successful,
+  };
+}

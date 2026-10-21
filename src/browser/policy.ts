@@ -43,7 +43,16 @@ export async function consumePage(root = process.cwd(), now = new Date()) {
   const directory = path.join(root, 'data/browser');
   await mkdir(directory, { recursive: true, mode: 0o700 });
   const lock = path.join(directory, 'usage.lock');
-  await mkdir(lock);
+  // Parallel sessions share only this short budget update, never the whole browser task.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await mkdir(lock);
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'EEXIST' || attempt >= 100) throw error;
+      await pause(25);
+    }
+  }
   try {
     const filename = path.join(directory, 'usage.json');
     let record = { date: shanghaiDate(now), count: 0 };

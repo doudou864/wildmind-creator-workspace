@@ -10,12 +10,15 @@ export async function checkConfirmations(
   onReady: (platformId: string, spaceId: number, page: string) => Promise<void>,
   browser = new EgoBrowser(),
   now = new Date().toISOString(),
+  platformId?: string,
 ) {
-  for (const item of expireConfirmations(database, now)) {
+  for (const item of expireConfirmations(database, now, platformId)) {
     const id = startCrawl(database, item.platformId, now);
     await finishCrawl(database, id, { status: 'failed', reason: '未确认登录' }, now);
   }
-  for (const item of pendingAttention(database).filter((x) => x.kind === 'confirmation')) {
+  for (const item of pendingAttention(database).filter(
+    (x) => x.kind === 'confirmation' && (!platformId || x.platformId === platformId),
+  )) {
     if (!item.spaceId || !item.page) throw new Error('微信确认任务缺少浏览器位置');
     const result = await browser.observeLogin(item.platformId, item.spaceId, item.page);
     if (result.state === 'logged_in') {

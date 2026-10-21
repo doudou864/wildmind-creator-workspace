@@ -2,56 +2,87 @@ import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile, open } from 'node:fs/promises';
 import { acquireJobLock } from './lock.ts';
 import { loadSchedule } from './schedule.ts';
-const file = 'data/jobs/manual-collection.json';
-export async function collectionRunning() {
+export type CollectionMode = 'manual' | 'scheduled' | 'resume';
+async function livePid(file: string, json = false) {
   try {
-    const pid = Number(await readFile('data/jobs/collect.pid', 'utf8'));
+    const value = await readFile(file, 'utf8');
+    const pid = Number(json ? JSON.parse(value).pid : value);
     if (pid > 0) {
       process.kill(pid, 0);
       return true;
     }
   } catch {}
-  try {
-    const job = JSON.parse(await readFile(file, 'utf8'));
-    if (job.pid > 0) {
-      process.kill(job.pid, 0);
-      return true;
-    }
-  } catch {}
   return false;
 }
-export function collectionArgs(platform: string | undefined, allowed: string[]) {
-  if (platform !== undefined && !allowed.includes(platform)) throw Error('该平台不在采集配置中');
-  return ['--experimental-strip-types', 'scripts/collect.mjs', ...(platform ? ['--platform', platform] : [])];
+export async function legacyCollectionRunning() {
+  return (await livePid('data/jobs/collect.pid')) || (await livePid('data/jobs/manual-collection.json', true));
 }
-export async function startCollection(platform?: string) {
-  const args = collectionArgs(platform, (await loadSchedule()).platforms);
+export async function runningPlatforms() {
+  const { platforms } = await loadSchedule();
+  if (await legacyCollectionRunning()) return platforms;
+  const running = await Promise.all(
+    platforms.map(
+      async (id) =>
+        (await livePid(`data/jobs/collect-${id}.pid`)) || (await livePid(`data/jobs/collection-${id}.json`, true)),
+    ),
+  );
+  return platforms.filter((_, index) => running[index]);
+}
+export async function collectionRunning() {
+  return (await runningPlatforms()).length > 0;
+}
+export function collectionArgs(platform: string | undefined, allowed: string[], mode: CollectionMode = 'manual') {
+  if (platform !== undefined && !allowed.includes(platform)) throw Error('该平台不在采集配置中');
+  return [
+    '--experimental-strip-types',
+    'scripts/collect.mjs',
+    ...(platform ? ['--platform', platform] : []),
+    ...(mode === 'manual' ? [] : [`--${mode}`]),
+  ];
+}
+export async function startCollection(platform?: string, mode: CollectionMode = 'manual') {
+  const { platforms } = await loadSchedule();
+  collectionArgs(platform, platforms, mode);
+  if (await legacyCollectionRunning())
+    throw Error('上一版采集任务仍在运行，完成后即可按平台并行采集；选题取材可独立运行');
   await mkdir('data/jobs', { recursive: true });
-  const release = await acquireJobLock('data/jobs/collection-launch.pid');
-  if (!release) throw Error('正在启动采集，请稍后查看状态');
-  try {
-    if (await collectionRunning()) throw Error('已有采集任务在运行，请等待完成');
-    const output = await open('data/jobs/manual-collection.log', 'a', 0o600);
-    try {
-      const child = spawn(process.execPath, args, {
-        cwd: process.cwd(),
-        detached: true,
-        stdio: ['ignore', output.fd, output.fd],
-      });
-      await new Promise<void>((resolve, reject) => {
-        child.once('spawn', resolve);
-        child.once('error', reject);
-      });
-      await writeFile(
-        file,
-        JSON.stringify({ pid: child.pid, platform: platform ?? 'all', startedAt: new Date().toISOString() }),
-      );
-      child.unref();
-    } finally {
-      await output.close();
-    }
-    return { started: true };
-  } finally {
-    await release();
-  }
+  const results = await Promise.all(
+    (platform ? [platform] : platforms).map(async (id) => {
+      const release = await acquireJobLock(`data/jobs/collection-launch-${id}.pid`);
+      if (!release) return { id, started: false };
+      try {
+        if ((await livePid(`data/jobs/collect-${id}.pid`)) || (await livePid(`data/jobs/collection-${id}.json`, true)))
+          return { id, started: false };
+        const output = await open(`data/jobs/collection-${id}.log`, 'a', 0o600);
+        try {
+          const child = spawn(process.execPath, collectionArgs(id, platforms, mode), {
+            cwd: process.cwd(),
+            detached: true,
+            stdio: ['ignore', output.fd, output.fd],
+          });
+          await new Promise<void>((resolve, reject) => {
+            child.once('spawn', resolve);
+            child.once('error', reject);
+          });
+          await writeFile(
+            `data/jobs/collection-${id}.json`,
+            JSON.stringify({ pid: child.pid, platform: id, startedAt: new Date().toISOString() }),
+          );
+          child.unref();
+        } finally {
+          await output.close();
+        }
+        return { id, started: true };
+      } catch (e) {
+        return { id, started: false, error: e instanceof Error ? e.message : '启动失败' };
+      } finally {
+        await release();
+      }
+    }),
+  );
+  const startedPlatforms = results.filter((r) => r.started).map((r) => r.id);
+  const skippedPlatforms = results.filter((r) => !r.started && !r.error).map((r) => r.id);
+  const errors = results.filter((r) => r.error).map((r) => ({ platform: r.id, reason: r.error! }));
+  if (platform && !startedPlatforms.length) throw Error(errors[0]?.reason ?? '这个平台已在采集，其他平台仍可启动');
+  return { started: startedPlatforms.length > 0, startedPlatforms, skippedPlatforms, errors };
 }

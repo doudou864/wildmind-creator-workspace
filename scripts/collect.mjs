@@ -1,3 +1,4 @@
+import { startCollection } from '../src/jobs/collection-control.ts';
 import { openDatabase } from '../src/db/database.ts';
 import { notifyCollectorHealth } from '../src/jobs/collector-health.ts';
 import { runCollection } from '../src/jobs/collect.ts';
@@ -6,17 +7,21 @@ const mode = process.argv.includes('--resume')
   : process.argv.includes('--scheduled')
     ? 'scheduled'
     : 'manual';
-try {
-  await runCollection(
-    mode,
-    process.env.WORKSPACE_EGO_SPACE ? Number(process.env.WORKSPACE_EGO_SPACE) : undefined,
-    process.argv.includes('--platform') ? process.argv[process.argv.indexOf('--platform') + 1] : undefined,
-  );
-} finally {
-  const db = openDatabase();
+const platform = process.argv.includes('--platform') ? process.argv[process.argv.indexOf('--platform') + 1] : undefined;
+if (!platform) {
+  console.log(JSON.stringify(await startCollection(undefined, mode)));
+} else
   try {
-    await notifyCollectorHealth(db);
+    await runCollection(
+      mode,
+      process.env.WORKSPACE_EGO_SPACE ? Number(process.env.WORKSPACE_EGO_SPACE) : undefined,
+      platform,
+    );
   } finally {
-    db.sqlite.close();
+    const db = openDatabase();
+    try {
+      await notifyCollectorHealth(db);
+    } finally {
+      db.sqlite.close();
+    }
   }
-}

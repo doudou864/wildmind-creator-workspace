@@ -15,10 +15,11 @@ export function CollectionStrip({
 }) {
   const { data, error, refresh } = useResource<{
     running: boolean;
+    legacyRunning?: boolean;
     activePlatforms?: string[];
     issue: { reason?: string; at?: string } | null;
   }>('/api/collection', { running: false, issue: null }, true);
-  const [starting, setStarting] = useState(false),
+  const [starting, setStarting] = useState<string | null>(null),
     [notice, setNotice] = useState('');
   useEffect(() => {
     const timer = setInterval(() => {
@@ -28,20 +29,30 @@ export function CollectionStrip({
     return () => clearInterval(timer);
   }, [refresh, onUpdate]);
   async function start(platform?: string) {
-    setStarting(true);
+    setStarting(platform ?? 'all');
     setNotice('');
     try {
-      await request('/api/collection', {
+      const result = await request<{
+        startedPlatforms: string[];
+        skippedPlatforms: string[];
+        errors: { platform: string; reason: string }[];
+      }>('/api/collection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ platform }),
       });
-      setNotice('采集已启动，结果会自动更新');
+      setNotice(
+        result.errors.length
+          ? result.errors.map((e) => `${e.platform}：${e.reason}`).join('；')
+          : result.startedPlatforms.length
+            ? `已启动 ${result.startedPlatforms.length} 个平台，结果会自动更新`
+            : '这些平台已在采集',
+      );
       await refresh();
     } catch (e) {
       setNotice(e instanceof Error ? e.message : '启动失败');
     } finally {
-      setStarting(false);
+      setStarting(null);
     }
   }
   return (
@@ -49,8 +60,10 @@ export function CollectionStrip({
       <div className="collection-strip-heading">
         <strong>平台采集</strong>
         <Button
-          disabled={starting || data.running}
-          disabledReason="采集正在进行，请等待完成"
+          disabled={
+            !!data.legacyRunning || starting !== null || platforms.every((p) => data.activePlatforms?.includes(p.id))
+          }
+          disabledReason={data.legacyRunning ? '旧版整批任务结束后即可并行启动' : '该平台正在采集，其他平台可单独启动'}
           onClick={() => void start()}
         >
           全部重新采集
@@ -70,8 +83,10 @@ export function CollectionStrip({
               </div>
               <small>{p.lastSuccess ? freshness(p.lastSuccess, today) : '尚无成功记录'}</small>
               <Button
-                disabled={starting || data.running}
-                disabledReason="采集正在进行，请等待完成"
+                disabled={!!data.legacyRunning || starting === 'all' || starting === p.id || !!running}
+                disabledReason={
+                  data.legacyRunning ? '旧版整批任务结束后即可并行启动' : '该平台正在采集，其他平台可单独启动'
+                }
                 onClick={() => void start(p.id)}
               >
                 重新采集
@@ -87,7 +102,15 @@ export function CollectionStrip({
         })}
       </div>
       {(notice || error || data.issue?.reason || data.running) && (
-        <p role="status">{error || data.issue?.reason || (data.running ? '正在采集，结果会自动更新' : notice)}</p>
+        <p role="status">
+          {error ||
+            data.issue?.reason ||
+            (data.legacyRunning
+              ? '旧版整批采集仍在运行，完成后可按平台并行；选题取材已可独立使用'
+              : data.running
+                ? '正在分别采集，结果会自动更新'
+                : notice)}
+        </p>
       )}
     </section>
   );

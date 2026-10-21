@@ -38,9 +38,9 @@ export function resolveAttention(database: WorkspaceDatabase, platformId: string
     )
     .run();
 }
-export function expireConfirmations(database: WorkspaceDatabase, now = new Date().toISOString()) {
+export function expireConfirmations(database: WorkspaceDatabase, now = new Date().toISOString(), platformId?: string) {
   const expired = pendingAttention(database).filter(
-    (x) => x.kind === 'confirmation' && x.deadline && x.deadline <= now,
+    (x) => (!platformId || x.platformId === platformId) && x.kind === 'confirmation' && x.deadline && x.deadline <= now,
   );
   for (const item of expired)
     database.db

@@ -11,8 +11,8 @@ export async function readTopicSources(
   maxScreens: number,
 ): Promise<ExternalTopicPage[]> {
   if (!channels.length) return [];
-  const release = await acquireJobLock(path.resolve('data/jobs/collect.pid'));
-  if (!release) throw Error('浏览器正在采集其他平台，请稍后再生成选题');
+  const release = await acquireJobLock(path.resolve('data/jobs/topic-sources.pid'));
+  if (!release) throw Error('选题来源正在读取，请等待本轮完成');
   try {
     const spaceId = (await runEgo(
       `const t=await taskSpace(${JSON.stringify('选题来源 ' + randomUUID())});console.log('WORKSPACE_RESULT:'+t.spaceId);`,
