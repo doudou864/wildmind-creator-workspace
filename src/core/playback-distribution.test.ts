@@ -22,7 +22,7 @@ const sample = (id: string, capturedAt: string, value: number | null, postId = '
 const now = Date.parse('2026-11-02T00:00:00+08:00');
 test('发布当天D0；北京时间跨午夜即D1，同日以最后完成采样覆盖，不受24小时和UTC日期影响', () => {
   const result = playbackDistribution(
-    post('a'),
+    'douyin',
     [post('a')],
     [
       sample('d0', '2026-10-01T23:59:00+08:00', 9000),
@@ -37,7 +37,7 @@ test('发布当天D0；北京时间跨午夜即D1，同日以最后完成采样�
   expect(result.rows[0].value).toBe(3000);
   expect(result).toMatchObject({ count: 1, median: 3000, min: 2000, max: 4000 });
 });
-test('中位数包括当前作品，排除其他平台形式；缺失不补抓、不补零，真实0参与中位数', () => {
+test('独立抖音统计包含视频图文，排除其他平台；缺失不补抓、不补零，真实0参与中位数', () => {
   const all = [
     post('a'),
     post('b'),
@@ -51,15 +51,15 @@ test('中位数包括当前作品，排除其他平台形式；缺失不补抓�
     sample('c', '2026-10-05T12:00:00+08:00', 99999, 'c'),
     sample('image', '2026-10-04T12:00:00+08:00', 99999, 'image'),
   ];
-  const result = playbackDistribution(post('a'), all, rows, 3, now, options);
-  expect(result.rows.map((r) => r.value)).toEqual([0, 4000, null]);
-  expect(result).toMatchObject({ count: 2, median: 2000, min: -1000, max: 5000 });
+  const result = playbackDistribution('douyin', all, rows, 3, now, options);
+  expect(result.rows.map((r) => r.value)).toEqual([0, 4000, null, 99999]);
+  expect(result).toMatchObject({ count: 3, median: 4000, min: -1000, max: 100999 });
 });
 test('D7和D30严格选对应日，未来记录不提前展示；全空不产生中位线或虚构坐标', () => {
   const rows = [sample('d7', '2026-10-08T00:01:00+08:00', 7000), sample('d30', '2026-10-31T00:01:00+08:00', 30000)];
-  expect(playbackDistribution(post('a'), [post('a')], rows, 7, now, options).median).toBe(7000);
-  expect(playbackDistribution(post('a'), [post('a')], rows, 30, now, options).median).toBe(30000);
-  expect(playbackDistribution(post('a'), [post('a')], rows, 30, Date.parse('2026-10-30'), options)).toMatchObject({
+  expect(playbackDistribution('douyin', [post('a')], rows, 7, now, options).median).toBe(7000);
+  expect(playbackDistribution('douyin', [post('a')], rows, 30, now, options).median).toBe(30000);
+  expect(playbackDistribution('douyin', [post('a')], rows, 30, Date.parse('2026-10-30'), options)).toMatchObject({
     count: 0,
     median: null,
     min: null,

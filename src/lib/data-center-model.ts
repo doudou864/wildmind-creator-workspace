@@ -9,6 +9,12 @@ export type Interpretation = {
   paragraphs: string[];
   createdAt: string;
 };
+export type WorksPlaybackData = {
+  platformName: string;
+  days: number[];
+  minimum: number;
+  distributions: Record<string, PlaybackDistribution>;
+};
 export type DataCenterData = {
   posts: AnalysisPost[];
   selected: AnalysisPost | null;
@@ -20,8 +26,6 @@ export type DataCenterData = {
   endDay: number;
   checkpoints: number[];
   curve: Comparison[];
-  playbackDays: number[];
-  playback: Record<string, PlaybackDistribution>;
   comparisons: Record<string, Comparison[]>;
   fingerprints: Record<string, string>;
   interpretations: Interpretation[];

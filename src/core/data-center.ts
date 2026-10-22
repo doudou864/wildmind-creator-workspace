@@ -131,7 +131,7 @@ export type PlaybackDistribution = {
 };
 // Calendar days in the workspace timezone: the publication date is D0.
 export function playbackDistribution(
-  selected: AnalysisPost,
+  platformId: string,
   posts: AnalysisPost[],
   samples: ReviewSample[],
   day: number,
@@ -148,9 +148,7 @@ export function playbackDistribution(
   const calendarAge = (post: AnalysisPost, time: number) =>
     Math.round((Date.parse(date(time)) - Date.parse(date(publicationTime(post.publishedAt)))) / 86400000);
   const rows = posts
-    .filter(
-      (p) => p.platformId === selected.platformId && p.form === selected.form && publicationTime(p.publishedAt) <= asOf,
-    )
+    .filter((p) => p.platformId === platformId && publicationTime(p.publishedAt) <= asOf)
     .sort((a, b) => publicationTime(a.publishedAt) - publicationTime(b.publishedAt) || a.id.localeCompare(b.id))
     .map((p) => {
       const sample = latestDailySamples(samples, asOf)

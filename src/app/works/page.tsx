@@ -6,7 +6,7 @@ import { loadConfig } from '@/lib/config';
 import { loadDataCenterConfig } from '@/lib/data-center-config';
 import { usingDatabase } from '@/lib/media-store';
 import { contents, posts, postSnapshots } from '@/db/schema';
-import { dataCenterData } from '@/lib/data-center-store';
+import { dataCenterData, worksPlaybackData } from '@/lib/data-center-store';
 import { analysisRead } from '@/ui/analysis-read';
 import { dashboardRead } from '@/ui/dashboard-read';
 import { isVisibleRecord } from '@/ui/visible-records';
@@ -14,6 +14,7 @@ import { dataDate, workTitle } from '@/ui/data-freshness';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { WorkPageHeader } from '@/ui/work-page-header';
 import { shanghaiDate } from '@/browser/policy';
+import { WorksPlaybackCard } from '@/ui/works-playback-card';
 import DataCenterPage from '../data-center/data-center-page';
 export const dynamic = 'force-dynamic';
 export default async function Page({
@@ -29,6 +30,7 @@ export default async function Page({
       samples: db.db.select().from(postSnapshots).all(),
     }),
   );
+  const playback = await usingDatabase((db) => worksPlaybackData(db, config, settings));
   const items = all.contents.filter(isVisibleRecord).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const requested = typeof query.content === 'string' ? all.contents.find((c) => c.id === query.content) : undefined;
   const requestedId = requested?.mergedInto ?? requested?.id;
@@ -59,6 +61,7 @@ export default async function Page({
     <main className="workspace works-workspace">
       <WorkspaceHeader current="/works" date={shanghaiDate()} syncWindow={config.parameters.syncWindow} />
       <WorkPageHeader hasWorks={items.length > 0} />
+      <WorksPlaybackCard data={playback} />
       <div className="works-grid">
         <section className="card works-list">
           <h2>作品</h2>

@@ -18,20 +18,20 @@ import {
   backfillNote,
   displayAnalysisValue,
   type DataCenterData,
+  type WorksPlaybackData,
   type InterpretationInput,
 } from './data-center-model.ts';
 import { CodexJudgment, type Judgment } from '../ai/structured.ts';
 import { acquireJobLock } from '../jobs/lock.ts';
-export function dataCenterData(
+function analysisPosts(
   db: WorkspaceDatabase,
   config: WorkspaceConfig,
   settings: DataCenterConfig,
-  postId?: string,
-  now = new Date(),
-): DataCenterData {
+  now: Date,
+): AnalysisPost[] {
   const content = db.db.select().from(contents).all(),
     topic = db.db.select().from(topics).all();
-  const all: AnalysisPost[] = db.db
+  return db.db
     .select()
     .from(posts)
     .all()
@@ -62,6 +62,35 @@ export function dataCenterData(
         : [];
     })
     .sort((a, b) => publicationTime(b.publishedAt) - publicationTime(a.publishedAt) || a.id.localeCompare(b.id));
+}
+export function worksPlaybackData(
+  db: WorkspaceDatabase,
+  config: WorkspaceConfig,
+  settings: DataCenterConfig,
+  now = new Date(),
+): WorksPlaybackData {
+  const all = analysisPosts(db, config, settings, now);
+  const samples = db.db.select().from(postSnapshots).all();
+  return {
+    platformName: config.platforms.find((p) => p.id === settings.platformId)!.name,
+    days: settings.playback.days,
+    minimum: config.parameters.baselineMinimum,
+    distributions: Object.fromEntries(
+      settings.playback.days.map((day) => [
+        day,
+        playbackDistribution(settings.platformId, all, samples, day, now.getTime(), settings.playback),
+      ]),
+    ),
+  };
+}
+export function dataCenterData(
+  db: WorkspaceDatabase,
+  config: WorkspaceConfig,
+  settings: DataCenterConfig,
+  postId?: string,
+  now = new Date(),
+): DataCenterData {
+  const all = analysisPosts(db, config, settings, now);
   const selected = postId ? (all.find((p) => p.id === postId) ?? null) : (all[0] ?? null);
   if (postId && !selected) throw Error('该作品不在当前数据中心范围内');
   const days = [...new Set([...config.parameters.checkpoints, ...config.parameters.anomalyCheckpoints])].sort(
@@ -78,8 +107,6 @@ export function dataCenterData(
     endDay: settings.endDay,
     checkpoints: days,
     curve: [],
-    playbackDays: settings.playback.days,
-    playback: {},
     comparisons: {},
     fingerprints: {},
     interpretations: [],
@@ -90,9 +117,6 @@ export function dataCenterData(
     .from(postSnapshots)
     .all()
     .filter((s) => all.some((p) => p.id === s.postId));
-  for (const day of settings.playback.days) {
-    result.playback[day] = playbackDistribution(selected, all, samples, day, now.getTime(), settings.playback);
-  }
   const options = {
     minimum: config.parameters.baselineMinimum,
     limit: config.parameters.baselineSamples,

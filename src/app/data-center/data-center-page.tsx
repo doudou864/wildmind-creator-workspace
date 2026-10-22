@@ -13,7 +13,7 @@ import type { DataCenterData, Interpretation } from '@/lib/data-center-model';
 import { backfillNote, displayAnalysisValue as display } from '@/lib/data-center-model';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { PageHeader, Button, Card, Empty } from '@/ui/components';
-import { DataCenterChart, MetricNeedle } from '@/ui/data-center-chart';
+import { MetricNeedle } from '@/ui/data-center-chart';
 import { request } from '@/ui/use-resource';
 export default function DataCenterPage({
   data: initialData,
@@ -35,8 +35,6 @@ export default function DataCenterPage({
   const data = visibleRecords(initialData);
   const router = useRouter();
   const [query, setQuery] = useState('');
-  const [playbackDay, setPlaybackDay] = useState(data.playbackDays[0]);
-  const distribution = data.playback[playbackDay];
   const [day, setDay] = useState(data.checkpoints.filter((d) => d <= data.age).at(-1) ?? data.checkpoints[0]);
   const [reports, setReports] = useState(data.interpretations);
   const [busy, setBusy] = useState(false);
@@ -304,40 +302,6 @@ export default function DataCenterPage({
               <p role="alert" className="small">
                 {error}
               </p>
-            )}
-          </Card>
-          <Card
-            title="作品播放量与中位数"
-            className="analysis-curve"
-            meta={
-              <div className="segments" role="group" aria-label="播放量天数">
-                {data.playbackDays.map((d) => (
-                  <Button
-                    key={d}
-                    className={playbackDay === d ? 'selected' : ''}
-                    aria-pressed={playbackDay === d}
-                    onClick={() => setPlaybackDay(d)}
-                  >
-                    D{d}
-                  </Button>
-                ))}
-              </div>
-            }
-          >
-            {distribution?.count ? (
-              <>
-                <p className="small">
-                  {selected.form} · D{playbackDay} 中位数 <span className="mono">{display(distribution.median)}</span> ·{' '}
-                  {distribution.count} 条有记录
-                  {distribution.count < data.minimum ? ' · 样本不足，仅供参考' : ''}
-                  {distribution.rows.length > distribution.count
-                    ? ` · ${distribution.rows.length - distribution.count} 条暂无当天记录`
-                    : ''}
-                </p>
-                <DataCenterChart distribution={distribution} day={playbackDay} />
-              </>
-            ) : (
-              <Empty>暂无 D{playbackDay} 记录；采集到对应日期的数据后显示。</Empty>
             )}
           </Card>
         </>
