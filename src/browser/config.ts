@@ -66,7 +66,15 @@ export function detectLogin(
   return {
     state: 'unknown',
     reason: config.loggedIn.length
-      ? '后台未显示完整登录证据，可能加载失败或页面变化'
+      ? `后台登录检查未完成：${
+          !onBackend
+            ? '页面不在创作者后台'
+            : !config.loggedInPath || !parsed.pathname.includes(config.loggedInPath)
+              ? `仍在 ${parsed.pathname}，尚未到账号首页`
+              : loggedOut
+                ? '账号信息与登录提示同时出现'
+                : `未读到${config.loggedIn.filter((marker) => !text.includes(marker)).join('、')}`
+        }`
       : '登录后页面标记尚未实测，不能确认登录',
   };
 }

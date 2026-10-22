@@ -132,3 +132,36 @@ test('等待确认的标签始终保留，空闲标签可复用，全部保留�
   expect(await collectionPage(20, ['p1', 'p2'], execute)).toBe('p3');
   expect(created).toBe(1);
 });
+
+test('小红书登录等待必须覆盖跳转和登录提示消失，不能在半加载账号栏上提前结束', async () => {
+  const config = (await loadBrowserConfig()).find((p) => p.id === 'xiaohongshu')!;
+  let exercised = false;
+  const browser = new EgoBrowser(
+    process.cwd(),
+    async (script) => {
+      if (!script.includes('async function observe')) return 32;
+      const predicate = script.match(/page\.waitForFunction\((.*),cfg,\{timeout:10000\}\)/)?.[1];
+      expect(predicate).toBeTruthy();
+      const cases = [
+        ['https://creator.xiaohongshu.com/', '小红书账号 粉丝数', false],
+        ['https://creator.xiaohongshu.com/new/home', '小红书账号 粉丝数 短信登录', false],
+        ['https://www.xiaohongshu.com/new/home', '小红书账号 粉丝数', false],
+        ['https://creator.xiaohongshu.com/new/home', '小红书账号 粉丝数', true],
+        ['https://creator.xiaohongshu.com/new/home', '验证码', false],
+      ] as const;
+      for (const [url, text, ready] of cases) {
+        const evaluate = new Function('document', 'location', 'cfg', `return (${predicate})(cfg)`);
+        expect(evaluate({ body: { innerText: text }, querySelectorAll: () => [] }, new URL(url), config)).toBe(ready);
+      }
+      exercised = true;
+      return { url: config.url, positive: config.loggedIn, negative: [], risk: [] };
+    },
+    32,
+  );
+  const [result] = await browser.checkLogins(['xiaohongshu']);
+  expect(exercised).toBe(true);
+  expect(result.state).toBe('unknown');
+  expect(result.reason).toContain('尚未到账号首页');
+  expect(detectLogin(config, 'https://www.xiaohongshu.com/notification', '小红书账号 粉丝数').state).toBe('unknown');
+  expect(detectLogin(config, 'https://creator.xiaohongshu.com/new/home', '小红书账号 粉丝数').state).toBe('logged_in');
+});

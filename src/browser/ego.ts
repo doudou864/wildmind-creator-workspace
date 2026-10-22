@@ -90,8 +90,8 @@ async function navigate(page){
 }
 function verified(o){return new URL(o.url).origin===new URL(cfg.url).origin && cfg.loggedInPath && new URL(o.url).pathname.includes(cfg.loggedInPath) && cfg.loggedIn.length>0 && o.positive.length===cfg.loggedIn.length && !o.negative.length && !(o.risk?.length);}
 async function observe(page){
- // Give automatic login redirects time to finish; only return booleans/URL, never page text.
- try{await page.waitForFunction((c)=>{const text=[document.body.innerText,...Array.from(document.querySelectorAll('iframe')).map(f=>{try{return f.contentDocument?.body?.innerText??'';}catch{return '';}})].join(' ');return c.loggedIn.length>0 && c.loggedIn.every(m=>text.includes(m));},cfg,{timeout:10000});}catch{}
+ // Wait for the same evidence verified below, not just text in a partially loaded page.
+ try{await page.waitForFunction((c)=>{const text=[document.body?.innerText??'',...Array.from(document.querySelectorAll('iframe')).map(f=>{try{return f.contentDocument?.body?.innerText??'';}catch{return '';}})].join(' ');return (location.origin===new URL(c.url).origin && !!c.loggedInPath && location.pathname.includes(c.loggedInPath) && c.loggedIn.length>0 && c.loggedIn.every(m=>text.includes(m)) && !c.loggedOut.some(m=>text.includes(m)) && !c.riskMarkers.some(m=>text.includes(m)));},cfg,{timeout:10000});}catch{}
  const observed=await page.evaluate(c=>{const text=[document.body.innerText,...Array.from(document.querySelectorAll('iframe')).map(f=>{try{return f.contentDocument?.body?.innerText??'';}catch{return '';}})].join(' ');return {url:location.href,positive:c.loggedIn.filter(m=>text.includes(m)),negative:c.loggedOut.filter(m=>text.includes(m)),risk:c.riskMarkers.filter(m=>text.includes(m))};},cfg);
  return observed;
 }
