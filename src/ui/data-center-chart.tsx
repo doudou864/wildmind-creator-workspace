@@ -19,7 +19,7 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
       text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
     chart.setOption({
       animation: false,
-      grid: { left: 80, right: 35, top: 35, bottom: 150 },
+      grid: { left: 80, right: 35, top: 35, bottom: 175 },
       tooltip: {
         trigger: 'axis',
         confine: true,
@@ -33,15 +33,24 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
       },
       xAxis: {
         type: 'category',
-        data: distribution.rows.map((r) => workTitle(r.title)),
+        data: distribution.rows.map((r) => r.id),
         boundaryGap: true,
-        axisLine: { show: false },
+        axisLine: { show: !distribution.count, lineStyle: { color: theme.line } },
         axisTick: { show: false },
         axisLabel: {
           interval: 0,
+          formatter: (_id: string, index: number) => {
+            const row = distribution.rows[index];
+            const title = workTitle(row.title);
+            const shortTitle = title.length > 18 ? `${title.slice(0, 18)}…` : title;
+            const value = row.value == null ? '—' : `${row.approximate ? '约 ' : ''}${display(row.value)}`;
+            return `{${row.value == null ? 'missing' : 'value'}|D${day}：${value}}\n${shortTitle}`;
+          },
+          rich: {
+            value: { color: theme.accent, fontFamily: theme.font, fontSize: 12, fontWeight: 600, lineHeight: 20 },
+            missing: { color: theme.muted, fontFamily: theme.font, fontSize: 12, lineHeight: 20 },
+          },
           rotate: 35,
-          width: 170,
-          overflow: 'truncate',
           color: theme.muted,
           fontFamily: theme.font,
           fontSize: 11,
@@ -52,12 +61,14 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
         name: '播放量',
         min: distribution.min,
         max: distribution.max,
+        axisLine: { show: !distribution.count, lineStyle: { color: theme.line } },
         nameTextStyle: { color: theme.muted, fontFamily: theme.font },
         splitLine: { show: false },
         axisLabel: {
           color: theme.muted,
           fontFamily: theme.font,
           fontSize: 11,
+          show: distribution.count > 0,
           formatter: (value: number) => display(value),
           showMinLabel: true,
           showMaxLabel: true,
@@ -69,7 +80,10 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
           type: 'line',
           data: distribution.rows.map((r) => r.value),
           connectNulls: false,
-          symbolSize: 6,
+          showAllSymbol: true,
+          symbol: 'circle',
+          symbolSize: 9,
+          z: 3,
           itemStyle: { color: theme.accent },
           lineStyle: { color: theme.accent, width: 2 },
           label: {
@@ -85,8 +99,13 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
           },
           markLine: {
             silent: true,
+            z: 1,
             symbol: 'none',
-            label: { position: 'insideEndTop', color: theme.ink, formatter: `中位数 ${display(distribution.median)}` },
+            label: {
+              position: 'insideEndBottom',
+              color: theme.ink,
+              formatter: `中位数 ${display(distribution.median)}`,
+            },
             lineStyle: { color: theme.ink, width: 1, type: 'dashed' },
             data: distribution.median === null ? [] : [{ yAxis: distribution.median }],
           },
@@ -104,7 +123,7 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
     <div style={{ overflowX: 'auto' }}>
       <div
         className="data-center-chart"
-        style={{ minWidth: Math.max(600, distribution.rows.length * 105), height: 410 }}
+        style={{ minWidth: Math.max(600, distribution.rows.length * 105), height: 435 }}
         ref={ref}
         role="img"
         aria-label={`D${day}各作品播放量与中位数虚线`}
