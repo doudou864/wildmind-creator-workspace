@@ -4,11 +4,19 @@ import { runEgo } from './ego.ts';
 import { CollectionSession } from './collection-session.ts';
 import { loadBrowserPolicy, pause, randomBetween } from './policy.ts';
 import { acquireJobLock } from '../jobs/lock.ts';
-export type ExternalTopicPage = { id: string; url: string; text: string; screenshots: string[]; error: string | null };
+export type ExternalTopicPage = {
+  id: string;
+  url: string;
+  text: string;
+  screenshots: string[];
+  error: string | null;
+  warning?: string;
+};
 // 一轮只用一个浏览器任务，逐个读取外部渠道；只看文档指定页面，不猜选择器或调用接口。
 export async function readTopicSources(
   channels: { id: string; location: string }[],
   maxScreens: number,
+  hooks?: { onStart?: (id: string) => void; onPage?: (page: ExternalTopicPage) => Promise<void> },
 ): Promise<ExternalTopicPage[]> {
   if (!channels.length) return [];
   const release = await acquireJobLock(path.resolve('data/jobs/topic-sources.pid'));
@@ -28,6 +36,7 @@ export async function readTopicSources(
         screenshots: [],
         error: null,
       };
+      hooks?.onStart?.(channel.id);
       try {
         const target = new URL(channel.location);
         if (!['http:', 'https:'].includes(target.protocol)) throw Error('外部渠道位置必须是完整网页地址');
@@ -39,11 +48,15 @@ export async function readTopicSources(
           const page = await session.run<{ url: string; text: string; bottom: boolean }>(
             `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(()=>({url:location.href,text:document.body.innerText,bottom:scrollY+innerHeight>=document.documentElement.scrollHeight-4}))));`,
           );
+          if (/\/(?:login|signin|i\/flow\/login)(?:[/?#]|$)/i.test(new URL(page.url).pathname))
+            throw Error('需要登录后才能访问');
           if (new URL(page.url).origin !== target.origin) throw Error('外部来源跳转到其他站点，请核对渠道地址');
           const risk = policy.riskMarkers.find((m) => page.text.includes(m));
           if (risk) throw Error(`外部选题来源需要处理：${risk}`);
           if (!page.text.trim()) throw Error('外部来源页面没有可读取文字');
           parts.push(page.text);
+          result.url = page.url;
+          result.text = [...new Set(parts)].join('\n');
           result.screenshots.push(
             await session.capture(path.resolve('data/topics', String(spaceId), `${index}-${i}.png`)),
           );
@@ -55,14 +68,17 @@ export async function readTopicSources(
           }
           await session.scroll();
         }
-        if (!complete) throw Error('外部来源超过单次页面读取上限，本轮不使用不完整来源');
+        if (!complete) result.warning = '已达本轮读取上限，仅使用已读取的页面原文';
       } catch (error) {
         const reason = error instanceof Error ? error.message : '外部来源读取失败';
         // 用户接管必须立即停下，不能换页面绕过。
         if (/控制权|不自动重试|浏览器操作超时/.test(reason)) throw error;
-        result.error = reason;
+        if (result.text.trim() && /网络|页面等待超时/.test(reason))
+          result.warning = `读取中断，仅使用此前原文：${reason}`;
+        else result.error = reason;
       }
       results.push(result);
+      await hooks?.onPage?.(result);
     }
     await session.run(
       results.some((r) => r.error)

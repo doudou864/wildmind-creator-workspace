@@ -29,7 +29,34 @@ export const topicSchema = z.object({
 });
 export type Topic = z.infer<typeof topicSchema>;
 export type TopicEvidence = z.infer<typeof evidenceSchema>;
+export const topicSourceReportSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  url: z.string(),
+  status: z.enum(['pending', 'reading', 'completed', 'failed']),
+  reason: z.string().nullable().default(null),
+  count: z.number().default(0),
+});
+export const topicProgressSchema = z.object({
+  pid: z.number().default(0),
+  stage: z.enum(['queued', 'collecting', 'extracting', 'generating', 'saving', 'finished']).default('queued'),
+  currentSource: z.string().default(''),
+  sources: z.array(topicSourceReportSchema).default([]),
+  sourceCount: z.number().default(0),
+  cachedCount: z.number().default(0),
+  count: z.number().default(0),
+  warning: z.string().nullable().default(null),
+});
+export type TopicProgress = z.infer<typeof topicProgressSchema>;
+export type TopicTask = TopicProgress & {
+  id: string;
+  status: 'queued' | 'running' | 'completed' | 'failed';
+  reason: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
 export type TopicData = {
+  generation?: TopicTask | null;
   topics: Topic[];
   d21Samples: number | null;
   generationReady: boolean;

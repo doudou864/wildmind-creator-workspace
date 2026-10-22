@@ -2,7 +2,8 @@
 import { TopicChannelEditor } from '@/ui/topic-channel-editor';
 import { ArchiveButton } from '@/ui/archive-controls';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { TopicGenerationStatus } from '@/ui/topic-generation-status';
 import type { Parameters, Platform } from '@/lib/config';
 import type { TopicChannel } from '@/lib/topic-channels';
 import {
@@ -38,7 +39,12 @@ export default function TopicsPage({
 }) {
   const [channels, setChannels] = useState(initialChannels);
   const [channelsPending, setChannelsPending] = useState(false);
-  const { data, error, refresh } = useResource('/api/topics', initialData);
+  const { data, error, refresh } = useResource('/api/topics', initialData, true);
+  const {
+    data: taskData,
+    error: taskError,
+    refresh: refreshTask,
+  } = useResource('/api/topics/generate', { task: initialData.generation ?? null }, true);
   const [status, setStatus] = useState<StatusFilter>('candidate');
   const [kind, setKind] = useState<KindFilter>('all');
   const [channelId, setChannelId] = useState('all');
@@ -46,6 +52,19 @@ export default function TopicsPage({
   const [focusId, setFocusId] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const generating = taskData.task?.status === 'queued' || taskData.task?.status === 'running';
+  useEffect(() => {
+    const timer = setInterval(() => void refreshTask(), parameters.topicPollMs);
+    return () => clearInterval(timer);
+  }, [refreshTask, parameters.topicPollMs]);
+  const lastCompleted = useRef(initialData.generation?.status === 'completed' ? initialData.generation.id : '');
+  useEffect(() => {
+    if (taskData.task?.status === 'completed' && taskData.task.id !== lastCompleted.current) {
+      lastCompleted.current = taskData.task.id;
+      void refresh();
+    }
+  }, [taskData.task, refresh]);
   const fireEnabled = data.d21Samples !== null && data.d21Samples >= parameters.topicFireMinimum;
   const topics = data.topics;
   const visible = filterTopics(topics, status, kind, channelId, query, fireEnabled);
@@ -86,23 +105,25 @@ export default function TopicsPage({
     }
   }
   async function generate() {
-    if (!data.generationReady || busy || channelsPending) return;
-    setBusy(true);
+    if (!data.generationReady || busy || starting || generating || channelsPending) return;
+    setStarting(true);
+    setNotice('');
     try {
       await request('/api/topics/generate', { method: 'POST' });
-      await refresh();
-      setNotice('候选已更新');
+      await refreshTask();
+      setNotice('');
       setStatus('candidate');
     } catch (e) {
       setNotice(e instanceof Error ? e.message : '生成失败');
     } finally {
-      setBusy(false);
+      await refreshTask();
+      setStarting(false);
     }
   }
   const generateButton = (
     <Button
       variant="primary"
-      disabled={!data.generationReady || busy || channelsPending}
+      disabled={!data.generationReady || busy || starting || generating || channelsPending}
       disabledReason={
         channelsPending
           ? '请先保存或删除左侧未保存的渠道行。'
@@ -112,7 +133,7 @@ export default function TopicsPage({
       }
       onClick={() => void generate()}
     >
-      生成 {parameters.topicCandidateCount} 个候选
+      {starting ? '正在启动…' : generating ? '正在采集…' : `生成 ${parameters.topicCandidateCount} 个候选`}
     </Button>
   );
   return (
@@ -127,15 +148,19 @@ export default function TopicsPage({
               ? '生成下一批候选，或继续已选方向'
               : '生成下一批候选，挑选新的方向'
         }
-        onRefresh={() => void refresh()}
+        onRefresh={() => {
+          void refresh();
+          void refreshTask();
+        }}
         action={candidateCount > 3 ? generateButton : null}
       />
-      {(notice || error) && <p role="status">{error || notice}</p>}
+      {(notice || error || taskError) && <p role="status">{error || taskError || notice}</p>}
       <div className="topics-channel-layout">
         <aside className="topics-channel-sidebar">
           <TopicChannelEditor onChanged={setChannels} onPendingChange={setChannelsPending} />
         </aside>
         <div className={`topics-v2-grid ${!focused ? 'topics-no-detail' : ''}`}>
+          <TopicGenerationStatus task={taskData.task} starting={starting} />
           <Card title="候选方向" className="topic-list-card">
             {candidateCount <= 3 && (
               <div className="candidate-low">

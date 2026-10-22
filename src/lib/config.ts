@@ -59,6 +59,8 @@ const parametersSchema = z.object({
   publishUploadExpiryHours: z.number().positive(),
   syncWindow: z.string(),
   retryTimes: z.array(z.string()),
+  topicPollMs: z.number().int().positive().default(2000),
+  topicStartupMs: z.number().int().positive().default(30000),
   topicExternalMaxScreens: z.number().int().positive().default(20),
   topicCandidateCount: z.number().int().positive(),
   topicExploreMin: z.number().int().nonnegative(),

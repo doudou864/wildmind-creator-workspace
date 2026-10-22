@@ -135,7 +135,11 @@ test('面板保存的渠道经重新读取进入生成链路，候选保留该�
             },
     } as unknown as Judgment;
     await generateTopics(db, judge, { config, ...saved });
-    expect(readTopicSources).toHaveBeenLastCalledWith([channel], config.parameters.topicExternalMaxScreens);
+    expect(readTopicSources).toHaveBeenLastCalledWith(
+      [channel],
+      config.parameters.topicExternalMaxScreens,
+      expect.objectContaining({ onPage: expect.any(Function) }),
+    );
     expect(db.db.select().from(topics).all()).toHaveLength(20);
     expect(
       db.db
@@ -145,6 +149,101 @@ test('面板保存的渠道经重新读取进入生成链路，候选保留该�
         .every((t) => t.channelId === channel.id && t.sourceUrl === channel.location),
     ).toBe(true);
     expect(topicSources(db.db.select().from(topicSignals).all(), [{ ...channel, enabled: false }])).toEqual([]);
+  } finally {
+    db.sqlite.close();
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+// All generated candidates and source records below live only in a temporary fixture database.
+import { latestTopicTask } from '../jobs/topic-task-state';
+const fixtureItem = (i: number) => ({
+  title: `fixture 方向${i}`,
+  direction: '依据已核对原文',
+  source: '0',
+  exploration: false,
+  explorationReason: '',
+  similar: [],
+  recommendFire: false,
+});
+
+test('登录/网络失败不浪费成功来源，少量有效候选仍保存并留下逐站原因', async () => {
+  const folder = await mkdtemp(path.join(tmpdir(), 'topic-partial-fixture-'));
+  const db = await initializeDatabase(path.join(folder, 'workspace.db'));
+  try {
+    const config = await loadConfig();
+    const base = (await loadTopicChannels()).channels.find((c) => c.kind === 'external')!;
+    const channels = ['login', 'network', 'good'].map((id) => ({
+      ...base,
+      id,
+      name: id,
+      enabled: true,
+      location: `https://example.com/${id}`,
+    }));
+    vi.mocked(readTopicSources).mockImplementationOnce(async (_channels, _max, hooks) => {
+      const pages = channels.map((c) => ({
+        id: c.id,
+        url: c.location,
+        text: c.id === 'good' ? 'fixture 公开原文' : '',
+        screenshots: [path.resolve('data/topics/fixture.png')],
+        error: c.id === 'login' ? '需要登录' : c.id === 'network' ? '网络连接失败' : null,
+      }));
+      for (const page of pages) {
+        hooks?.onStart?.(page.id);
+        await hooks?.onPage?.(page);
+      }
+      return pages;
+    });
+    const read = vi
+      .fn()
+      .mockResolvedValueOnce({ items: [{ text: 'fixture需求', quote: '公开原文' }] })
+      .mockResolvedValueOnce({ items: [fixtureItem(0)] });
+    const result = await generateTopics(db, { read } as unknown as Judgment, { config, channels, document: 'fixture' });
+    expect(result.count).toBe(1);
+    expect(read).toHaveBeenCalledTimes(2); // Failed websites do not consume extraction calls.
+    expect(db.db.select().from(topics).get()?.channelId).toBe('good');
+    expect(latestTopicTask(db)).toMatchObject({
+      status: 'completed',
+      count: 1,
+      cachedCount: 0,
+      sources: [
+        { status: 'failed', reason: '需要登录' },
+        { status: 'failed', reason: '网络连接失败' },
+        { status: 'completed', count: 1 },
+      ],
+    });
+  } finally {
+    db.sqlite.close();
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
+test('全站失败时无材料不调用AI；有已存线索可回退且明确标注', async () => {
+  const folder = await mkdtemp(path.join(tmpdir(), 'topic-cache-fixture-'));
+  const db = await initializeDatabase(path.join(folder, 'workspace.db'));
+  try {
+    const config = await loadConfig();
+    const channel = { ...(await loadTopicChannels()).channels.find((c) => c.kind === 'external')!, enabled: true };
+    const options = { config, channels: [channel], document: 'fixture' };
+    const pages = [{ id: channel.id, url: channel.location, text: '', screenshots: [], error: '需要登录' }];
+    vi.mocked(readTopicSources).mockResolvedValueOnce(pages);
+    const read = vi.fn().mockResolvedValue({ items: [fixtureItem(0)] });
+    await expect(generateTopics(db, { read } as unknown as Judgment, options)).rejects.toThrow('没有获得可用线索');
+    expect(read).not.toHaveBeenCalled();
+    db.db
+      .insert(topicSignals)
+      .values({
+        id: 'fixture',
+        sourceType: channel.id,
+        text: '此前保存的fixture线索',
+        capturedAt: '2026-10-20T00:00:00.000Z',
+        updatedAt: '2026-10-20T00:00:00.000Z',
+      })
+      .run();
+    vi.mocked(readTopicSources).mockResolvedValueOnce(pages);
+    await generateTopics(db, { read } as unknown as Judgment, options);
+    expect(latestTopicTask(db)).toMatchObject({ status: 'completed', cachedCount: 1, count: 1 });
+    expect(read).toHaveBeenCalledOnce();
   } finally {
     db.sqlite.close();
     await rm(folder, { recursive: true, force: true });
