@@ -63,7 +63,6 @@ assert.equal(writes.at(-1), 'e', '新修改可从失败恢复');
 for (const [page, names] of [
   ['publishing', ['save', 'upload']],
   ['layouts', ['save']],
-  ['images', ['saveDraft', 'saveMetadata']],
 ]) {
   const source = await readFile(`src/app/${page}/${page}-page.tsx`, 'utf8');
   for (const name of names) {
@@ -78,10 +77,20 @@ const hook = await readFile('src/ui/use-autosave.ts', 'utf8');
 assert.ok(hook.includes("'pagehide'"));
 assert.ok(hook.includes("'visibilitychange'"));
 console.log('PASS autosave: coalescing, in-flight edits, leave flush, errors, usable fields');
-for (const page of ['images', 'layouts', 'publishing']) {
+for (const page of ['layouts', 'publishing']) {
   const source = await readFile(`src/app/${page}/${page}-page.tsx`, 'utf8');
   assert.ok(
     source.includes('submittedSession !== editSession.current'),
     `${page} 切换记录后旧响应不能覆盖新记录的身份`,
   );
 }
+
+// The image center now persists per-conversation browser drafts, not the removed asset forms.
+const studio = await readFile('src/ui/image-chat-studio.tsx', 'utf8');
+assert.ok(
+  studio.includes('localStorage.setItem(key, JSON.stringify({ active, drafts }))'),
+  '各生图会话分别保存输入草稿',
+);
+assert.ok(studio.includes('activeRef.current !== id || ticket !== sequence.current'), '迟到历史不能覆盖当前对话');
+assert.ok(studio.includes('activeRef.current === sessionId'), '流式回复只能更新发起会话');
+assert.ok(studio.includes('未能保存输入草稿'), '本机草稿保存失败必须可见');

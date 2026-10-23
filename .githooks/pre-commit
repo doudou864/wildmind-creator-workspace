@@ -2,7 +2,9 @@
 set -e
 npm run format
 # Do not silently stage unrelated or partially staged changes.
-git diff --exit-code -- src scripts >/dev/null || {
-  echo "格式已更新，请检查并重新暂存 src/ 和 scripts/ 后提交。"
-  exit 1
-}
+git diff --cached --name-only --diff-filter=ACMR -- src scripts | while IFS= read -r file; do
+  git diff --exit-code -- "$file" >/dev/null || {
+    echo "格式已更新，请检查并重新暂存 $file 后提交。"
+    exit 1
+  }
+done

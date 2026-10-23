@@ -480,6 +480,8 @@ export const imageChatTurns = sqliteTable('image_chat_turns', {
 export const imageStudioChats = sqliteTable('image_studio_chats', {
   contentId: text('session_id').primaryKey(),
   threadId: text('thread_id'),
+  title: text('title').notNull().default(''),
+  archived: integer('archived', { mode: 'boolean' }).notNull().default(false),
   updatedAt: updatedAt(),
 });
 export const imageStudioTurns = sqliteTable('image_studio_turns', {
@@ -489,6 +491,7 @@ export const imageStudioTurns = sqliteTable('image_studio_turns', {
   skillId: text('skill_id'),
   skillName: text('skill_name'),
   purposeId: text('purpose_id').notNull(),
+  ratio: text('ratio').notNull().default(''),
   referenceIds: json<string[]>('reference_ids').notNull(),
   output: text('output').notNull(),
   error: text('error'),

@@ -4,7 +4,7 @@ import { CHAT_INSTRUCTIONS } from '@/ai/image-chat';
 import { loadImageChatSkills } from '@/lib/image-chat-skills';
 import { z } from 'zod';
 import { imageChatTurns, imageStudioTurns } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, asc } from 'drizzle-orm';
 export const maxDuration = 600;
 export async function GET(request: Request) {
   const query = new URL(request.url).searchParams;
@@ -20,6 +20,7 @@ export async function GET(request: Request) {
         .select()
         .from(table)
         .where(eq(table.contentId, sessionId ?? query.get('content') ?? ''))
+        .orderBy(asc(table.createdAt))
         .all();
     }),
   });

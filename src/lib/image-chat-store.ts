@@ -27,6 +27,7 @@ export const chatInput = z
     contentId: z.string().min(1).nullable().default(null),
     sessionId: z.string().uuid().optional(),
     skillId: z.string().nullable().default(null),
+    ratio: z.string().default(''),
     text: z.string().min(1).max(20000),
     referenceIds: z.array(z.string()).max(3),
     purposeId: z.string(),
@@ -51,7 +52,8 @@ export async function runImageChat(
     if (
       old.contentId !== conversationId ||
       old.input !== input.text ||
-      ('skillId' in old && (old.skillId !== input.skillId || old.purposeId !== input.purposeId)) ||
+      ('skillId' in old &&
+        (old.skillId !== input.skillId || old.purposeId !== input.purposeId || old.ratio !== input.ratio)) ||
       JSON.stringify(old.referenceIds) !== JSON.stringify(input.referenceIds)
     )
       throw Error('请求编号已用于其他对话');
@@ -61,6 +63,13 @@ export async function runImageChat(
     imageConfig = await loadImageConfig();
   if (!imageConfig.purposes.some((p) => p.id === input.purposeId && p.contentMode !== 'upload'))
     throw Error('请选择图片用途');
+  if (input.ratio && !imageConfig.purposes.some((p) => p.ratios.includes(input.ratio)))
+    throw Error('请选择有效的图片比例。');
+  if (
+    input.sessionId &&
+    db.db.select().from(imageStudioChats).where(eq(imageStudioChats.contentId, input.sessionId)).get()?.archived
+  )
+    throw Error('请先恢复这条对话再发送。');
   const references = await Promise.all(
     input.referenceIds.map(async (id) => {
       const asset = db.db.select().from(assets).where(eq(assets.id, id)).get();
@@ -76,13 +85,28 @@ export async function runImageChat(
   try {
     if (usedImages(db, shanghaiDate()) >= config.dailyLimit) throw Error('今天已达到每日上限');
     db.db.transaction((tx) => {
+      if (
+        input.sessionId &&
+        tx.select().from(imageStudioChats).where(eq(imageStudioChats.contentId, input.sessionId)).get()?.archived
+      )
+        throw Error('请先恢复这条对话再发送。');
+      if (input.sessionId)
+        tx.insert(imageStudioChats)
+          .values({ contentId: input.sessionId, updatedAt: startedAt })
+          .onConflictDoNothing()
+          .run();
       tx.insert(turns)
         .values({
           id: input.id,
           contentId: conversationId,
           input: input.text,
           ...(input.sessionId
-            ? { skillId: skill?.id ?? null, skillName: skill?.name ?? null, purposeId: input.purposeId }
+            ? {
+                skillId: skill?.id ?? null,
+                skillName: skill?.name ?? null,
+                purposeId: input.purposeId,
+                ratio: input.ratio,
+              }
             : {}),
           referenceIds: input.referenceIds,
           output: '',
@@ -121,6 +145,7 @@ export async function runImageChat(
       text: input.text,
       skill,
       standalone: !!input.sessionId,
+      ratio: input.ratio,
       references,
       threadId: chat?.threadId ?? null,
       config,

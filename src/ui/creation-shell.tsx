@@ -38,6 +38,7 @@ export function CreationShell({
     if (content) p.set('content', content.id);
     return '/create?' + p.toString();
   }
+  if (step === 'materials') return <>{children}</>;
   return (
     <div
       className="workspace creation-shell"

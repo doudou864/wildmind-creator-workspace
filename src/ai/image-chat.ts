@@ -14,6 +14,7 @@ export type ChatTransport = (input: {
   text: string;
   skill?: ImageChatSkill | null;
   standalone?: boolean;
+  ratio?: string;
   references: string[];
   threadId: string | null;
   config: GenerationConfig;
@@ -83,7 +84,12 @@ export const streamImageChat: ChatTransport = async (input) => {
   return { threadId: thread.id, files, text: [...messages.values()].join('\n\n') };
 };
 
-export function imageChatMessages(input: { text: string; skill?: ImageChatSkill | null; standalone?: boolean }) {
+export function imageChatMessages(input: {
+  text: string;
+  skill?: ImageChatSkill | null;
+  standalone?: boolean;
+  ratio?: string;
+}) {
   const instructions = input.standalone
     ? '这是独立图片对话。用户提示词保持原样，按用户要求和当前选中的技能执行；未选择技能时不沿用上一轮技能。生图仅使用内置 image_gen 和 ChatGPT 套餐，不调用 API 或第三方服务，不访问浏览器，不启动子代理，不自动重试。需要的工具不可用时明确说明。保留生成原图在 generated_images 目录供工作台收取，不删除文件，不擅自裁剪。可只读技能引用的文件。文字回答直接给用户。'
     : CHAT_INSTRUCTIONS;
@@ -94,6 +100,14 @@ export function imageChatMessages(input: { text: string; skill?: ImageChatSkill 
           {
             type: 'text' as const,
             text: `用户已选择并要求调用技能 $${input.skill.name}。技能入口：${input.skill.path}；相对引用按该文件目录解析。执行以下完整技能说明：\n${input.skill.instructions}`,
+          },
+        ]
+      : []),
+    ...(input.ratio
+      ? [
+          {
+            type: 'text' as const,
+            text: `用户在本轮比例快捷选项中选择：${input.ratio}。本轮生成采用此比例，保留返回原图。`,
           },
         ]
       : []),
