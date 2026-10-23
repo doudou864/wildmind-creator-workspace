@@ -482,3 +482,57 @@
 .publish-local > p {
   flex-basis: 100%;
 }
+
+.publishing-workspace .publish-simple-grid {
+  grid-template-columns: minmax(650px, 2fr) minmax(300px, 1fr);
+}
+.publishing-workspace .publish-simple-grid .publish-check {
+  grid-column: 1 / -1;
+}
+.video-publish-form {
+  margin-top: 16px;
+  gap: 18px;
+}
+.video-publish-topic {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 16px;
+}
+.video-publish-topic > label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.video-publish-cover-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.video-publish-form .publish-covers {
+  margin: 10px 0 0;
+  gap: 16px;
+}
+.video-publish-form .publish-covers img,
+.video-publish-form .publish-cover-empty {
+  height: 156px;
+}
+.video-cover-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.video-cover-actions label {
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+}
+.video-cover-actions input[type='file'] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+}
+.video-cover-actions label:focus-within {
+  outline: 2px solid var(--ink);
+}

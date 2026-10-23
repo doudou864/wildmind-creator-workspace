@@ -1,5 +1,5 @@
 'use client';
-import { LocalVideoPicker } from '@/ui/local-video-picker';
+import { VideoPublishInputs } from '@/ui/video-publish-inputs';
 import { mediaStage } from '@/lib/publishing-media-stage';
 import Link from 'next/link';
 import { uniqueVideoId } from '@/ui/work-flow';
@@ -14,7 +14,7 @@ import type { LayoutConfig } from '@/lib/layout-model';
 import {
   publishMaterialKey,
   platformMaterialKey,
-  autoVideoCovers,
+  videoDraftCovers,
   canRetryPublishReceipt,
   defaultPublishTime,
   generatePublishSetting,
@@ -91,14 +91,38 @@ export default function PublishingPage({
   expiryHours: number;
 }) {
   const { data, error, refresh } = useResource('/api/publishing', initialData);
-  const [draft, setDraft] = useState<PublishDraft>(() => ({
-    ...newPublishDraft(initialKind),
-    contentId: initialContent,
-    videoId: initialKind === 'video' ? uniqueVideoId(data.videos, initialContent) : null,
-    commonCopy: { title: data.contents.find((c) => c.id === initialContent)?.title ?? '', description: '', tags: [] },
-  }));
-  const [meta, setMeta] = useState<PublishBatch | null>(null);
-  const savedRecord = useRef<string | null>(null);
+  const initialBatch =
+    !initialContent && initialKind === 'video'
+      ? (data.batches
+          .filter((b) => b.draft.kind === 'video' && b.draft.videoInput && !b.abandonedAt && b.state !== 'finished')
+          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null)
+      : null;
+  const [draft, setDraft] = useState<PublishDraft>(() =>
+    initialBatch
+      ? structuredClone(initialBatch.draft)
+      : {
+          ...newPublishDraft(initialKind),
+          contentId: initialContent,
+          videoId: initialKind === 'video' ? uniqueVideoId(data.videos, initialContent) : null,
+          ...(initialKind === 'video'
+            ? {
+                videoInput: {
+                  topicId: data.contents.find((c) => c.id === initialContent)?.topicId ?? null,
+                  path: '',
+                  covers: data.contents.find((c) => c.id === initialContent)?.videoCovers ?? {},
+                },
+              }
+            : {}),
+          commonCopy: {
+            title: data.contents.find((c) => c.id === initialContent)?.title ?? '',
+            description: '',
+            tags: [],
+          },
+        },
+  );
+  const [meta, setMeta] = useState<PublishBatch | null>(initialBatch);
+  const savedRecord = useRef<string | null>(initialBatch?.id ?? null);
+  const savedRevision = useRef<number | null>(initialBatch?.revision ?? null);
   const editSession = useRef(0);
   const [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
@@ -131,6 +155,7 @@ export default function PublishingPage({
     setNotice('后台截图无法读取，请刷新重试；截图可见后才能确认发布。');
   }
   const uploadRequest = useRef<{ key: string; id: string } | null>(null);
+  const publishRequest = useRef<{ key: string; id: string } | null>(null);
   const [expanded, setExpanded] = useState<Record<string, { key: string; open: boolean }>>({});
   const [checked, setChecked] = useState(false),
     [retry, setRetry] = useState<PublishReceipt | null>(null);
@@ -169,16 +194,7 @@ export default function PublishingPage({
   const name = (id: string) => platforms.find((p) => p.id === id)?.name ?? id;
   const assetUrl = (id: string) => `/api/images/assets/${encodeURIComponent(id)}/file`;
   const issues = publishIssues(draft, data, config, platforms, now);
-  const covers = autoVideoCovers(
-    draft.contentId,
-    data.assets,
-    config,
-    data.contents.find((c) => c.id === draft.contentId)?.videoCovers,
-  ).filter((c) =>
-    draft.settings.some(
-      (s) => config.templates.find((t) => t.platformId === s.platformId)?.videoCoverRatio === c.ratio,
-    ),
-  );
+  const covers = videoDraftCovers(draft, data, config);
   const snapshots = data.snapshots.filter((s) => s.contentId === draft.contentId && s.state === 'ready');
   const saved = !!meta && !dirty && !local.length;
   const eligibleTemplates = config.templates.filter((t) => t.kinds.includes(draft.kind));
@@ -200,6 +216,7 @@ export default function PublishingPage({
       setNotice('复制失败，可直接选择文本复制。');
     }
   }
+  const inputSession = editSession.current;
   const materials = publishMaterialKey(draft, data, config);
   const readyReceipts = meta ? readyPublishReceipts(meta.id, draft, data, config, platforms, now, expiryHours) : [];
   const receiptKey = JSON.stringify(
@@ -229,6 +246,7 @@ export default function PublishingPage({
   useEffect(() => {
     if (liveBatch && !dirty && (liveBatch.revision !== meta?.revision || liveBatch.state !== meta?.state)) {
       setMeta(liveBatch);
+      savedRevision.current = liveBatch.revision;
       setDraft(structuredClone(liveBatch.draft));
     }
   }, [liveBatch, dirty, meta?.revision, meta?.state]);
@@ -278,9 +296,13 @@ export default function PublishingPage({
   function fresh(kind: PublishKind) {
     editSession.current++;
     clearMedia();
-    setDraft(newPublishDraft(kind));
+    setDraft({
+      ...newPublishDraft(kind),
+      ...(kind === 'video' ? { videoInput: { topicId: null, path: '', covers: {} } } : {}),
+    });
     setMeta(null);
     savedRecord.current = null;
+    savedRevision.current = null;
     setDirty(false);
     setInstruction('');
     setNotice('');
@@ -403,14 +425,19 @@ export default function PublishingPage({
         recordId ? `/api/publishing/drafts/${encodeURIComponent(recordId)}` : '/api/publishing/drafts',
         {
           method: recordId ? 'PATCH' : 'POST',
-          headers: { 'Content-Type': 'application/json', ...(meta ? { 'If-Match': String(meta.revision) } : {}) },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(recordId ? { 'If-Match': String(savedRevision.current ?? meta?.revision) } : {}),
+          },
           keepalive: true,
           body: JSON.stringify(draft),
         },
       );
       if (submittedSession !== editSession.current) return;
       savedRecord.current = result.id;
+      savedRevision.current = result.revision;
       setMeta(result);
+      setDraft((current) => ({ ...current, contentId: result.draft.contentId }));
       setDirty(!isCurrent());
       await refresh();
     } catch (e) {
@@ -419,7 +446,12 @@ export default function PublishingPage({
   }
   const autosave = useAutosave(
     JSON.stringify([editSession.current, draft]),
-    dirty && data.storageReady && !busy && !locked && !local.length && !!draft.contentId,
+    dirty &&
+      data.storageReady &&
+      !busy &&
+      !locked &&
+      !local.length &&
+      (!!draft.contentId || (draft.kind === 'video' && !!draft.commonCopy.title.trim())),
     save,
   );
   const mediaAutosave = useAutosave(
@@ -453,11 +485,15 @@ export default function PublishingPage({
     if (!meta || busy || dirty || locked || stale) return;
     const time = Date.now();
     const ready = readyPublishReceipts(meta.id, draft, data, config, platforms, time, expiryHours);
+    const approvalKey = JSON.stringify([meta.id, materials, receiptKey]);
+    if (!publishRequest.current || publishRequest.current.key !== approvalKey)
+      publishRequest.current = { key: approvalKey, id: crypto.randomUUID() };
+    const approval = draft.kind === 'video' ? { requestId: publishRequest.current.id, materials, receiptKey } : review;
     if (
       kind === 'publish-all' &&
       (!canPublish ||
-        !review ||
-        !checked ||
+        !approval ||
+        (draft.kind !== 'video' && !checked) ||
         JSON.stringify(
           ready.map((r) => ({
             id: r.id,
@@ -465,7 +501,7 @@ export default function PublishingPage({
             screenshotAssetId: r.screenshotAssetId,
             uploadedAt: r.uploadedAt,
           })),
-        ) !== review.receiptKey)
+        ) !== approval.receiptKey)
     ) {
       setNow(time);
       return;
@@ -487,8 +523,8 @@ export default function PublishingPage({
         ...(kind === 'publish-all'
           ? {
               confirmed: true,
-              requestId: review!.requestId,
-              materials: review!.materials,
+              requestId: approval!.requestId,
+              materials: approval!.materials,
               receipts: ready.map((r) => ({ id: r.id, expectedRevision: r.revision })),
             }
           : kind === 'upload'
@@ -554,6 +590,7 @@ export default function PublishingPage({
   function loadBatch(batch: PublishBatch) {
     editSession.current++;
     savedRecord.current = batch.id;
+    savedRevision.current = batch.revision;
     clearMedia();
     setDraft(structuredClone(batch.draft));
     setMeta(batch);
@@ -582,22 +619,24 @@ export default function PublishingPage({
         title="发布中心"
         summary={
           stage === 'uploaded'
-            ? '核对平台草稿，或放弃这次上传'
+            ? '上传完成，请检查下方平台截图，确认后点击发布'
             : stage === 'published'
               ? '已发布，去平台查看作品'
               : stage === 'blocked'
                 ? '先核实平台结果，再继续操作'
                 : stage === 'abandoned'
                   ? '已放弃这次上传，请到平台清理草稿'
-                  : !draft.contentId
-                    ? '先选一条作品'
-                    : draft.kind === 'layout' && !snapshots.length
-                      ? '先回排版确认稿件，再准备上传'
-                      : issues.length
-                        ? `还差 ${issues.length} 项就能上传`
-                        : canUpload
-                          ? '准备完成，可以上传'
-                          : '查看当前发布进度，完成下一步确认'
+                  : draft.kind === 'video'
+                    ? '填写内容并选平台，上传后审核，再发布'
+                    : !draft.contentId
+                      ? '先选一条作品'
+                      : draft.kind === 'layout' && !snapshots.length
+                        ? '先回排版确认稿件，再准备上传'
+                        : issues.length
+                          ? `还差 ${issues.length} 项就能上传`
+                          : canUpload
+                            ? '准备完成，可以上传'
+                            : '查看当前发布进度，完成下一步确认'
         }
         onRefresh={() => {
           setLoadedScreenshots([]);
@@ -608,25 +647,27 @@ export default function PublishingPage({
         action={
           <Button
             variant="primary"
-            disabled={!canUpload}
+            disabled={draft.kind === 'video' && readyReceipts.length > 0 ? !canPublish || inFlight : !canUpload}
             disabledReason={
-              !data.uploadReady
-                ? '平台上传尚不可用，当前可准备发布材料。'
-                : draft.kind === 'layout' && !snapshots.length
-                  ? '请先在排版页检查并确认稿件。'
-                  : busy
-                    ? '正在处理，请稍候。'
-                    : issues.length
-                      ? issues.join('；')
-                      : '请等待保存完成，并核对发布状态。'
+              draft.kind === 'video' && readyReceipts.length > 0
+                ? '请先查看平台截图，并等待全部上传结束。'
+                : !data.uploadReady
+                  ? '平台上传尚不可用，当前可准备发布材料。'
+                  : draft.kind === 'layout' && !snapshots.length
+                    ? '请先在排版页检查并确认稿件。'
+                    : busy
+                      ? '正在处理，请稍候。'
+                      : issues.length
+                        ? issues.join('；')
+                        : '请等待保存完成，并核对发布状态。'
             }
-            onClick={() => void action('upload')}
+            onClick={() => void action(draft.kind === 'video' && readyReceipts.length > 0 ? 'publish-all' : 'upload')}
           >
-            检查并上传
+            {draft.kind === 'video' ? (readyReceipts.length > 0 ? '发布' : '上传') : '检查并上传'}
           </Button>
         }
       />
-      {!canUpload && (
+      {!canUpload && draft.kind !== 'video' && (
         <p className="publish-upload-reason">
           {issues.length
             ? `还需完成：${issues.join('；')}`
@@ -637,14 +678,16 @@ export default function PublishingPage({
                 : '请等待保存完成，并核对发布状态。'}
         </p>
       )}
-      <nav className="creation-steps" aria-label="发布准备步骤">
-        <a href="#publish-source">选成片 / 确认稿 →</a>
-        <a href="#publish-platforms">选平台 →</a>
-        <a href={draft.kind === 'layout' ? '#publish-platforms' : '#publish-copy'}>
-          {draft.kind === 'layout' ? '核对确认稿 →' : '写文案 →'}
-        </a>
-        <a href="#publish-check">检查并上传 →</a>
-      </nav>
+      {draft.kind !== 'video' && (
+        <nav className="creation-steps" aria-label="发布准备步骤">
+          <a href="#publish-source">选成片 / 确认稿 →</a>
+          <a href="#publish-platforms">选平台 →</a>
+          <a href={draft.kind === 'layout' ? '#publish-platforms' : '#publish-copy'}>
+            {draft.kind === 'layout' ? '核对确认稿 →' : '写文案 →'}
+          </a>
+          <a href="#publish-check">检查并上传 →</a>
+        </nav>
+      )}
       <div className="publish-mode" role="group" aria-label="发布来源">
         {modes.map((mode, i) => (
           <Button
@@ -683,7 +726,7 @@ export default function PublishingPage({
           {error}
         </p>
       )}
-      <div className="publish-grid">
+      <div className={`publish-grid ${draft.kind === 'video' ? 'publish-simple-grid' : ''}`}>
         <aside className="publish-source">
           <div id="publish-source" />
           {stage !== 'editable' && (
@@ -741,292 +784,205 @@ export default function PublishingPage({
               )}
             </section>
           )}
-          <Card title={draft.kind === 'video' ? '选成片' : '选确认稿或图片'}>
-            <div className="image-form">
-              <ContentPicker
-                value={draft.contentId}
-                form={draft.kind === 'video' ? '视频' : '图文'}
-                disabled={busy}
-                onChange={(id) =>
-                  protect(() => {
-                    clearMedia();
-                    const existing = data.batches.find(
-                      (b) =>
-                        b.draft.contentId === id &&
-                        b.draft.kind === draft.kind &&
-                        b.state !== 'finished' &&
-                        !b.abandonedAt,
-                    );
-                    if (existing) {
-                      loadBatch(existing);
-                      return;
-                    }
-                    editSession.current++;
-                    setDraft({
-                      ...newPublishDraft(draft.kind),
-                      contentId: id,
-                      videoId: draft.kind === 'video' ? uniqueVideoId(data.videos, id) : null,
-                      commonCopy: {
-                        title: data.contents.find((c) => c.id === id)?.title ?? '',
-                        description: '',
-                        tags: [],
-                      },
-                    });
-                    setMeta(null);
-                    savedRecord.current = null;
-                    setDirty(true);
-                    setInstruction('');
-                    void refresh();
-                  })
-                }
-              />
-              {draft.kind === 'video' && (
-                <>
-                  <label>
-                    已保存成片
-                    <select
-                      aria-label="已保存成片"
-                      value={draft.videoId ?? ''}
-                      disabled={!draft.contentId || mediaLocked || busy}
-                      onChange={(e) => {
-                        clearMedia();
-                        change({ videoId: e.target.value || null });
-                      }}
-                    >
-                      <option value="">请选择成片</option>
-                      {data.videos
-                        .filter((v) => v.contentId === draft.contentId)
-                        .map((v) => (
-                          <option key={v.id} value={v.id}>
-                            {v.name}
-                          </option>
-                        ))}
-                    </select>
-                  </label>
-                  <LocalVideoPicker
-                    contentId={draft.contentId}
-                    disabled={busy || mediaLocked}
-                    onSelected={(id) => {
+          {draft.kind === 'video' ? (
+            <VideoPublishInputs
+              key={editSession.current}
+              draft={draft}
+              data={data}
+              config={config}
+              disabled={busy || mediaLocked}
+              onChange={(patch) => {
+                if (editSession.current === inputSession) change(patch);
+              }}
+              onRefresh={refresh}
+            />
+          ) : (
+            <Card title="选确认稿或图片">
+              <div className="image-form">
+                <ContentPicker
+                  value={draft.contentId}
+                  form="图文"
+                  disabled={busy}
+                  onChange={(id) =>
+                    protect(() => {
                       clearMedia();
-                      change({ videoId: id });
+                      const existing = data.batches.find(
+                        (b) =>
+                          b.draft.contentId === id &&
+                          b.draft.kind === draft.kind &&
+                          b.state !== 'finished' &&
+                          !b.abandonedAt,
+                      );
+                      if (existing) {
+                        loadBatch(existing);
+                        return;
+                      }
+                      editSession.current++;
+                      setDraft({
+                        ...newPublishDraft(draft.kind),
+                        contentId: id,
+                        videoId: draft.kind === 'video' ? uniqueVideoId(data.videos, id) : null,
+                        commonCopy: {
+                          title: data.contents.find((c) => c.id === id)?.title ?? '',
+                          description: '',
+                          tags: [],
+                        },
+                      });
+                      setMeta(null);
+                      savedRecord.current = null;
+                      savedRevision.current = null;
+                      setDirty(true);
+                      setInstruction('');
                       void refresh();
-                    }}
-                  />
-                  {currentVideo && (
-                    <div>
-                      <Button
-                        disabled={busy || mediaLocked}
-                        disabledReason="已上传、已发布或状态未确认，不能移除成片"
-                        onClick={() => change({ videoId: null })}
-                      >
-                        移除这次选择
-                      </Button>
-                      <small>只移除本次发布的关联，不删除原文件。</small>
-                    </div>
-                  )}
-                  {local[0] || currentVideo ? (
-                    <div className="publish-video">
-                      <video
-                        key={local[0]?.url ?? currentVideo?.id}
-                        controls
-                        preload="metadata"
-                        src={local[0]?.url ?? `/api/publishing/media/${encodeURIComponent(currentVideo!.id)}/file`}
-                        onError={() => setNotice('成片暂时无法播放；请检查文件格式或存储服务。')}
-                      />
-                      <p className="small">
-                        {local[0]
-                          ? `${local[0].file.name} · ${(local[0].file.size / 1024 / 1024).toFixed(1)} MB · 尚未上传`
-                          : currentVideo?.name}
-                      </p>
-                      {currentVideo && !local.length && (
-                        <a
-                          className="button"
-                          href={`/api/publishing/media/${encodeURIComponent(currentVideo.id)}/file`}
-                          download={currentVideo.name}
-                        >
-                          下载成片
-                        </a>
-                      )}
-                    </div>
-                  ) : (
-                    <Empty>尚未选择成片</Empty>
-                  )}
-                </>
-              )}
-              {draft.kind === 'layout' && (
-                <>
-                  {snapshots.length ? (
-                    snapshots.map((s) => (
-                      <div className="publish-snapshot" key={s.id}>
-                        <strong>
-                          {name(s.platform)} · {s.content.title}
-                        </strong>
-                        <span className="small">排版修订 {s.layoutUpdatedAt} · 已人工确认</span>
-                        <div>
-                          <Button onClick={() => setPreview(s)}>查看确认稿</Button>
-                          <Link
-                            href={`/layouts?layout=${encodeURIComponent(s.layoutId)}&content=${encodeURIComponent(s.contentId)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            查看排版稿 →
-                          </Link>
-                          <Button
-                            disabled={
-                              !data.handoffReady || !saved || busy || locked || !draft.snapshotIds.includes(s.id)
-                            }
-                            disabledReason={
-                              !data.handoffReady
-                                ? '发布交接暂不可用。'
-                                : '请确认版本已加入当前草稿，等待保存完成并解除锁定。'
-                            }
-                            onClick={() => setReturning(s)}
-                          >
-                            退回修改
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <Empty>暂无这条作品的待发布确认稿</Empty>
-                  )}
-                  <Link
-                    href={`/layouts?${new URLSearchParams(draft.contentId ? { content: draft.contentId } : {})}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    去排版中心准备 →
-                  </Link>
-                </>
-              )}
-              {draft.kind === 'xhs' && (
-                <>
-                  <label className="publish-upload">
-                    选择本机图片
-                    <input
-                      aria-label="选择本机图文图片"
-                      type="file"
-                      accept={config.imageTypes.join(',')}
-                      multiple
-                      disabled={busy || mediaLocked || mediaLoading}
-                      onChange={(e) => void chooseFiles(e)}
-                    />
-                    <span className="small">
-                      PNG / JPEG · 每张 {config.imageMaxMB} MB · 工作台上限 {config.xhsMaxImages} 张
-                    </span>
-                  </label>
-                  <Button
-                    disabled={busy || mediaLocked}
-                    disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
-                    onClick={() => {
-                      setSearch('');
-                      setPicker(true);
-                    }}
-                  >
-                    从已上传素材选择
-                  </Button>
-                  <p className="small">移除或替换只改变本次配图，素材库原图保留。</p>
-                  <div className="publish-photos">
-                    {draft.imageIds.map((id, i) => {
-                      const a = data.assets.find((a) => a.id === id);
-                      return (
-                        <div key={id}>
-                          <AssetImage src={assetUrl(id)} alt={a?.title ?? '素材缺失'} />
-                          <span className="small">
-                            {i + 1} · {a?.title ?? '素材缺失'}
-                          </span>
+                    })
+                  }
+                />
+                {draft.kind === 'layout' && (
+                  <>
+                    {snapshots.length ? (
+                      snapshots.map((s) => (
+                        <div className="publish-snapshot" key={s.id}>
+                          <strong>
+                            {name(s.platform)} · {s.content.title}
+                          </strong>
+                          <span className="small">排版修订 {s.layoutUpdatedAt} · 已人工确认</span>
                           <div>
-                            <a className="button" href={assetUrl(id)} download>
-                              下载图片
-                            </a>
-                            <Button
-                              aria-label={`第${i + 1}张前移`}
-                              disabled={i === 0 || busy || mediaLocked}
-                              disabledReason="已在首位，或正在处理，暂不能前移。"
-                              onClick={() => {
-                                const ids = [...draft.imageIds];
-                                [ids[i - 1], ids[i]] = [ids[i], ids[i - 1]];
-                                change({ imageIds: ids });
-                              }}
+                            <Button onClick={() => setPreview(s)}>查看确认稿</Button>
+                            <Link
+                              href={`/layouts?layout=${encodeURIComponent(s.layoutId)}&content=${encodeURIComponent(s.contentId)}`}
+                              target="_blank"
+                              rel="noreferrer"
                             >
-                              ←
-                            </Button>
+                              查看排版稿 →
+                            </Link>
                             <Button
-                              disabled={busy || mediaLocked}
-                              disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
-                              onClick={() => change({ imageIds: draft.imageIds.filter((value) => value !== id) })}
+                              disabled={
+                                !data.handoffReady || !saved || busy || locked || !draft.snapshotIds.includes(s.id)
+                              }
+                              disabledReason={
+                                !data.handoffReady
+                                  ? '发布交接暂不可用。'
+                                  : '请确认版本已加入当前草稿，等待保存完成并解除锁定。'
+                              }
+                              onClick={() => setReturning(s)}
                             >
-                              移除本次配图
+                              退回修改
                             </Button>
                           </div>
                         </div>
-                      );
-                    })}
-                    {local.map((item, i) => (
-                      <div key={item.url}>
-                        <img src={item.url} alt={item.file.name} />
-                        <span className="small">{draft.imageIds.length + i + 1} · 本页预览</span>
-                        <Button
-                          aria-label={`本机第${i + 1}张前移`}
-                          disabled={i === 0 || busy}
-                          disabledReason="已在首位，或正在处理，暂不能前移。"
-                          onClick={() =>
-                            setLocal((items) => {
-                              const next = [...items];
-                              [next[i - 1], next[i]] = [next[i], next[i - 1]];
-                              return next;
-                            })
-                          }
-                        >
-                          ← 前移
-                        </Button>
-                        <Button
-                          disabled={busy}
-                          disabledReason="正在处理，请稍候。"
-                          onClick={() => {
-                            URL.revokeObjectURL(item.url);
-                            urls.current = urls.current.filter((url) => url !== item.url);
-                            setLocal((items) => items.filter((v) => v.url !== item.url));
-                          }}
-                        >
-                          移除
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  {!draft.imageIds.length && !local.length && <Empty>尚未选择自制图片</Empty>}
-                </>
-              )}
-              {draft.kind !== 'layout' && <></>}
-            </div>
-          </Card>
-          {draft.kind === 'video' && draft.settings.length > 0 && (
-            <Card title="作品封面">
-              <div className="publish-covers">
-                {covers.map((cover) => (
-                  <div key={cover.ratio}>
-                    {cover.asset ? (
-                      <AssetImage src={assetUrl(cover.asset.id)} alt={cover.asset.title} />
+                      ))
                     ) : (
-                      <div className="publish-cover-empty mono">{cover.ratio}</div>
+                      <Empty>暂无这条作品的待发布确认稿</Empty>
                     )}
-                    <span className="mono small">{cover.ratio}</span>
-                    {cover.asset && (
-                      <a className="button" href={assetUrl(cover.asset.id)} download>
-                        下载封面
-                      </a>
-                    )}
-                    <p className="small">{cover.asset ? `已带出 · V${cover.asset.version}` : cover.reason}</p>
-                  </div>
-                ))}
+                    <Link
+                      href={`/layouts?${new URLSearchParams(draft.contentId ? { content: draft.contentId } : {})}`}
+                      target="_blank"
+                      rel="noreferrer"
+                    >
+                      去排版中心准备 →
+                    </Link>
+                  </>
+                )}
+                {draft.kind === 'xhs' && (
+                  <>
+                    <label className="publish-upload">
+                      选择本机图片
+                      <input
+                        aria-label="选择本机图文图片"
+                        type="file"
+                        accept={config.imageTypes.join(',')}
+                        multiple
+                        disabled={busy || mediaLocked || mediaLoading}
+                        onChange={(e) => void chooseFiles(e)}
+                      />
+                      <span className="small">
+                        PNG / JPEG · 每张 {config.imageMaxMB} MB · 工作台上限 {config.xhsMaxImages} 张
+                      </span>
+                    </label>
+                    <Button
+                      disabled={busy || mediaLocked}
+                      disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
+                      onClick={() => {
+                        setSearch('');
+                        setPicker(true);
+                      }}
+                    >
+                      从已上传素材选择
+                    </Button>
+                    <p className="small">移除或替换只改变本次配图，素材库原图保留。</p>
+                    <div className="publish-photos">
+                      {draft.imageIds.map((id, i) => {
+                        const a = data.assets.find((a) => a.id === id);
+                        return (
+                          <div key={id}>
+                            <AssetImage src={assetUrl(id)} alt={a?.title ?? '素材缺失'} />
+                            <span className="small">
+                              {i + 1} · {a?.title ?? '素材缺失'}
+                            </span>
+                            <div>
+                              <a className="button" href={assetUrl(id)} download>
+                                下载图片
+                              </a>
+                              <Button
+                                aria-label={`第${i + 1}张前移`}
+                                disabled={i === 0 || busy || mediaLocked}
+                                disabledReason="已在首位，或正在处理，暂不能前移。"
+                                onClick={() => {
+                                  const ids = [...draft.imageIds];
+                                  [ids[i - 1], ids[i]] = [ids[i], ids[i - 1]];
+                                  change({ imageIds: ids });
+                                }}
+                              >
+                                ←
+                              </Button>
+                              <Button
+                                disabled={busy || mediaLocked}
+                                disabledReason="当前内容已锁定或正在处理，请先解锁或等待操作完成。"
+                                onClick={() => change({ imageIds: draft.imageIds.filter((value) => value !== id) })}
+                              >
+                                移除本次配图
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      {local.map((item, i) => (
+                        <div key={item.url}>
+                          <img src={item.url} alt={item.file.name} />
+                          <span className="small">{draft.imageIds.length + i + 1} · 本页预览</span>
+                          <Button
+                            aria-label={`本机第${i + 1}张前移`}
+                            disabled={i === 0 || busy}
+                            disabledReason="已在首位，或正在处理，暂不能前移。"
+                            onClick={() =>
+                              setLocal((items) => {
+                                const next = [...items];
+                                [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                                return next;
+                              })
+                            }
+                          >
+                            ← 前移
+                          </Button>
+                          <Button
+                            disabled={busy}
+                            disabledReason="正在处理，请稍候。"
+                            onClick={() => {
+                              URL.revokeObjectURL(item.url);
+                              urls.current = urls.current.filter((url) => url !== item.url);
+                              setLocal((items) => items.filter((v) => v.url !== item.url));
+                            }}
+                          >
+                            移除
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                    {!draft.imageIds.length && !local.length && <Empty>尚未选择自制图片</Empty>}
+                  </>
+                )}
+                {draft.kind !== 'layout' && <></>}
               </div>
-              <Link
-                href={`/images?${new URLSearchParams(draft.contentId ? { content: draft.contentId } : {})}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                去生图中心补齐或修改封面 →
-              </Link>
             </Card>
           )}
         </aside>
@@ -1034,40 +990,42 @@ export default function PublishingPage({
           <div id="publish-platforms" />{' '}
           <Card title="选平台" meta={<span className="eyebrow">{draft.settings.length} 个已选</span>}>
             <div className="publish-platforms">
-              {eligibleTemplates.map((template) => {
-                const p = platforms.find((p) => p.id === template.platformId)!;
-                const matches = snapshots.filter((s) => s.platform === p.id);
-                const disabled =
-                  busy ||
-                  locked ||
-                  (draft.kind === 'layout' &&
-                    matches.length !== 1 &&
-                    !draft.settings.some((s) => s.platformId === p.id));
-                return (
-                  <label
-                    key={p.id}
-                    title={
-                      !p.active
-                        ? '平台尚未启用，可先准备手动发布材料'
-                        : draft.kind === 'layout' && matches.length !== 1
-                          ? '需要唯一待发布确认稿'
-                          : undefined
-                    }
-                  >
-                    <input
-                      type="checkbox"
-                      checked={draft.settings.some((s) => s.platformId === p.id)}
-                      disabled={disabled}
-                      onChange={() => toggle(p.id)}
-                    />
-                    {p.name}
-                    {!p.active && <small>未启用</small>}
-                  </label>
-                );
-              })}
+              {eligibleTemplates
+                .filter((t) => draft.kind !== 'video' || platforms.find((p) => p.id === t.platformId)?.active)
+                .map((template) => {
+                  const p = platforms.find((p) => p.id === template.platformId)!;
+                  const matches = snapshots.filter((s) => s.platform === p.id);
+                  const disabled =
+                    busy ||
+                    locked ||
+                    (draft.kind === 'layout' &&
+                      matches.length !== 1 &&
+                      !draft.settings.some((s) => s.platformId === p.id));
+                  return (
+                    <label
+                      key={p.id}
+                      title={
+                        !p.active
+                          ? '平台尚未启用，可先准备手动发布材料'
+                          : draft.kind === 'layout' && matches.length !== 1
+                            ? '需要唯一待发布确认稿'
+                            : undefined
+                      }
+                    >
+                      <input
+                        type="checkbox"
+                        checked={draft.settings.some((s) => s.platformId === p.id)}
+                        disabled={disabled}
+                        onChange={() => toggle(p.id)}
+                      />
+                      {p.name}
+                      {!p.active && <small>未启用</small>}
+                    </label>
+                  );
+                })}
             </div>
           </Card>
-          {draft.kind !== 'layout' && (
+          {draft.kind === 'xhs' && (
             <Card title="写文案">
               <div id="publish-copy" />
               <p className="copy-limits">
@@ -1174,7 +1132,15 @@ export default function PublishingPage({
               </fieldset>
             </Card>
           )}
-          {!draft.settings.length ? (
+          {draft.kind === 'video' ? (
+            <p className="small">
+              {stage === 'uploaded'
+                ? '请检查平台截图，确认后点击发布。'
+                : data.uploadReady
+                  ? '选好平台后，点击上方上传。'
+                  : '暂不能上传到平台，填写内容会自动保存。'}
+            </p>
+          ) : !draft.settings.length ? (
             <div className="card collapsed-note">选择平台后显示对应文案版本</div>
           ) : (
             draft.settings.map((item) => {
@@ -1336,45 +1302,56 @@ export default function PublishingPage({
           )}
         </section>
         <aside className="publish-check" id="publish-check">
-          <Card title="检查并上传">
-            <div className="publish-check-list">
-              {issues.length ? (
-                issues.map((issue, i) => {
-                  const platform = draft.settings.find((s) =>
-                    publishSettingIssues(draft, s, data, config, platforms, now).includes(issue),
-                  );
-                  const target = platform
-                    ? `publish-setting-${platform.platformId}`
-                    : issue === '请选择发布平台'
-                      ? 'publish-platforms'
-                      : 'publish-source';
-                  return (
-                    <a
-                      className="list-row"
-                      key={`${i}-${issue}`}
-                      href={`#${target}`}
-                      onClick={() => {
-                        if (platform)
-                          setExpanded((current) => ({
-                            ...current,
-                            [platform.platformId]: {
-                              key: JSON.stringify(publishSettingIssues(draft, platform, data, config, platforms, now)),
-                              open: true,
-                            },
-                          }));
-                      }}
-                    >
-                      {issue} →
-                    </a>
-                  );
-                })
-              ) : (
-                <p>待补项已完成，可在页头检查并上传。</p>
-              )}
-            </div>
-          </Card>
+          {draft.kind !== 'video' && (
+            <Card title="检查并上传">
+              <div className="publish-check-list">
+                {issues.length ? (
+                  issues.map((issue, i) => {
+                    const platform = draft.settings.find((s) =>
+                      publishSettingIssues(draft, s, data, config, platforms, now).includes(issue),
+                    );
+                    const target = platform
+                      ? `publish-setting-${platform.platformId}`
+                      : issue === '请选择发布平台'
+                        ? 'publish-platforms'
+                        : 'publish-source';
+                    return (
+                      <a
+                        className="list-row"
+                        key={`${i}-${issue}`}
+                        href={`#${target}`}
+                        onClick={() => {
+                          if (platform)
+                            setExpanded((current) => ({
+                              ...current,
+                              [platform.platformId]: {
+                                key: JSON.stringify(
+                                  publishSettingIssues(draft, platform, data, config, platforms, now),
+                                ),
+                                open: true,
+                              },
+                            }));
+                        }}
+                      >
+                        {issue} →
+                      </a>
+                    );
+                  })
+                ) : (
+                  <p>待补项已完成，可在页头检查并上传。</p>
+                )}
+              </div>
+            </Card>
+          )}
           {data.batches.length ? (
-            <Card title="最近的发布记录" meta={<span className="eyebrow">{data.batches.length} 条</span>}>
+            <Card
+              title="最近的发布记录"
+              meta={
+                <Button disabled={busy || dirty} onClick={() => fresh(draft.kind)}>
+                  新的一条
+                </Button>
+              }
+            >
               {data.batches.length ? (
                 <div className="publish-batches">
                   {data.batches.map((batch) => (
@@ -1385,7 +1362,9 @@ export default function PublishingPage({
                       onClick={() => setHistory(batch)}
                     >
                       <strong>
-                        {data.contents.find((c) => c.id === batch.draft.contentId)?.title ?? '关联作品不可用'}
+                        {batch.draft.commonCopy.title ||
+                          data.contents.find((c) => c.id === batch.draft.contentId)?.title ||
+                          '未填写主题'}
                       </strong>
                       <span className="small">
                         {batch.abandonedAt ? '已放弃（回执保留）' : batchNames[batch.state]} ·{' '}
@@ -1405,21 +1384,23 @@ export default function PublishingPage({
       </div>
       {meta && data.receipts.some((r) => r.batchId === meta.id) ? (
         <Card title="截图审核与发布回执">
-          <div className="publish-review-heading">
-            <Button
-              disabled={!canPublish}
-              disabledReason={
-                !data.publishReady ? '实际发布尚不可用。' : '请先上传并查看有效截图，等待保存完成，核对发布状态。'
-              }
-              onClick={() => {
-                setNow(Date.now());
-                setReview({ draft: structuredClone(draft), requestId: crypto.randomUUID(), materials, receiptKey });
-                setChecked(false);
-              }}
-            >
-              全部发布（{readyReceipts.length}）
-            </Button>
-          </div>
+          {draft.kind !== 'video' && (
+            <div className="publish-review-heading">
+              <Button
+                disabled={!canPublish}
+                disabledReason={
+                  !data.publishReady ? '实际发布尚不可用。' : '请先上传并查看有效截图，等待保存完成，核对发布状态。'
+                }
+                onClick={() => {
+                  setNow(Date.now());
+                  setReview({ draft: structuredClone(draft), requestId: crypto.randomUUID(), materials, receiptKey });
+                  setChecked(false);
+                }}
+              >
+                全部发布（{readyReceipts.length}）
+              </Button>
+            </div>
+          )}
           {meta && data.receipts.some((r) => r.batchId === meta.id) ? (
             <div className="publish-review-grid">
               {data.receipts
@@ -1557,6 +1538,15 @@ export default function PublishingPage({
           <p>
             {history.abandonedAt ? '已放弃（回执保留）' : batchNames[history.state]} · {history.createdAt}
           </p>
+          <Button
+            disabled={busy}
+            onClick={() => {
+              loadBatch(history);
+              setHistory(null);
+            }}
+          >
+            继续这条发布
+          </Button>
           {history.draft.settings.map((item) => (
             <section key={item.platformId}>
               <strong>

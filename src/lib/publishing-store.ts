@@ -2,7 +2,15 @@ import { mediaStage } from './publishing-media-stage.ts';
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import type { WorkspaceDatabase } from '../db/database.ts';
-import { assets, contents, publishRecords, publishSnapshots, publishVideos, publishReceipts } from '../db/schema.ts';
+import {
+  assets,
+  contents,
+  topics,
+  publishRecords,
+  publishSnapshots,
+  publishVideos,
+  publishReceipts,
+} from '../db/schema.ts';
 import {
   publishDraftSchema,
   commonCopySchema,
@@ -18,6 +26,11 @@ import { CodexJudgment, type Judgment } from '../ai/structured.ts';
 import { actOnLayout } from './layout-store.ts';
 export function publishingData(db: WorkspaceDatabase): PublishingData {
   return {
+    topics: db.db
+      .select({ id: topics.id, title: topics.title, fixture: topics.fixture })
+      .from(topics)
+      .where(eq(topics.status, 'selected'))
+      .all(),
     contents: db.db.select().from(contents).all(),
     assets: db.db.select().from(assets).all(),
     videos: db.db.select().from(publishVideos).all(),
@@ -43,6 +56,31 @@ export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: s
   const input = publishDraftSchema.parse(raw),
     config = await loadPublishingConfig((await loadConfig()).platforms);
   return db.db.transaction((tx) => {
+    const old = id ? tx.select().from(publishRecords).where(eq(publishRecords.id, id)).get() : null;
+    if (id && !old) throw new Error('发布草稿不存在。');
+    if (old && old.revision !== expectedRevision) throw new Error('发布草稿已被其他窗口修改，请刷新后再保存。');
+    if (input.videoInput && input.kind !== 'video') throw Error('视频输入不能用于图文');
+    if (input.videoInput) {
+      if (!input.commonCopy.title.trim() || input.commonCopy.title.trim().length > 200)
+        throw Error('请填写不超过200字的主题');
+      if (input.videoInput.topicId && !tx.select().from(topics).where(eq(topics.id, input.videoInput.topicId)).get())
+        throw Error('选题已不存在，请重新选择或手动填写主题');
+      if (!input.contentId && old) input.contentId = old.draft.contentId;
+      if (!input.contentId) {
+        input.contentId = randomUUID();
+        tx.insert(contents)
+          .values({
+            id: input.contentId,
+            title: input.commonCopy.title.trim(),
+            topicId: input.videoInput.topicId,
+            form: '视频',
+            plannedDate: null,
+            videoCovers: {},
+            updatedAt: new Date().toISOString(),
+          })
+          .run();
+      }
+    }
     const content = input.contentId ? tx.select().from(contents).where(eq(contents.id, input.contentId)).get() : null;
     if (!content || content.form !== (input.kind === 'video' ? '视频' : '图文'))
       throw new Error('请选择与发布来源一致的作品。');
@@ -69,6 +107,20 @@ export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: s
     )
       throw new Error('图文图片必须是这条作品上传的素材。');
     if (input.imageIds.length > config.xhsMaxImages) throw new Error('图文图片数量超过配置上限。');
+    if (input.videoInput) {
+      for (const [ratio, assetId] of Object.entries(input.videoInput.covers)) {
+        const [w, h] = ratio.split(':').map(Number);
+        const asset = allAssets.find((a) => a.id === assetId);
+        if (
+          !config.requiredVideoRatios.includes(ratio) ||
+          !asset ||
+          asset.width <= 0 ||
+          asset.height <= 0 ||
+          Math.abs(asset.width * h - asset.height * w) > 0.01
+        )
+          throw Error('封面不存在或比例不符，请重新选择');
+      }
+    }
     const snapshots = tx.select().from(publishSnapshots).all();
     for (const snapshotId of input.snapshotIds) {
       const snapshot = snapshots.find(
@@ -78,14 +130,13 @@ export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: s
       if (!snapshot || !setting || setting.title !== snapshot.content.title || setting.description !== '')
         throw new Error('确认稿已退回、来源不符或内容被改写，请刷新后重新选择。');
     }
-    const old = id ? tx.select().from(publishRecords).where(eq(publishRecords.id, id)).get() : null;
-    if (id && !old) throw new Error('发布草稿不存在。');
-    if (old && old.revision !== expectedRevision) throw new Error('发布草稿已被其他窗口修改，请刷新后再保存。');
     if (old?.abandonedAt) throw Error('这次发布准备已放弃，请新建准备；原回执保留');
     if (
       old &&
       mediaStage(old, tx.select().from(publishReceipts).all()) !== 'editable' &&
-      (old.draft.videoId !== input.videoId || JSON.stringify(old.draft.imageIds) !== JSON.stringify(input.imageIds))
+      (old.draft.videoId !== input.videoId ||
+        JSON.stringify(old.draft.imageIds) !== JSON.stringify(input.imageIds) ||
+        JSON.stringify(old.draft.videoInput) !== JSON.stringify(input.videoInput))
     )
       throw Error('已上传或结果未确认，不能替换素材；请先核实或放弃上传');
     if (old && old.state !== 'draft') throw new Error('当前批次已进入执行阶段，不能覆盖草稿。');

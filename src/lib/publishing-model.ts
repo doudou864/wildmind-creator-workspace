@@ -59,6 +59,14 @@ export const publishSettingSchema = z
 export const publishDraftSchema = z
   .object({
     kind: publishKindSchema,
+    videoInput: z
+      .object({
+        topicId: z.string().nullable(),
+        path: z.string().max(4000),
+        covers: z.record(z.string(), z.string().min(1)),
+      })
+      .strict()
+      .optional(),
     commonCopy: commonCopySchema,
     contentId: z.string().nullable(),
     videoId: z.string().nullable(),
@@ -128,6 +136,7 @@ export type PublishVideo = {
   height: number;
 };
 export type PublishingData = {
+  topics?: { id: string; title: string; fixture?: boolean }[];
   contents: Content[];
   videos: PublishVideo[];
   assets: Asset[];
@@ -242,6 +251,34 @@ export function autoVideoCovers(
     };
   });
 }
+// Explicit batch choices may reuse any existing image; never change its original association.
+export function videoDraftCovers(draft: PublishDraft, data: PublishingData, config: PublishingConfig) {
+  if (!draft.videoInput)
+    return autoVideoCovers(
+      draft.contentId,
+      data.assets,
+      config,
+      data.contents.find((c) => c.id === draft.contentId)?.videoCovers,
+    );
+  return config.requiredVideoRatios.map((ratio) => {
+    const [w, h] = ratio.split(':').map(Number);
+    const id = draft.videoInput!.covers[ratio];
+    const asset = data.assets.find(
+      (a) => a.id === id && a.width > 0 && a.height > 0 && Math.abs(a.width * h - a.height * w) < 0.01,
+    );
+    return { ratio, asset: asset ?? null, reason: asset ? '' : id ? '封面已失效或比例不符' : '请选择封面' };
+  });
+}
+export function parsePublishTags(text: string): string[] {
+  return [
+    ...new Set(
+      text
+        .split(/[\s#＃]+/u)
+        .map((s) => s.trim())
+        .filter(Boolean),
+    ),
+  ];
+}
 export function scheduleTime(value: string): number {
   if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return NaN;
   const time = Date.parse(`${value}:00+08:00`);
@@ -278,8 +315,11 @@ export function publishIssues(
     issues.push('作品内容形式与发布来源不一致');
   if (!draft.settings.length) issues.push('请选择发布平台');
   if (draft.kind === 'video') {
-    if (!data.videos.some((v) => v.id === draft.videoId && v.contentId === draft.contentId))
-      issues.push('请选择这条作品的成片，文件会自动上传保存');
+    if (
+      !draft.videoInput?.path.trim() &&
+      !data.videos.some((v) => v.id === draft.videoId && v.contentId === draft.contentId)
+    )
+      issues.push(draft.videoInput ? '请填写视频地址' : '请选择这条作品的成片，文件会自动上传保存');
   }
   if (draft.kind === 'xhs') {
     if (!draft.imageIds.length) issues.push('请添加自己制作的图文图片');
@@ -324,12 +364,7 @@ export function publishSettingIssues(
   if (!data.accounts.some((a) => a.platformId === setting.platformId && a.ready)) issues.push(`${name}账号尚未就绪`);
   if (
     draft.kind === 'video' &&
-    !autoVideoCovers(
-      draft.contentId,
-      data.assets,
-      config,
-      data.contents.find((c) => c.id === draft.contentId)?.videoCovers,
-    ).find((c) => c.ratio === template.videoCoverRatio)?.asset
+    !videoDraftCovers(draft, data, config).find((c) => c.ratio === template.videoCoverRatio)?.asset
   )
     issues.push(`${name}缺少 ${template.videoCoverRatio} 封面`);
   if (!setting.title.trim()) issues.push(`${name}缺少标题`);
@@ -391,7 +426,7 @@ export function generatePublishSetting(
     title: draft.kind === 'layout' ? (snapshot?.content.title ?? '') : copy.title,
     description: draft.kind === 'layout' ? '' : copy.description,
     tags: [...new Set([...copy.tags, ...(template?.tags ?? [])])],
-    scheduleAt: defaultPublishTime(platformId, data, config, now),
+    scheduleAt: draft.videoInput ? null : defaultPublishTime(platformId, data, config, now),
   };
 }
 export function updateCommonCopy(
@@ -440,9 +475,7 @@ export function platformMaterialKey(
   const content = data.contents.find((c) => c.id === draft.contentId);
   const cover =
     draft.kind === 'video'
-      ? autoVideoCovers(draft.contentId, data.assets, config, content?.videoCovers).find(
-          (c) => c.ratio === template?.videoCoverRatio,
-        )?.asset
+      ? videoDraftCovers(draft, data, config).find((c) => c.ratio === template?.videoCoverRatio)?.asset
       : null;
   const snapshots =
     draft.kind === 'layout'
@@ -460,6 +493,7 @@ export function platformMaterialKey(
   ]);
   return JSON.stringify({
     kind: draft.kind,
+    ...(draft.videoInput ? { videoPath: draft.videoInput.path } : {}),
     contentId: draft.contentId,
     setting: setting
       ? { title: setting.title, description: setting.description, tags: setting.tags, scheduleAt: setting.scheduleAt }
