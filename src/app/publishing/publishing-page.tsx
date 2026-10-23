@@ -24,6 +24,7 @@ import {
   restorePublishSetting,
   formatPublishTags,
   publishSettingIssues,
+  videoUploadIssues,
   readyPublishReceipts,
   receiptStatus,
   uploadPlatformIds,
@@ -180,11 +181,14 @@ export default function PublishingPage({
   const stale = !!meta && !!liveBatch && (liveBatch.revision !== meta.revision || liveBatch.state !== meta.state);
   const stage = mediaStage(liveBatch ?? meta, data.receipts);
   const taskLocked = !!data.tasks?.some((t) => t.batchId === meta?.id);
+  const taskActionLocked = !!data.tasks?.some(
+    (t) => t.batchId === meta?.id && !['ready', 'attention'].includes(t.status),
+  );
   const locked =
-    taskLocked ||
+    taskActionLocked ||
     !!liveBatch?.abandonedAt ||
     (!!meta && ['uploading', 'queued', 'running', 'finished'].includes(meta.state));
-  const mediaLocked = locked || stage !== 'editable';
+  const mediaLocked = taskLocked || locked || stage !== 'editable';
   const liveRetry = data.receipts.find((receipt) => receipt.id === retry?.id);
   const retryAllowed =
     !liveBatch?.abandonedAt &&
@@ -198,7 +202,10 @@ export default function PublishingPage({
     loadedScreenshots.includes(liveRetry.screenshotAssetId);
   const name = (id: string) => platforms.find((p) => p.id === id)?.name ?? id;
   const assetUrl = (id: string) => `/api/images/assets/${encodeURIComponent(id)}/file`;
-  const issues = publishIssues(draft, data, config, platforms, now);
+  const issues =
+    draft.kind === 'video' && draft.videoInput
+      ? videoUploadIssues(draft, data, config)
+      : publishIssues(draft, data, config, platforms, now);
   const covers = videoDraftCovers(draft, data, config);
   const snapshots = data.snapshots.filter((s) => s.contentId === draft.contentId && s.state === 'ready');
   const saved = !!meta && !dirty && !local.length;
@@ -335,6 +342,7 @@ export default function PublishingPage({
     });
   }
   function toggle(platformId: string) {
+    if (taskLocked) return;
     const existing = draft.settings.some((s) => s.platformId === platformId);
     if (existing) {
       change({
@@ -520,7 +528,7 @@ export default function PublishingPage({
       setNow(time);
       return;
     }
-    if (kind === 'upload' && (!canUpload || publishIssues(draft, data, config, platforms, time).length)) return;
+    if (kind === 'upload' && (!canUpload || issues.length)) return;
     if (kind === 'return' && !data.handoffReady) return;
     const targets = uploadPlatformIds(meta.id, draft, data, config, time, expiryHours).filter(
       (id) => !onlyPlatform || id === onlyPlatform,
@@ -782,7 +790,13 @@ export default function PublishingPage({
                 </>
               )}
               {stage === 'published' && <p>已发布内容不能在这里删除或替换。</p>}
-              {stage === 'blocked' && <p>进行中或结果未知，不能删除、替换或再次上传。</p>}
+              {stage === 'blocked' && (
+                <p>
+                  {taskLocked
+                    ? '请查看任务中的待处理事项；新作品可点“新的一条”。'
+                    : '进行中或结果未知，请先核对平台状态。'}
+                </p>
+              )}
               {draft.settings.map((item) =>
                 managementPages[item.platformId] ? (
                   <a
@@ -1011,7 +1025,9 @@ export default function PublishingPage({
                   const matches = snapshots.filter((s) => s.platform === p.id);
                   const disabled =
                     busy ||
+                    taskLocked ||
                     locked ||
+                    (draft.kind === 'video' && !data.uploadPlatforms?.includes(p.id)) ||
                     (draft.kind === 'layout' &&
                       matches.length !== 1 &&
                       !draft.settings.some((s) => s.platformId === p.id));
@@ -1033,7 +1049,11 @@ export default function PublishingPage({
                         onChange={() => toggle(p.id)}
                       />
                       {p.name}
-                      {!p.active && <small>未启用</small>}
+                      {!p.active ? (
+                        <small>未启用</small>
+                      ) : draft.kind === 'video' && !data.uploadPlatforms?.includes(p.id) ? (
+                        <small>暂不可上传</small>
+                      ) : null}
                     </label>
                   );
                 })}
@@ -1150,9 +1170,11 @@ export default function PublishingPage({
             <p className="small">
               {stage === 'uploaded'
                 ? '请检查平台截图，确认后点击发布。'
-                : data.uploadReady
-                  ? '选好平台后，点击上方上传。'
-                  : '暂不能上传到平台，填写内容会自动保存。'}
+                : taskLocked
+                  ? '查看下方任务进度与平台截图。'
+                  : data.uploadReady
+                    ? '选好平台后，点击上方上传。'
+                    : '暂不能上传到平台，填写内容会自动保存。'}
             </p>
           ) : !draft.settings.length ? (
             <div className="card collapsed-note">选择平台后显示对应文案版本</div>

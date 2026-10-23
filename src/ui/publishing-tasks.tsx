@@ -58,7 +58,9 @@ export function PublishingTasks({
                   <strong>{batch.draft.commonCopy.title || '未填写主题'}</strong>
                   <span className="small">
                     {task
-                      ? publishingTaskNames[task.status]
+                      ? task.status === 'running' && task.operation === 'publish'
+                        ? '正在发布'
+                        : publishingTaskNames[task.status]
                       : batch.state === 'draft'
                         ? '草稿 · 尚未上传'
                         : batch.state === 'prepared'
@@ -67,16 +69,20 @@ export function PublishingTasks({
                     →
                   </span>
                 </button>
-                {task && <p className="small">{task.reason || task.checkpoint}</p>}
+                {task && (
+                  <p className="small" title={task.reason || task.checkpoint}>
+                    {task.reason || task.checkpoint}
+                  </p>
+                )}
                 <div className="video-cover-actions">
                   {task?.status === 'running' && (
                     <Button disabled={disabled} onClick={() => void control(batch, 'pause')}>
                       暂停
                     </Button>
                   )}
-                  {task?.status === 'paused' && (
+                  {task && ['paused', 'interrupted', 'attention'].includes(task.status) && (
                     <Button disabled={disabled} onClick={() => void control(batch, 'resume')}>
-                      继续上传
+                      {task.operation === 'publish' ? '核对发布结果' : '继续处理'}
                     </Button>
                   )}
                   <Button disabled={disabled} onClick={() => void control(batch, 'delete')}>

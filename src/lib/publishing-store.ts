@@ -1,3 +1,7 @@
+import { readFileSync } from 'node:fs';
+import { parse } from 'yaml';
+import { z } from 'zod';
+import { readUploadRun } from '../jobs/publishing-upload-state.ts';
 import { readPublishingTask } from '../jobs/publishing-tasks.ts';
 import { mediaStage } from './publishing-media-stage.ts';
 import { randomUUID } from 'node:crypto';
@@ -50,15 +54,28 @@ export function publishingData(db: WorkspaceDatabase): PublishingData {
         return task ? [task] : [];
       }),
     receipts: db.db.select().from(publishReceipts).all(),
-    accounts: [],
+    accounts: [
+      ...new Set(
+        db.db
+          .select()
+          .from(publishRecords)
+          .all()
+          .flatMap(
+            (b) =>
+              readUploadRun(db, b.id)
+                ?.platforms.filter((p) => p.accountVerified)
+                .map((p) => p.id) ?? [],
+          ),
+      ),
+    ].map((platformId) => ({ platformId, ready: true, reason: '本批上传时已核验账号' })),
+    uploadPlatforms: uploadPlatformIds(),
     recommendations: [],
     storageReady: true,
     aiReady: true,
     handoffReady: true,
-    uploadReady: false,
-    publishReady: false,
-    message:
-      '审查 E 已通过。当前等待可真实发布的新作品，平台上传尚未完成实测；材料可继续准备，每个平台首次真实发布前仍须审查 F 确认。',
+    uploadReady: true,
+    publishReady: true,
+    message: '上传后请核对逐平台截图；首次公开发布仍等待本人审核确认。',
   };
 }
 export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: string, expectedRevision?: number) {
@@ -268,4 +285,12 @@ export function abandonPublishing(db: WorkspaceDatabase, id: string, expectedRev
       .run();
     return tx.select().from(publishRecords).where(eq(publishRecords.id, id)).get()!;
   });
+}
+
+function uploadPlatformIds(): string[] {
+  const config = parse(readFileSync('config/publishing-browser.yaml', 'utf8'));
+  return z
+    .object({ platforms: z.array(z.object({ id: z.string() })) })
+    .parse(config)
+    .platforms.map((p) => p.id);
 }

@@ -1,0 +1,116 @@
+# 2026-10-23 真实视频上传页面核验；公开发布另行确认。
+{
+  "pollMs": 3000,
+  "uploadTimeoutMs": 1200000,
+  "platforms": [
+    {
+      "id": "douyin",
+      "name": "抖音",
+      "home": "https://creator.douyin.com/",
+      "accountId": "bailan1120",
+      "accountNames": [
+        "摆烂的逗逗（AI版）",
+        "摆烂的逗逗"
+      ],
+      "uploadUrl": "https://creator.douyin.com/creator-micro/content/upload",
+      "videoInput": "input[type=file]",
+      "titleInput": "input[placeholder=\"填写作品标题，为作品获得更多流量\"]",
+      "descriptionInput": "[contenteditable=true]",
+      "titleMax": 30,
+      "descriptionMax": 1000,
+      "uploadedText": "重新上传",
+      "coverRatios": [
+        "4:3",
+        "3:4"
+      ]
+    },
+    {
+      "id": "xiaohongshu",
+      "name": "小红书",
+      "home": "https://creator.xiaohongshu.com/",
+      "accountId": "513439150",
+      "accountNames": [
+        "摆烂的逗逗"
+      ],
+      "uploadUrl": "https://creator.xiaohongshu.com/publish/publish?from=homepage&target=video",
+      "videoInput": "input.upload-input",
+      "titleInput": "input[placeholder=\"填写标题会有更多赞哦\"]",
+      "descriptionInput": ".tiptap[contenteditable=true]",
+      "titleMax": 20,
+      "descriptionMax": 1000,
+      "uploadedText": "检测为高清视频",
+      "coverRatios": [
+        "3:4"
+      ]
+    },
+    {
+      "id": "bilibili",
+      "name": "B站",
+      "home": "https://account.bilibili.com/account/home",
+      "accountId": "291051369",
+      "accountNames": [
+        "摆烂的逗逗"
+      ],
+      "uploadUrl": "https://member.bilibili.com/platform/upload/video/frame/",
+      "videoInput": ".bcc-upload-wrapper input[type=file]",
+      "titleInput": "input[placeholder=\"请输入稿件标题\"]",
+      "descriptionInput": null,
+      "titleMax": 80,
+      "descriptionMax": 2000,
+      "uploadedText": "上传完成",
+      "coverRatios": [
+        "4:3",
+        "16:9"
+      ],
+      "categories": [
+        "影视",
+        "娱乐",
+        "音乐",
+        "舞蹈",
+        "动画",
+        "游戏",
+        "资讯",
+        "知识",
+        "人工智能",
+        "科技数码",
+        "汽车",
+        "时尚美妆",
+        "家装房产",
+        "户外潮流",
+        "健身",
+        "体育运动",
+        "手工",
+        "美食",
+        "小剧场",
+        "旅游出行",
+        "三农",
+        "动物",
+        "亲子",
+        "健康",
+        "情感",
+        "vlog",
+        "生活兴趣",
+        "生活经验"
+      ]
+    },
+    {
+      "id": "youtube",
+      "name": "YouTube",
+      "home": "https://studio.youtube.com/",
+      "accountId": "UCNRZf29PvGrv1puttSISTpA",
+      "accountNames": [
+        "摆烂的逗逗"
+      ],
+      "uploadUrl": null,
+      "videoInput": null,
+      "titleInput": "[contenteditable=true][aria-label=\"添加一个可描述你视频的标题（输入 @ 可提及某个频道）\"]",
+      "descriptionInput": "[contenteditable=true][aria-label=\"向观看者介绍你的视频（输入 @ 可提及频道）\"]",
+      "titleMax": 100,
+      "descriptionMax": 5000,
+      "uploadedText": "检查完毕。未发现任何问题。",
+      "coverRatios": [
+        "16:9"
+      ]
+    }
+  ]
+}

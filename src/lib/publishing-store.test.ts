@@ -43,7 +43,7 @@ test('发布准备只能接收原确认稿；退回后不可再采用旧快照�
     expect(returned.draft.snapshotIds).toEqual([]);
     expect(returned.draft.settings).toEqual([]);
     await expect(savePublishing(db, draft)).rejects.toThrow('已退回');
-    expect(publishingData(db)).toMatchObject({ uploadReady: false, publishReady: false, storageReady: true });
+    expect(publishingData(db)).toMatchObject({ uploadReady: true, publishReady: true, storageReady: true });
   } finally {
     db.sqlite.close();
     await rm(folder, { recursive: true, force: true });

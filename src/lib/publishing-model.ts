@@ -24,6 +24,8 @@ export const publishingConfigSchema = z.object({
         platformId: z.string().min(1),
         kinds: z.array(publishKindSchema).min(1),
         videoCoverRatio: ratioSchema.nullable(),
+        extraVideoCoverRatios: z.array(ratioSchema).optional(),
+        videoVerified: z.boolean().optional(),
         titleMax: z.number().int().positive().nullable(),
         descriptionMax: z.number().int().positive().nullable(),
         tagFormat: z.object({ prefix: z.string(), suffix: z.string(), separator: z.string() }).strict(),
@@ -137,6 +139,7 @@ export type PublishVideo = {
   height: number;
 };
 export type PublishingData = {
+  uploadPlatforms?: string[];
   topics?: { id: string; title: string; fixture?: boolean }[];
   contents: Content[];
   videos: PublishVideo[];
@@ -361,7 +364,11 @@ export function publishSettingIssues(
     issues.push(`${name}不支持此来源`);
     return issues;
   }
-  if (!template.verified || template.titleMax === null || (draft.kind !== 'layout' && template.descriptionMax === null))
+  if (
+    !(draft.kind === 'video' ? (template.videoVerified ?? template.verified) : template.verified) ||
+    template.titleMax === null ||
+    (draft.kind !== 'layout' && template.descriptionMax === null)
+  )
     issues.push(`${name}发布模板待核验`);
   if (!data.accounts.some((a) => a.platformId === setting.platformId && a.ready)) issues.push(`${name}账号尚未就绪`);
   if (
@@ -488,6 +495,11 @@ export function platformMaterialKey(
   const ids = new Set([
     ...(draft.kind === 'xhs' ? draft.imageIds : []),
     ...(cover ? [cover.id] : []),
+    ...(draft.kind === 'video'
+      ? videoDraftCovers(draft, data, config)
+          .filter((c) => template?.extraVideoCoverRatios?.includes(c.ratio))
+          .flatMap((c) => (c.asset ? [c.asset.id] : []))
+      : []),
     ...snapshots.flatMap((s) => [
       ...s.content.blocks.flatMap((b) => (b.assetId ? [b.assetId] : [])),
       ...Object.values(s.content.covers),
@@ -625,4 +637,17 @@ export function canRetryPublishReceipt(
     !!receipt.screenshotAssetId &&
     receipt.materials === platformMaterialKey(draft, receipt.platformId, data, config)
   );
+}
+
+// Upload starts by checking the current account in the browser; stale login records do not block preparation.
+export function videoUploadIssues(draft: PublishDraft, data: PublishingData, config: PublishingConfig): string[] {
+  const issues: string[] = [];
+  if (!draft.commonCopy.title.trim()) issues.push('请填写主题');
+  if (!draft.videoInput?.path.trim()) issues.push('请填写视频地址');
+  if (!draft.settings.length) issues.push('请选择发布平台');
+  if (draft.settings.some((s) => !data.uploadPlatforms?.includes(s.platformId)))
+    issues.push('所选平台中有尚未接通的视频上传平台');
+  for (const cover of videoDraftCovers(draft, data, config))
+    if (!cover.asset) issues.push(`请提供 ${cover.ratio} 封面`);
+  return issues;
 }

@@ -1,3 +1,4 @@
+import { reconcilePublishingTasks } from '../jobs/publishing-tasks.ts';
 import { withArchives } from './record-archives.ts';
 import { topicData } from './topic-store.ts';
 import { inboxData, dealData } from './inbox-store.ts';
@@ -78,7 +79,10 @@ export async function readLayouts(): Promise<LayoutData> {
 }
 
 export async function readPublishing(): Promise<PublishingData> {
-  return usingDatabase((db) => withArchives(db, publishingData(db)));
+  return usingDatabase(async (db) => {
+    await reconcilePublishingTasks(db);
+    return withArchives(db, publishingData(db));
+  });
 }
 
 export async function readInbox(): Promise<InboxData> {

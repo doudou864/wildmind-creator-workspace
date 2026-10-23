@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import { publishRecords, publishReceipts } from '../db/schema.ts';
 import { readState, writeState } from '../collectors/state.ts';
-import { closePublishingBrowser } from '../browser/publishing-task.ts';
+import { closePublishingBrowser, pausePublishingBrowser, findPublishingBrowser } from '../browser/publishing-task.ts';
 import { publishingTaskSchema, type PublishingTask, type PublishingTaskAction } from '../lib/publishing-task-model.ts';
 const key = (id: string) => `publishing-task:${id}`;
 export function readPublishingTask(db: WorkspaceDatabase, id: string): PublishingTask | null {
@@ -87,7 +87,7 @@ export function registerPublishingTask(
   writePublishingTask(db, task);
   return task;
 }
-// Worker acknowledgement is the only way a cooperative pause becomes "paused".
+// Late worker output cannot advance a paused or deleted task.
 export function publishingCheckpoint(db: WorkspaceDatabase, batchId: string, token: string, checkpoint: string) {
   const task = readPublishingTask(db, batchId);
   if (!task || task.token !== token || !['running', 'pausing'].includes(task.status)) return false;
@@ -98,27 +98,43 @@ export function publishingCheckpoint(db: WorkspaceDatabase, batchId: string, tok
 type Controls = {
   stop: (task: PublishingTask) => Promise<void>;
   close: (browser: NonNullable<PublishingTask['browser']>) => Promise<void>;
+  pauseBrowser?: typeof pausePublishingBrowser;
   resume?: (task: PublishingTask) => Promise<void>;
 };
 export async function controlPublishingTask(
   db: WorkspaceDatabase,
   id: string,
   input: PublishingTaskAction,
-  controls: Controls = { stop: stopPublishingProcess, close: closePublishingBrowser },
+  controls: Controls = {
+    stop: stopPublishingProcess,
+    close: closePublishingBrowser,
+    pauseBrowser: pausePublishingBrowser,
+  },
 ) {
+  if (input.action === 'resume') {
+    const old = readPublishingTask(db, id);
+    if (old?.process) await controls.stop(old);
+  }
   const task = db.db.transaction(() => {
     const batch = db.db.select().from(publishRecords).where(eq(publishRecords.id, id)).get();
     if (!batch || batch.revision !== input.expectedRevision) throw Error('任务已更新，请刷新后操作');
     const old = readPublishingTask(db, id);
     if (input.action === 'pause' && old?.status !== 'running') throw Error('这条任务当前没有正在运行的上传');
-    if (input.action === 'resume' && old?.status !== 'paused') throw Error('只有已暂停的任务可以继续');
-    if (input.action === 'resume' && !controls.resume) throw Error('浏览器上传执行尚未接通，暂不能继续上传');
+    if (input.action === 'resume' && (!old || !['paused', 'interrupted', 'attention'].includes(old.status)))
+      throw Error('只有已暂停的任务可以继续');
+    if (input.action === 'resume' && !controls.resume)
+      controls.resume = async (task) => {
+        const { launchPublishingUpload } = await import('./publishing-upload.ts');
+        await launchPublishingUpload(db, task);
+      };
     if (input.action === 'delete' && old?.status === 'deleted') return old;
     if (old && ['pausing', 'deleting'].includes(old.status)) throw Error('任务正在停止或清理，请等待结果');
     const next: PublishingTask = {
       batchId: id,
-      token: old?.token ?? randomUUID(),
-      process: old?.process ?? null,
+      operation: old?.operation,
+      browserName: old?.browserName,
+      token: input.action === 'resume' ? randomUUID() : (old?.token ?? randomUUID()),
+      process: input.action === 'resume' ? null : (old?.process ?? null),
       browser: old?.browser ?? null,
       checkpoint: old?.checkpoint ?? '本地草稿，尚未上传',
       reason: null,
@@ -136,7 +152,13 @@ export async function controlPublishingTask(
   if (input.action === 'pause') {
     try {
       await controls.stop(task);
-      writePublishingTask(db, { ...task, status: 'paused', process: null });
+      if (task.browser && controls.pauseBrowser) await controls.pauseBrowser(task.browser);
+      writePublishingTask(db, {
+        ...task,
+        status: 'paused',
+        process: null,
+        browser: task.browser && controls.pauseBrowser ? { ...task.browser, pausedByTask: true } : task.browser,
+      });
     } catch (e) {
       writePublishingTask(db, { ...task, status: 'interrupted', reason: e instanceof Error ? e.message : '暂停失败' });
       throw e;
@@ -155,7 +177,9 @@ export async function controlPublishingTask(
   if (task.status === 'deleted') return task;
   try {
     await controls.stop(task);
-    if (task.browser) await controls.close(task.browser);
+    const browser = task.browser ?? (task.browserName ? await findPublishingBrowser(task.browserName) : null);
+    if (task.browserName && !browser) throw Error('浏览器创建中断，暂不能确认资源清理，请稍后重试');
+    if (browser) await controls.close(browser);
     db.db.transaction(() => {
       const current = readPublishingTask(db, id);
       if (current?.token !== task.token || current.status !== 'deleting') throw Error('清理状态发生变化，请刷新核对');
@@ -184,4 +208,27 @@ export async function controlPublishingTask(
     throw e;
   }
   return readPublishingTask(db, id);
+}
+
+export async function reconcilePublishingTasks(db: WorkspaceDatabase) {
+  for (const batch of db.db.select().from(publishRecords).all()) {
+    const task = readPublishingTask(db, batch.id);
+    if (!task || task.status !== 'running') continue;
+    const current = task.process ? await inspectPublishingProcess(task.process.pid) : null;
+    if (!task.process && Date.now() - Date.parse(task.updatedAt) < 30000) continue;
+    if (task.process && current?.command === task.process.command && current.startedAt === task.process.startedAt)
+      continue;
+    const live = readPublishingTask(db, batch.id);
+    if (
+      live?.token !== task.token ||
+      live.status !== 'running' ||
+      JSON.stringify(live.process) !== JSON.stringify(task.process)
+    )
+      continue;
+    writePublishingTask(db, {
+      ...live,
+      status: 'interrupted',
+      reason: '后台进程已停止或身份变化，保留已有页面；继续时先核对进度',
+    });
+  }
 }

@@ -73,7 +73,11 @@ function check(name, fn) {
   console.log(`PASS ${name}`);
 }
 check('未知平台限制与时间保持 null，不伪造推荐', () => {
-  assert(config.templates.every((t) => t.titleMax === null && t.defaultTime === null && !t.verified));
+  assert(
+    config.templates.every(
+      (t) => (t.videoVerified ? t.titleMax > 0 : t.titleMax === null) && t.defaultTime === null && !t.verified,
+    ),
+  );
   assert.equal(makePublishSetting('douyin', '标题', config).scheduleAt, null);
 });
 check('发布准备不默认替用户勾选发布目标', () => assert.deepEqual(newPublishDraft('video').settings, []));
@@ -107,7 +111,15 @@ const video = {
 };
 check('完整视频材料通过内容校验，模板未核验仍阻断', () => {
   assert.deepEqual(publishIssues(video, { ...data, assets }, verified, platforms, now), []);
-  assert(publishIssues(video, { ...data, assets }, config, platforms, now).some((s) => s.includes('待核验')));
+  assert(
+    publishIssues(
+      video,
+      { ...data, assets },
+      { ...config, templates: config.templates.map((t) => ({ ...t, verified: false, videoVerified: false })) },
+      platforms,
+      now,
+    ).some((s) => s.includes('待核验')),
+  );
 });
 check('只选抖音时只有3:4封面即可上传，未选平台不阻断', () =>
   assert.deepEqual(publishIssues(video, { ...data, assets: [assets[0]] }, verified, platforms, now), []),
@@ -310,7 +322,7 @@ check('只使用本月观看分布；错过今天的时段则使用下一天', (
   );
 });
 check('仅打开 verified 不能绕过未知标题限制', () => {
-  const incomplete = { ...config, templates: config.templates.map((t) => ({ ...t, verified: true })) };
+  const incomplete = { ...config, templates: config.templates.map((t) => ({ ...t, verified: true, titleMax: null })) };
   assert(publishIssues(video, { ...data, assets }, incomplete, platforms, now).some((s) => s.includes('待核验')));
 });
 
