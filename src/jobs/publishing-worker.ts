@@ -254,6 +254,7 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
               })
               .run();
             item.stage = 'ready';
+            item.reviewObservation = view;
             update();
             db.db
               .update(publishReceipts)

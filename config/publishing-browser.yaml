@@ -111,6 +111,7 @@
       "uploadedText": "text \"删除\"",
       "uploadingText": "取消上传",
       "submitLabel": "发表",
+      "submitResultUrl": "https://channels.weixin.qq.com/platform/post/list",
       "coverRatios": [
         "3:4",
         "4:3"

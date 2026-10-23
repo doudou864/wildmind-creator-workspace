@@ -15,6 +15,7 @@ export const uploadRunSchema = z.object({
       attempted: z.boolean(),
       copyPrepared: z.boolean().default(false),
       accountVerified: z.boolean(),
+      reviewObservation: z.object({ snapshot: z.string(), controls: z.array(z.unknown()).optional() }).optional(),
       copy,
       reason: z.string().nullable(),
     }),

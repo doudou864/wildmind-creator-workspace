@@ -23,6 +23,7 @@ import {
   publishingObservation,
   publishingPageCall,
   screenshotPublishing,
+  publishingUploadComplete,
 } from '../browser/publishing-runner.ts';
 const approvalSchema = z.object({
   requestId: z.string(),
@@ -147,11 +148,18 @@ export async function runPublishingSubmit(db: WorkspaceDatabase, id: string, tok
             identity.id !== platform.accountId
           )
             throw Error('当前账号与审核账号不一致或无法核实');
+          if (platform.id === 'channels')
+            await publishingPageCall(
+              page,
+              `await p.evaluate(()=>Array.from(document.querySelectorAll('iframe')).forEach(f=>f.contentDocument?.querySelector('.input-editor')?.scrollIntoView({block:'center',behavior:'instant'})));console.log('WORKSPACE_RESULT:true');`,
+            );
+          const before = await publishingObservation(page);
+          if (!publishingUploadComplete(before.snapshot, platform)) throw Error('当前页面未确认上传完成，尚未提交');
           const file = path.resolve('data/jobs/publishing', id, platform.id + '-before-submit.png');
           await screenshotPublishing(page, file);
           const check = await judge.read(
             z.object({ matches: z.boolean(), ready: z.boolean(), reason: z.string() }),
-            `检查当前待发布版本与已审核资料完全一致，标题、话题、封面及声明。尚未提交且上传已完成才ready=true。未知或页面不完整返回false。审核资料:${JSON.stringify(item.copy)} 当前页面:${JSON.stringify(await publishingObservation(page))}`,
+            `检查当前待发布版本与已审核资料一致，标题、话题、封面及声明。上传完成状态已由代码按本平台实测标记核验；尚未提交且仍处于编辑页才ready=true。声明及选项与待审时的页面证据比较，不要求文案重复写声明。缺少证据或发生实质变化返回false。审核文案:${JSON.stringify(item.copy)} 待审时页面证据:${JSON.stringify(item.reviewObservation ?? null)} 当前页面:${JSON.stringify(before)}`,
             [file, ...platform.coverRatios.map((r) => run.covers[r])],
           );
           if (!check.matches || !check.ready) throw Error('发布前核对未通过：' + check.reason);
@@ -187,6 +195,11 @@ export async function runPublishingSubmit(db: WorkspaceDatabase, id: string, tok
           }
         }
         active();
+        if (platform.submitResultUrl)
+          await publishingPageCall(
+            page,
+            `try{await p.waitForFunction(expected=>location.href.split('?')[0]===expected.url&&[document,...Array.from(document.querySelectorAll('iframe')).flatMap(f=>{try{return f.contentDocument?[f.contentDocument]:[];}catch{return [];}})].some(d=>d.body?.innerText.includes(expected.text)),${JSON.stringify({ url: platform.submitResultUrl, text: item.copy.description || item.copy.title })},{timeout:30000});}catch{}console.log('WORKSPACE_RESULT:true');`,
+          );
         const observation = await publishingObservation(page),
           file = path.resolve('data/jobs/publishing', id, platform.id + '-submit-result.png');
         await screenshotPublishing(page, file);
@@ -197,7 +210,7 @@ export async function runPublishingSubmit(db: WorkspaceDatabase, id: string, tok
             url: z.string().nullable(),
             evidence: z.string(),
           }),
-          `只核验当前作品的提交结果，必须有可见成功页或对应标题的后台条目；按钮点击不证明成功。审核中为pending_review，明确公开/发布成功为published，否则unknown。不得把历史作品或浏览器地址当本片回执。当前标题:${JSON.stringify(item.copy.title)} 页面:${JSON.stringify(observation)}`,
+          `只核验当前作品的提交结果，必须有可见成功页或对应标题/描述的后台条目；部分平台列表展示描述而不是短标题。按钮点击不证明成功。审核中为pending_review，明确公开/发布成功为published，否则unknown。不得把历史作品或浏览器地址当本片回执。当前文案:${JSON.stringify(item.copy)} 页面:${JSON.stringify(observation)}`,
           [file],
         );
         active();

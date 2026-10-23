@@ -20,6 +20,7 @@ const platformSchema = z.object({
   uploadedText: z.string(),
   uploadingText: z.string().optional(),
   submitLabel: z.string().default('发布'),
+  submitResultUrl: z.url().optional(),
   coverRatios: z.array(z.string()),
 });
 export type UploadPlatform = z.infer<typeof platformSchema>;

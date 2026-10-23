@@ -73,6 +73,10 @@ test.each(['bilibili', 'channels'])('%s 恢复遗留 submitting 只核对结果�
       approvedAt: new Date().toISOString(),
       materials: 'fixture',
     });
+    const waitForFunction = vi.fn();
+    vi.mocked(browser.publishingPageCall).mockImplementation(async (_page, script) => {
+      return new Function('p', 'console', `return (async()=>{${script}})()`)({ waitForFunction }, { log: () => {} });
+    });
     vi.mocked(browser.publishingObservation).mockResolvedValue({ url: 'https://example.test', snapshot: '无法核验' });
     vi.spyOn(CodexJudgment.prototype, 'read').mockResolvedValue({
       status: 'unknown',
@@ -81,8 +85,13 @@ test.each(['bilibili', 'channels'])('%s 恢复遗留 submitting 只核对结果�
       evidence: '隔离测试：未找到可核验回执',
     });
     await runPublishingSubmit(db, batch.id, task.token);
-    expect(browser.publishingPageCall).not.toHaveBeenCalled();
-    expect(db.db.select().from(publishReceipts).get()).toMatchObject({ status: 'unknown', safeToRetry: false });
+    if (platformId === 'channels') expect(waitForFunction).toHaveBeenCalledTimes(1);
+    else expect(browser.publishingPageCall).not.toHaveBeenCalled();
+    expect(db.db.select().from(publishReceipts).get()).toMatchObject({
+      status: 'unknown',
+      safeToRetry: false,
+      reason: '隔离测试：未找到可核验回执',
+    });
     await expect(enqueuePublishingSubmit(db, batch.id, { action: 'upload' })).rejects.toThrow();
   } finally {
     db.sqlite.close();
