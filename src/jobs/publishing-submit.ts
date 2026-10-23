@@ -223,11 +223,15 @@ export async function runPublishingSubmit(db: WorkspaceDatabase, id: string, tok
       }
     }
     const task = active();
+    const completed = approval.receiptIds.every((receiptId) => {
+      const receipt = db.db.select().from(publishReceipts).where(eq(publishReceipts.id, receiptId)).get();
+      return receipt && ['published', 'pending_review'].includes(receipt.status);
+    });
     writePublishingTask(db, {
       ...task,
-      status: 'attention',
+      status: completed ? 'completed' : 'attention',
       process: null,
-      checkpoint: '提交检查结束，请查看逐平台回执',
+      checkpoint: completed ? '已提交，请查看逐平台发布与审核结果' : '提交检查结束，请查看逐平台回执',
       reason: null,
     });
     db.db
