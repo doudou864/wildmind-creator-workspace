@@ -1,11 +1,12 @@
 import { readTopicSources } from '../browser/topic-source';
 vi.mock('../browser/topic-source', () => ({ readTopicSources: vi.fn(async () => []) }));
 import { expect, test, vi } from 'vitest';
+import { z } from 'zod';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { initializeDatabase } from '../db/database';
-import { topicSources, fireEvidence, generateTopics, decideTopic } from './topic-store';
+import { topicSources, fireEvidence, generateTopics, decideTopic, topicExtractionSchema } from './topic-store';
 import { loadConfig } from './config';
 import { loadTopicChannels, editTopicChannel } from './topic-channels';
 import { topics, topicSignals, topicGenerationTasks } from '../db/schema';
@@ -121,7 +122,7 @@ test('面板保存的渠道经重新读取进入生成链路，候选保留该�
     const judge = {
       read: async () =>
         ++call === 1
-          ? { items: [{ text: '创作需求', quote: '可核对的创作需求' }] }
+          ? { items: [{ text: '创作需求', quote: '可核对的创作需求' }], reason: null }
           : {
               items: Array.from({ length: 20 }, (_, i) => ({
                 title: `外部方向${i}`,
@@ -196,7 +197,7 @@ test('登录/网络失败不浪费成功来源，少量有效候选仍保存并�
     });
     const read = vi
       .fn()
-      .mockResolvedValueOnce({ items: [{ text: 'fixture需求', quote: '公开原文' }] })
+      .mockResolvedValueOnce({ items: [{ text: 'fixture需求', quote: '公开原文' }], reason: null })
       .mockResolvedValueOnce({ items: [fixtureItem(0)] });
     const result = await generateTopics(db, { read } as unknown as Judgment, { config, channels, document: 'fixture' });
     expect(result.count).toBe(1);
@@ -248,4 +249,26 @@ test('全站失败时无材料不调用AI；有已存线索可回退且明确标
     db.sqlite.close();
     await rm(folder, { recursive: true, force: true });
   }
+});
+
+test('提取协议发送到模型前所有对象字段均必填，原因可为null但不可省略', () => {
+  const schema = z.toJSONSchema(topicExtractionSchema);
+  function assertRequired(value: unknown) {
+    if (!value || typeof value !== 'object') return;
+    const object = value as Record<string, unknown>;
+    if (object.type === 'object') {
+      expect(object.required).toEqual(Object.keys(object.properties as object));
+      expect(object.additionalProperties).toBe(false);
+    }
+    for (const child of Object.values(object)) {
+      if (Array.isArray(child)) child.forEach(assertRequired);
+      else assertRequired(child);
+    }
+  }
+  assertRequired(schema);
+  expect(
+    topicExtractionSchema.parse({ items: [{ text: 'fixture', quote: 'fixture' }], reason: null }).reason,
+  ).toBeNull();
+  expect(topicExtractionSchema.parse({ items: [], reason: '需要登录' }).reason).toBe('需要登录');
+  expect(() => topicExtractionSchema.parse({ items: [] })).toThrow();
 });
