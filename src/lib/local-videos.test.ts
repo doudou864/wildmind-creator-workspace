@@ -23,10 +23,14 @@ test('only explicitly allowed original files are referenced; changed or missing 
       videoListLimit: 20,
       probeTimeoutMs: 1000,
       finishedVideoDirectories: [allowed],
+      allowedVideoFiles: [],
     };
     expect(await allowedVideo(file, settings)).toBe(await realpath(file));
     await expect(allowedVideo(outside, settings)).rejects.toThrow('允许');
     await expect(allowedVideo(path.join(allowed, 'escape.mp4'), settings)).rejects.toThrow('允许');
+    expect(await allowedVideo("'" + outside + "'", { ...settings, allowedVideoFiles: [outside] })).toBe(
+      await realpath(outside),
+    );
     const mark = await fingerprint(file);
     const record = {
       id: 'fixture',

@@ -1,3 +1,4 @@
+import type { PublishingTask } from './publishing-task-model';
 import type { Content } from './content-model';
 import { z } from 'zod';
 import type { Asset } from './image-model';
@@ -142,6 +143,7 @@ export type PublishingData = {
   assets: Asset[];
   snapshots: PublishSnapshot[];
   batches: PublishBatch[];
+  tasks?: PublishingTask[];
   receipts: PublishReceipt[];
   accounts: { platformId: string; ready: boolean; reason: string }[];
   recommendations: { platformId: string; month: string; time: string; basis: string }[];

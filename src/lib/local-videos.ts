@@ -16,13 +16,21 @@ export const mediaSettingsSchema = z.object({
   ffprobePath: z.string(),
   probeTimeoutMs: z.number().positive(),
   videoListLimit: z.number().int().min(1).max(100).default(20),
+  allowedVideoFiles: z.array(z.string().refine(path.isAbsolute)).default([]),
   finishedVideoDirectories: z.array(z.string().refine(path.isAbsolute, '成片目录必须使用绝对路径')).default([]),
 });
 export type MediaSettings = z.infer<typeof mediaSettingsSchema>;
 export async function mediaSettings() {
   return mediaSettingsSchema.parse(parse(await readFile('config/media.yaml', 'utf8')));
 }
+export function normalizeVideoPath(file: string) {
+  const value = file.trim();
+  return (value.startsWith("'") && value.endsWith("'")) || (value.startsWith('"') && value.endsWith('"'))
+    ? value.slice(1, -1)
+    : value;
+}
 export async function allowedVideo(file: string, settings: MediaSettings) {
+  file = normalizeVideoPath(file);
   if (!path.isAbsolute(file)) throw Error('请填写成片文件夹内的绝对路径');
   let full: string;
   try {
@@ -31,7 +39,8 @@ export async function allowedVideo(file: string, settings: MediaSettings) {
     throw Error('成片不存在或已移动，请重新选择');
   }
   const roots = await Promise.all(settings.finishedVideoDirectories.map((p) => realpath(p).catch(() => null)));
-  if (!roots.some((root) => root && full.startsWith(root + path.sep)))
+  const allowedFiles = await Promise.all((settings.allowedVideoFiles ?? []).map((p) => realpath(p).catch(() => null)));
+  if (!allowedFiles.includes(full) && !roots.some((root) => root && full.startsWith(root + path.sep)))
     throw Error('文件不在允许的成片文件夹内，请检查 config/media.yaml');
   if (!/\.(mp4|mov)$/i.test(full) || (await stat(full)).isFile() === false) throw Error('请选择有效的 MP4/MOV 成片');
   return full;

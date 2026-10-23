@@ -7,3 +7,7 @@ finishedVideoDirectories:
   - /Volumes/U1/成片库
   - /Users/a1234/Downloads
 videoListLimit: 20
+
+# 本次用户在发布页指定并授权上传的单个视频。
+allowedVideoFiles:
+  - /Users/a1234/Documents/New project/AI-竞速史.mp4

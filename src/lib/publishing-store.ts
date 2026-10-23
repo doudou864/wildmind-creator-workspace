@@ -1,3 +1,4 @@
+import { readPublishingTask } from '../jobs/publishing-tasks.ts';
 import { mediaStage } from './publishing-media-stage.ts';
 import { randomUUID } from 'node:crypto';
 import { eq } from 'drizzle-orm';
@@ -40,6 +41,14 @@ export function publishingData(db: WorkspaceDatabase): PublishingData {
       .all()
       .map((s) => ({ ...s, platform: layoutPlatformSchema.parse(s.platform) })),
     batches: db.db.select().from(publishRecords).all(),
+    tasks: db.db
+      .select()
+      .from(publishRecords)
+      .all()
+      .flatMap((b) => {
+        const task = readPublishingTask(db, b.id);
+        return task ? [task] : [];
+      }),
     receipts: db.db.select().from(publishReceipts).all(),
     accounts: [],
     recommendations: [],
@@ -58,6 +67,8 @@ export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: s
   return db.db.transaction((tx) => {
     const old = id ? tx.select().from(publishRecords).where(eq(publishRecords.id, id)).get() : null;
     if (id && !old) throw new Error('发布草稿不存在。');
+    if (id && readPublishingTask(db, id) && !['deleted'].includes(readPublishingTask(db, id)!.status))
+      throw Error('这条任务已进入上传流程，请新建一条填写新的作品');
     if (old && old.revision !== expectedRevision) throw new Error('发布草稿已被其他窗口修改，请刷新后再保存。');
     if (input.videoInput && input.kind !== 'video') throw Error('视频输入不能用于图文');
     if (input.videoInput) {

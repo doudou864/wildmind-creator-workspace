@@ -7,6 +7,7 @@ import { ContentPicker } from '@/ui/content-picker';
 import { AutosaveStatus } from '@/ui/autosave-status';
 import type { SaveContext } from '@/ui/autosave-queue';
 import { shouldSyncPublishingEditor } from '@/lib/publishing-editor-sync';
+import { PublishingTasks } from '@/ui/publishing-tasks';
 import { useAutosave } from '@/ui/use-autosave';
 import { useEditSession } from '@/ui/use-edit-session';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
@@ -178,8 +179,11 @@ export default function PublishingPage({
   const liveBatch = data.batches.find((batch) => batch.id === meta?.id);
   const stale = !!meta && !!liveBatch && (liveBatch.revision !== meta.revision || liveBatch.state !== meta.state);
   const stage = mediaStage(liveBatch ?? meta, data.receipts);
+  const taskLocked = !!data.tasks?.some((t) => t.batchId === meta?.id);
   const locked =
-    !!liveBatch?.abandonedAt || (!!meta && ['uploading', 'queued', 'running', 'finished'].includes(meta.state));
+    taskLocked ||
+    !!liveBatch?.abandonedAt ||
+    (!!meta && ['uploading', 'queued', 'running', 'finished'].includes(meta.state));
   const mediaLocked = locked || stage !== 'editable';
   const liveRetry = data.receipts.find((receipt) => receipt.id === retry?.id);
   const retryAllowed =
@@ -269,10 +273,10 @@ export default function PublishingPage({
     (r) => r.batchId === meta?.id && ['queued', 'uploading', 'submitting'].includes(r.status),
   );
   useEffect(() => {
-    if (!inFlight) return;
+    if (!inFlight && !data.tasks?.some((t) => ['running', 'pausing', 'deleting'].includes(t.status))) return;
     const timer = window.setInterval(() => void refresh(), 3000);
     return () => window.clearInterval(timer);
-  }, [inFlight, refresh]);
+  }, [inFlight, data.tasks, refresh]);
   useEffect(() => {
     const timer = window.setInterval(() => setNow(Date.now()), 30000);
     return () => window.clearInterval(timer);
@@ -1353,7 +1357,20 @@ export default function PublishingPage({
               </div>
             </Card>
           )}
-          {data.batches.length ? (
+          {draft.kind === 'video' ? (
+            <PublishingTasks
+              data={data}
+              selectedId={meta?.id ?? null}
+              onNew={() => void protect(() => fresh('video'))}
+              onSelect={(batch) => {
+                if (batch.id !== savedRecord.current) void protect(() => loadBatch(batch));
+              }}
+              onRefresh={refresh}
+              onDeleted={(id) => {
+                if (meta?.id === id) fresh('video');
+              }}
+            />
+          ) : data.batches.length ? (
             <Card
               title="最近的发布记录"
               meta={

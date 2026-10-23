@@ -536,3 +536,27 @@
 .video-cover-actions label:focus-within {
   outline: 2px solid var(--ink);
 }
+.publishing-task-list {
+  display: grid;
+  gap: 16px;
+}
+.publishing-task-item {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 12px;
+}
+.publishing-task-select {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  padding: 10px 0;
+  color: var(--ink);
+  background: transparent;
+  cursor: pointer;
+}
+.publishing-task-select:hover,
+.publishing-task-select[aria-current='true'] {
+  background: var(--bg);
+}
