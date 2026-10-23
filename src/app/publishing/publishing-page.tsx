@@ -6,6 +6,7 @@ import { uniqueVideoId } from '@/ui/work-flow';
 import { ContentPicker } from '@/ui/content-picker';
 import { AutosaveStatus } from '@/ui/autosave-status';
 import type { SaveContext } from '@/ui/autosave-queue';
+import { shouldSyncPublishingEditor } from '@/lib/publishing-editor-sync';
 import { useAutosave } from '@/ui/use-autosave';
 import { useEditSession } from '@/ui/use-edit-session';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
@@ -244,7 +245,7 @@ export default function PublishingPage({
     readyReceipts.length > 0 &&
     readyReceipts.every((r) => loadedScreenshots.includes(r.screenshotAssetId!));
   useEffect(() => {
-    if (liveBatch && !dirty && (liveBatch.revision !== meta?.revision || liveBatch.state !== meta?.state)) {
+    if (liveBatch && shouldSyncPublishingEditor(meta, liveBatch, dirty)) {
       setMeta(liveBatch);
       savedRevision.current = liveBatch.revision;
       setDraft(structuredClone(liveBatch.draft));
@@ -290,7 +291,16 @@ export default function PublishingPage({
     setLocal([]);
     setMediaLoading(false);
   }
-  function protect(action: () => void) {
+  async function protect(action: () => void) {
+    if (busy) return;
+    if (local.length || mediaLoading) {
+      setNotice('正在保存素材，请稍候再切换。');
+      return;
+    }
+    if (dirty && !(await autosave.flush())) {
+      setNotice('当前内容尚未保存，请填写主题并检查保存提示后再切换。');
+      return;
+    }
     action();
   }
   function fresh(kind: PublishKind) {
@@ -1347,7 +1357,7 @@ export default function PublishingPage({
             <Card
               title="最近的发布记录"
               meta={
-                <Button disabled={busy || dirty} onClick={() => fresh(draft.kind)}>
+                <Button disabled={busy} onClick={() => void protect(() => fresh(draft.kind))}>
                   新的一条
                 </Button>
               }
@@ -1541,7 +1551,7 @@ export default function PublishingPage({
           <Button
             disabled={busy}
             onClick={() => {
-              loadBatch(history);
+              void protect(() => loadBatch(history));
               setHistory(null);
             }}
           >

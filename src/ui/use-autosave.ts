@@ -27,5 +27,11 @@ export function useAutosave(key: string, enabled: boolean, save: (context: SaveC
       flush();
     };
   }, []);
-  return status;
+  return {
+    ...status,
+    flush: async () => {
+      await queue.current!.flush();
+      return queue.current!.isSaved();
+    },
+  };
 }

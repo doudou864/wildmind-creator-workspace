@@ -6,6 +6,7 @@ type Snapshot = { key: string; enabled: boolean; save: (context: SaveContext) =>
 export function createAutosaveQueue(report: (status: SaveStatus) => void) {
   let latest: Snapshot | undefined;
   let attempted: string | undefined;
+  let saved: string | undefined;
   let pending: Promise<void> | undefined;
   async function drain() {
     while (latest?.enabled && latest.key !== attempted) {
@@ -14,6 +15,7 @@ export function createAutosaveQueue(report: (status: SaveStatus) => void) {
       report({ state: 'saving' });
       try {
         await current.save({ isCurrent: () => latest?.key === current.key });
+        saved = current.key;
         report({ state: 'saved' });
       } catch (error) {
         report({ state: 'error', reason: error instanceof Error ? error.message : '本机保存失败' });
@@ -21,6 +23,9 @@ export function createAutosaveQueue(report: (status: SaveStatus) => void) {
     }
   }
   return {
+    isSaved() {
+      return !!latest && latest.key === saved;
+    },
     update(snapshot: Snapshot) {
       latest = snapshot;
     },
