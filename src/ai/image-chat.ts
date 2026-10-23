@@ -1,3 +1,4 @@
+import type { ImageChatSkill } from '../lib/image-chat-skills';
 import { Codex } from '@openai/codex-sdk';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -11,6 +12,8 @@ export const CHAT_INSTRUCTIONS =
   '这是本机作品配图对话。用户文字和参考图保持原样。需要生图时仅调用一次内置 image_gen，使用 ChatGPT 套餐；不调用 API、第三方服务，不运行命令，不启动子代理，不访问浏览器。不自动重试。生成图片保留在 Codex generated_images 目录，工作台会自动收取；不要另存或删除用户文件。文字回答直接给用户。';
 export type ChatTransport = (input: {
   text: string;
+  skill?: ImageChatSkill | null;
+  standalone?: boolean;
   references: string[];
   threadId: string | null;
   config: GenerationConfig;
@@ -35,7 +38,7 @@ export const streamImageChat: ChatTransport = async (input) => {
     ) as Record<string, string>,
     config: {
       features: {
-        shell_tool: false,
+        shell_tool: !!input.skill,
         apps: false,
         multi_agent: false,
         image_generation: true,
@@ -55,11 +58,7 @@ export const streamImageChat: ChatTransport = async (input) => {
   };
   const thread = input.threadId ? codex.resumeThread(input.threadId, options) : codex.startThread(options);
   const { events } = await thread.runStreamed(
-    [
-      { type: 'text', text: CHAT_INSTRUCTIONS },
-      { type: 'text', text: input.text },
-      ...input.references.map((p) => ({ type: 'local_image' as const, path: p })),
-    ],
+    [...imageChatMessages(input), ...input.references.map((p) => ({ type: 'local_image' as const, path: p }))],
     { signal: AbortSignal.timeout(input.config.timeoutMs) },
   );
   const messages = new Map<string, string>();
@@ -83,3 +82,21 @@ export const streamImageChat: ChatTransport = async (input) => {
   }
   return { threadId: thread.id, files, text: [...messages.values()].join('\n\n') };
 };
+
+export function imageChatMessages(input: { text: string; skill?: ImageChatSkill | null; standalone?: boolean }) {
+  const instructions = input.standalone
+    ? '这是独立图片对话。用户提示词保持原样，按用户要求和当前选中的技能执行；未选择技能时不沿用上一轮技能。生图仅使用内置 image_gen 和 ChatGPT 套餐，不调用 API 或第三方服务，不访问浏览器，不启动子代理，不自动重试。需要的工具不可用时明确说明。保留生成原图在 generated_images 目录供工作台收取，不删除文件，不擅自裁剪。可只读技能引用的文件。文字回答直接给用户。'
+    : CHAT_INSTRUCTIONS;
+  return [
+    { type: 'text' as const, text: instructions },
+    ...(input.skill
+      ? [
+          {
+            type: 'text' as const,
+            text: `用户已选择并要求调用技能 $${input.skill.name}。技能入口：${input.skill.path}；相对引用按该文件目录解析。执行以下完整技能说明：\n${input.skill.instructions}`,
+          },
+        ]
+      : []),
+    { type: 'text' as const, text: input.text },
+  ];
+}

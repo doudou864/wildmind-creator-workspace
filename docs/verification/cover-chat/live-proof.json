@@ -1,0 +1,32 @@
+{
+  "fixtureOnly": true,
+  "skill": "doudou-editorial-cover",
+  "input": "这是工作台隔离验收，只生成一张4:3测试图片。调用已选技能，使用技能中已认可的参考图和配色。主标题准确写 FIXTURE，副标题写 隔离测试，主体为简单几何立方体。不关联任何真实作品。不需要追问，不生成其他版本。保留原图。",
+  "turn": {
+    "id": "677644ee-0afa-4bc6-af99-f2dfe87c1b61",
+    "contentId": "2fe28b54-d9be-4ea6-8327-0a3003842e20",
+    "input": "这是工作台隔离验收，只生成一张4:3测试图片。调用已选技能，使用技能中已认可的参考图和配色。主标题准确写 FIXTURE，副标题写 隔离测试，主体为简单几何立方体。不关联任何真实作品。不需要追问，不生成其他版本。保留原图。",
+    "skillId": "c1dbb49f911c6ae756e6bc8be6b80f224905dff76b55a1a860aaaba18c3d11e6",
+    "skillName": "doudou-editorial-cover",
+    "purposeId": "video_cover",
+    "referenceIds": [],
+    "output": "我会使用已选的 doudou-editorial-cover 技能和认可参考图，只生成一张 4:3 测试图，保留原图，不裁剪、不重试。\n\n\n已生成一张，尺寸为 1448×1086（4:3），标题与品牌文字正确。原图及提示词已保存在 `generated_images`，未裁剪、未重试。\n\n主体带有镂空和辅助结构，比要求的简单立方体稍复杂。",
+    "error": null,
+    "status": "success",
+    "assetIds": [
+      "8708f8aa-be8e-4166-8c18-d6af74c87c37"
+    ],
+    "createdAt": "2026-10-23T08:55:07.639Z",
+    "updatedAt": "2026-10-23T08:57:44.302Z"
+  },
+  "workCount": 0,
+  "images": [
+    {
+      "id": "8708f8aa-be8e-4166-8c18-d6af74c87c37",
+      "width": 1448,
+      "height": 1086,
+      "ratio": "4:3",
+      "contentId": null
+    }
+  ]
+}

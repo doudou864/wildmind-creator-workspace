@@ -1,18 +1,30 @@
 import { usingDatabase } from '@/lib/media-store';
-import { runImageChat } from '@/lib/image-chat-store';
+import { runImageChat, recoverStoppedStudioChats } from '@/lib/image-chat-store';
 import { CHAT_INSTRUCTIONS } from '@/ai/image-chat';
-import { imageChatTurns } from '@/db/schema';
+import { loadImageChatSkills } from '@/lib/image-chat-skills';
+import { z } from 'zod';
+import { imageChatTurns, imageStudioTurns } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 export const maxDuration = 600;
 export async function GET(request: Request) {
-  const contentId = new URL(request.url).searchParams.get('content') ?? '';
+  const query = new URL(request.url).searchParams;
+  const sessionId = query.get('session');
+  if (sessionId && !z.uuid().safeParse(sessionId).success) return Response.json({ error: '无效会话' }, { status: 400 });
+  const table = sessionId ? imageStudioTurns : imageChatTurns;
   return Response.json({
     instructions: CHAT_INSTRUCTIONS,
-    turns: await usingDatabase((db) =>
-      db.db.select().from(imageChatTurns).where(eq(imageChatTurns.contentId, contentId)).all(),
-    ),
+    skills: (await loadImageChatSkills()).map(({ instructions, ...skill }) => skill),
+    turns: await usingDatabase(async (db) => {
+      if (sessionId) await recoverStoppedStudioChats(db);
+      return db.db
+        .select()
+        .from(table)
+        .where(eq(table.contentId, sessionId ?? query.get('content') ?? ''))
+        .all();
+    }),
   });
 }
+
 export async function POST(request: Request) {
   const input = await request.json();
   let cancelled = false;

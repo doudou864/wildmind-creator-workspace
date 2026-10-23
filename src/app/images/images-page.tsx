@@ -1,5 +1,6 @@
 'use client';
 import Link from 'next/link';
+import { VideoCoverStudio } from '@/ui/video-cover-studio';
 import { ArchiveButton } from '@/ui/archive-controls';
 import { ImageReferencePicker } from '@/ui/image-reference-picker';
 import { ImageChatPanel } from '@/ui/image-chat-panel';
@@ -453,6 +454,24 @@ export default function ImagesPage({
       Object.entries(metadata).some(([k, v]) => k !== 'asset' && metadata.asset[k as keyof Asset] !== v),
     saveMetadata,
   );
+  if (purpose.id === 'video_cover')
+    return (
+      <VideoCoverStudio
+        config={config}
+        data={data}
+        today={today}
+        syncWindow={syncWindow}
+        refresh={refresh}
+        onPurpose={(id) =>
+          update({
+            purposeId: id,
+            ratio: config.purposes.find((p) => p.id === id)?.ratios[0] ?? '',
+            parentAssetId: null,
+            existingAssets: {},
+          })
+        }
+      />
+    );
   return (
     <main className="workspace images-workspace">
       <AutosaveStatus statuses={[autosave, metadataAutosave]} />

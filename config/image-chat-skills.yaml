@@ -1,0 +1,4 @@
+# 本机可选技能目录；~ 相对于当前用户主目录。
+roots:
+  - ~/.codex/skills
+  - ~/.agents/skills

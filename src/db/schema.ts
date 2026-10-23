@@ -476,6 +476,27 @@ export const imageChatTurns = sqliteTable('image_chat_turns', {
   createdAt: text('created_at').notNull(),
   updatedAt: updatedAt(),
 });
+// Independent image conversations share the storage adapter; contentId here is a session key, never a work.
+export const imageStudioChats = sqliteTable('image_studio_chats', {
+  contentId: text('session_id').primaryKey(),
+  threadId: text('thread_id'),
+  updatedAt: updatedAt(),
+});
+export const imageStudioTurns = sqliteTable('image_studio_turns', {
+  id: id(),
+  contentId: text('session_id').notNull(),
+  input: text('input').notNull(),
+  skillId: text('skill_id'),
+  skillName: text('skill_name'),
+  purposeId: text('purpose_id').notNull(),
+  referenceIds: json<string[]>('reference_ids').notNull(),
+  output: text('output').notNull(),
+  error: text('error'),
+  status: text('status', { enum: ['running', 'success', 'failed'] }).notNull(),
+  assetIds: json<string[]>('asset_ids').notNull(),
+  createdAt: text('created_at').notNull(),
+  updatedAt: updatedAt(),
+});
 export const imageCrops = sqliteTable('image_crops', {
   id: id(),
   contentId: text('content_id').references(() => contents.id),

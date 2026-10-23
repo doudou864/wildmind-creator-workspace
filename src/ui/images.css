@@ -633,3 +633,58 @@
   border-radius: 4px;
   font: inherit;
 }
+
+.cover-chat-grid {
+  display: grid;
+  grid-template-columns: minmax(380px, 0.8fr) minmax(0, 1.6fr);
+  gap: 12px;
+  align-items: start;
+  margin-top: 12px;
+}
+.cover-chat-grid .image-chat-panel textarea {
+  margin: 8px 0 12px;
+  min-height: 240px;
+}
+.cover-skill-picker {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.cover-skill-picker select {
+  width: 100%;
+  padding: 10px;
+  font: inherit;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.cover-skill-description {
+  max-height: 60px;
+  overflow: auto;
+  margin-bottom: 12px;
+}
+.cover-chat-history {
+  margin-top: 16px;
+}
+.cover-chat-empty {
+  min-height: 480px;
+  display: grid;
+  place-items: center;
+}
+.cover-chat-results figure {
+  margin: 0 0 18px;
+}
+.cover-chat-results figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 640px;
+  object-fit: contain;
+}
+.cover-chat-results figcaption {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 10px;
+  color: var(--ink-2);
+}

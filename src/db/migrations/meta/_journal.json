@@ -120,6 +120,13 @@
       "when": 1792505407938,
       "tag": "0016_swift_lake",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1792745476859,
+      "tag": "0017_flowery_stryfe",
+      "breakpoints": true
     }
   ]
 }

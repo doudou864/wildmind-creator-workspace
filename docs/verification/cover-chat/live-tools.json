@@ -1,0 +1,18 @@
+[
+  {
+    "name": "exec",
+    "input": "text(await tools.exec_command({cmd:\"cat /Users/a1234/.codex/skills/doudou-editorial-cover/SKILL.md\",\"max_output_tokens\":6500}));\nconst r=await tools.view_image({path:\"/Users/a1234/.codex/skills/doudou-editorial-cover/assets/approved-reference.png\"});image(r.image_url);\n"
+  },
+  {
+    "name": "exec",
+    "input": "const prompt=\"用户原始提示词（保持原样）：\\n这是工作台隔离验收，只生成一张4:3测试图片。调用已选技能，使用技能中已认可的参考图和配色。主标题准确写 FIXTURE，副标题写 隔离测试，主体为简单几何立方体。不关联任何真实作品。不需要追问，不生成其他版本。保留原图。\\n\\n执行设计要求：仅生成一张横向4:3图片，优先1536×1152。传入图片是风格参考，不是布局模板。禁止复用参考旧标题、机器和主题物体。主标题精确为“FIXTURE”，最大最深的自然厚重字形；副标题精确为“隔离测试”，石板蓝灰，清楚易读；右上角安全区内品牌精确为“摆烂的逗逗”，深石油蓝。不添加其他文字。中央偏下为一个简单精致的等轴测几何立方体，辅以一个很小的平面投影图和少量尺寸构造线。标题在上部横排，副标题靠近标题，排版自由服务横幅内容，不照搬参考。米白#F4F4EB轻纸纹背景；深石油蓝#0F3D53为主标题及品牌；石板蓝灰#527588为副标题和立方体外轮廓；浅灰蓝#A0B3BC为稀疏细网格及辅助虚线；铜赭#B37633仅突出立方体的一条边，表达测试对象边界；浅赭#F9DBA6作副标题背后的轻薄平直印刷底纹。多层次配色，不是双色印刷。外轮廓较强、内部结构中等、辅助线更浅更细。文字自然不挤压，有充分图文间距。左右安全边距约6%，上框约6%，品牌距顶部约3%，底部留白约9%，整体稍靠上。禁止密集暗网格、荧光色和营销承诺。保留生成原图，不裁剪。请将原图保存至当前工作目录下generated_images目录。\";\nstore(\"fixture_prompt\",prompt);\ntext(await tools.exec_command({cmd:\"mkdir -p generated_images\"}));\ntext(await tools.apply_patch(\"*** Begin Patch\\n*** Add File: generated_images/fixture-prompt.txt\\n+\"+prompt.replace(/\\n/g,\"\\n+\")+\"\\n*** End Patch\"));\n"
+  },
+  {
+    "name": "exec",
+    "input": "// @exec: {\"yield_time_ms\": 120000, \"max_output_tokens\": 2000}\nconst r=await tools.image_gen__imagegen({prompt:load(\"fixture_prompt\"),referenced_image_paths:[\"/Users/a1234/.codex/skills/doudou-editorial-cover/assets/approved-reference.png\"]});store(\"fixture_result\",r);generatedImage(r);\n"
+  },
+  {
+    "name": "exec",
+    "input": "text(await tools.exec_command({cmd:\"cp -n /Users/a1234/.codex/generated_images/01a167f8-9d6e-7102-8473-49b6415a525a/exec-8155a7e2-d2a0-451d-95eb-1d90638f6447.png generated_images/fixture.png\\nsips -g pixelWidth -g pixelHeight generated_images/fixture.png\",\"max_output_tokens\":500}));\n"
+  }
+]
