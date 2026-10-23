@@ -89,3 +89,46 @@ test('登录墙跳过，用户接管则停止，不换窗口绕过', async () =>
   ).rejects.toThrow('控制权');
   expect(mocks.navigate).toHaveBeenCalledOnce();
 });
+
+test('追加研究页复用同一工作区，并保留观察链接供追原文；网页跳转不冒充配置源', async () => {
+  mocks.observe
+    .mockResolvedValueOnce({
+      url: 'https://example.com',
+      text: 'fixture来源',
+      bottom: true,
+      links: [{ title: '正文', url: 'https://news.example.org/article' }],
+    })
+    .mockResolvedValueOnce({ url: 'https://news.example.org/article', text: 'fixture正文', bottom: true });
+  const nextBatch = vi
+    .fn()
+    .mockResolvedValueOnce([{ id: 'detail', location: 'https://example.com/redirect', allowRedirect: true }])
+    .mockResolvedValue([]);
+  const pages = await readTopicSources([{ id: 'feed', location: 'https://example.com' }], 1, {
+    nextBatch,
+    maxLinks: 1,
+  });
+  expect(mocks.ego).toHaveBeenCalledOnce();
+  expect(pages[0].links).toEqual([{ title: '正文', url: 'https://news.example.org/article' }]);
+  expect(pages[1]).toMatchObject({ url: 'https://news.example.org/article', error: null });
+  expect(mocks.navigate).toHaveBeenCalledTimes(2);
+});
+
+test('搜索跳转也不能重新采用用户已停用的来源', async () => {
+  mocks.observe.mockResolvedValueOnce({
+    url: 'https://disabled.example.com/article',
+    text: 'fixture原文',
+    bottom: true,
+  });
+  const pages = await readTopicSources(
+    [
+      {
+        id: 'fixture',
+        location: 'https://example.com/redirect',
+        allowRedirect: true,
+        blockedHosts: ['disabled.example.com'],
+      },
+    ],
+    1,
+  );
+  expect(pages[0]).toMatchObject({ error: '该来源已停用，不采用本页', text: '' });
+});

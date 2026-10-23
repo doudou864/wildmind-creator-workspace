@@ -11,14 +11,22 @@ export type ExternalTopicPage = {
   screenshots: string[];
   error: string | null;
   warning?: string;
+  links?: { title: string; url: string }[];
 };
-// 一轮只用一个浏览器任务，逐个读取外部渠道；只看文档指定页面，不猜选择器或调用接口。
+export type TopicReadTarget = { id: string; location: string; allowRedirect?: boolean; blockedHosts?: string[] };
+// 一轮只用一个浏览器任务；追加页面来自配置搜索入口或已观察链接，不猜选择器或调用接口。
 export async function readTopicSources(
-  channels: { id: string; location: string }[],
+  channels: TopicReadTarget[],
   maxScreens: number,
-  hooks?: { onStart?: (id: string) => void; onPage?: (page: ExternalTopicPage) => Promise<void> },
+  hooks?: {
+    onStart?: (id: string) => void;
+    onPage?: (page: ExternalTopicPage) => Promise<void>;
+    nextBatch?: (pages: ExternalTopicPage[]) => Promise<TopicReadTarget[]>;
+    maxLinks?: number;
+    maxCharacters?: number;
+  },
 ): Promise<ExternalTopicPage[]> {
-  if (!channels.length) return [];
+  if (!channels.length && !hooks?.nextBatch) return [];
   const release = await acquireJobLock(path.resolve('data/jobs/topic-sources.pid'));
   if (!release) throw Error('选题来源正在读取，请等待本轮完成');
   try {
@@ -28,12 +36,20 @@ export async function readTopicSources(
     const session = new CollectionSession(spaceId),
       policy = await loadBrowserPolicy(),
       results: ExternalTopicPage[] = [];
-    for (const [index, channel] of channels.entries()) {
+    const queue = [...channels];
+    for (let index = 0; ; index++) {
+      if (index >= queue.length) {
+        const next = (await hooks?.nextBatch?.(results)) ?? [];
+        if (!next.length) break;
+        queue.push(...next);
+      }
+      const channel = queue[index];
       const result: ExternalTopicPage = {
         id: channel.id,
         url: channel.location,
         text: '',
         screenshots: [],
+        links: [],
         error: null,
       };
       hooks?.onStart?.(channel.id);
@@ -45,21 +61,38 @@ export async function readTopicSources(
         const parts: string[] = [];
         let complete = false;
         for (let i = 0; i < maxScreens; i++) {
-          const page = await session.run<{ url: string; text: string; bottom: boolean }>(
-            `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(()=>({url:location.href,text:document.body.innerText,bottom:scrollY+innerHeight>=document.documentElement.scrollHeight-4}))));`,
+          const page = await session.run<{
+            url: string;
+            text: string;
+            bottom: boolean;
+            links?: { title: string; url: string }[];
+          }>(
+            `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(()=>({url:location.href,text:document.body.innerText,bottom:scrollY+innerHeight>=document.documentElement.scrollHeight-4,links:Array.from(document.querySelectorAll('a[href]')).filter(a=>a.getClientRects().length&&a.innerText.trim()).map(a=>({title:a.innerText.trim(),url:a.href}))}))));`,
           );
           if (/\/(?:login|signin|i\/flow\/login)(?:[/?#]|$)/i.test(new URL(page.url).pathname))
             throw Error('需要登录后才能访问');
-          if (new URL(page.url).origin !== target.origin) throw Error('外部来源跳转到其他站点，请核对渠道地址');
+          if (!['http:', 'https:'].includes(new URL(page.url).protocol)) throw Error('来源跳转到非网页地址');
+          if (channel.blockedHosts?.includes(new URL(page.url).hostname)) throw Error('该来源已停用，不采用本页');
+          if (!channel.allowRedirect && new URL(page.url).origin !== target.origin)
+            throw Error('外部来源跳转到其他站点，请核对渠道地址');
           const risk = policy.riskMarkers.find((m) => page.text.includes(m));
           if (risk) throw Error(`外部选题来源需要处理：${risk}`);
           if (!page.text.trim()) throw Error('外部来源页面没有可读取文字');
           parts.push(page.text);
           result.url = page.url;
           result.text = [...new Set(parts)].join('\n');
+          for (const link of page.links ?? []) {
+            if (/^https?:\/\//i.test(link.url) && !result.links!.some((l) => l.url === link.url))
+              result.links!.push(link);
+          }
+          if (hooks?.maxLinks) result.links = result.links!.slice(0, hooks.maxLinks);
           result.screenshots.push(
             await session.capture(path.resolve('data/topics', String(spaceId), `${index}-${i}.png`)),
           );
+          if (hooks?.maxCharacters && result.text.length > hooks.maxCharacters) {
+            result.text = result.text.slice(0, hooks.maxCharacters);
+            break;
+          }
           if (page.bottom) {
             result.url = page.url;
             result.text = [...new Set(parts)].join('\n');

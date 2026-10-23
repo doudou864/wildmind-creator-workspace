@@ -66,7 +66,7 @@ test('真实后台入口在请求连接关闭后继续运行，隔离无材料�
   db.sqlite.close();
   try {
     await mkdir(path.join(folder, 'config'));
-    for (const name of ['parameters.yaml', 'platforms.yaml', 'metrics.yaml'])
+    for (const name of ['parameters.yaml', 'platforms.yaml', 'metrics.yaml', 'topic-workflow.yaml'])
       await copyFile(path.resolve('config', name), path.join(folder, 'config', name));
     await writeFile(path.join(folder, 'config/选题输入渠道.md'), '# fixture\n```yaml\nchannels: []\n```');
     const child = spawn(

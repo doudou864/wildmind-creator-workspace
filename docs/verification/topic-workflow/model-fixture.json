@@ -1,0 +1,198 @@
+{
+  "fixture": true,
+  "warning": "仅验证流程，以下为虚构材料生成，不可发布",
+  "result": {
+    "taskId": "8872e38a-feaf-438f-8573-1362fbb70524",
+    "count": 4
+  },
+  "calls": [
+    {
+      "stage": "[topic:draft]",
+      "result": {
+        "items": [
+          {
+            "title": "虚构案例：口播说错一句，改完字幕就能只重做这一句声音",
+            "entity": "虚构口播修补工具“补句”",
+            "angle": "修改局部口误，保留其余原录音",
+            "viewerBenefit": "修正说错的句子，减少重新录音的折腾；需本人声音授权，且不支持所有方言。",
+            "curiosity": "重新合成的一句接回原录音，前后音轨有什么变化？",
+            "payoff": "展示案例中的修改前后音轨，说明局部重合成方式及授权、方言限制。",
+            "source": "1",
+            "evidenceQuote": "虚构工具“补句”允许创作者修改口播字幕后，只重新合成说错的那一句。测试者保留了其余原录音，展示了修改前后音轨；不支持所有方言，需要本人声音授权。",
+            "exploration": true,
+            "explorationReason": "历史为空，无已知重复；探索局部口播修补的省事价值。热度未验证。",
+            "similar": [],
+            "recommendFire": false
+          },
+          {
+            "title": "虚构案例：把老房子的照片做成桌面小屋，送给父母是什么样？",
+            "entity": "虚构店铺“掌心小屋”的老房子微缩摆件",
+            "angle": "把老房子照片变成送父母的实体礼物",
+            "viewerBenefit": "获得一种将老房子照片做成纪念礼物的具体思路。",
+            "curiosity": "照片里的老房子缩成桌面摆件，实物会是什么样？",
+            "payoff": "围绕案例中的买家晒图与“送父母”评价展示礼物形态；标价只能说明挂牌价格，不能推导利润或销量。",
+            "source": "2",
+            "evidenceQuote": "虚构店铺“掌心小屋”将顾客的老房子照片用AI辅助设计成桌面微缩摆件，页面有三条独立买家晒图和“送父母”的评价。标价199元，没有成本、利润及月销量信息。",
+            "exploration": true,
+            "explorationReason": "历史为空，无已知重复；探索AI辅助制作家庭纪念礼物的实物吸引力。热度未验证。",
+            "similar": [],
+            "recommendFire": false
+          },
+          {
+            "title": "虚构案例：让AI看照片猜衣长，卖家因尺寸不符被退货",
+            "entity": "虚构服装卖家的AI估算衣长案例",
+            "angle": "商品尺寸靠猜造成退货，实测后再用AI排版",
+            "viewerBenefit": "上架服装时先实测尺寸，再让AI排版，避免把照片估算当成商品尺寸。",
+            "curiosity": "",
+            "payoff": "交代未量尺、尺寸不符、退货及改用实测尺寸的过程；只讨论这个自述案例，不推断发生率。",
+            "source": "3",
+            "evidenceQuote": "虚构服装卖家用AI估算商品照片里的衣长，没有实际量尺。实物衣长与页面不符导致退货，之后改用实测尺寸再让AI排版。单一自述案例，没有统计发生率。",
+            "exploration": true,
+            "explorationReason": "历史为空，无已知重复；探索AI使用失误带来的具体损失及纠正动作。热度未验证。",
+            "similar": [],
+            "recommendFire": false
+          },
+          {
+            "title": "虚构招聘案例：用手机录双手拼积木，录像合格才按有效时长结算",
+            "entity": "虚构积木数据公司的居家装配录像员",
+            "angle": "看清录像工作的具体动作与付款门槛",
+            "viewerBenefit": "了解培训、录像验收与有效时长结算条件，识别未通过验收就没有报酬的限制。",
+            "curiosity": "双手组装积木的手机录像，也能成为按有效时长结算的工作内容？",
+            "payoff": "解释虚构招聘中的工作内容和付款条件；没有收入金额，不能估算收益，也不能作为真实招聘机会。",
+            "source": "0",
+            "evidenceQuote": "【虚构测试资料，不是真实机会】积木数据公司招聘居家装配录像员，用手机录制双手组装积木。完成培训后，合格录像按有效时长结算；未通过验收的视频不付费。没有提供实际收入金额。",
+            "exploration": false,
+            "explorationReason": "",
+            "similar": [],
+            "recommendFire": false
+          }
+        ]
+      }
+    },
+    {
+      "stage": "[topic:edit]",
+      "result": {
+        "items": [
+          {
+            "draftId": "0",
+            "title": "虚构案例：口播说错一句，“补句”能只重做这一句声音，保留其余原录音",
+            "entityKey": "补句",
+            "angleKey": "局部修正口播免重录",
+            "interest": true,
+            "supported": true,
+            "distinct": true,
+            "reason": "修正口误、少重录的利益具体，音轨前后对比能兑现观看理由。材料支持局部合成；正文须交代本人声音授权及方言限制。"
+          },
+          {
+            "draftId": "1",
+            "title": "虚构案例：把老房子的照片做成桌面小屋，送给父母是什么样？",
+            "entityKey": "掌心小屋",
+            "angleKey": "老房子微缩纪念礼物",
+            "interest": true,
+            "supported": true,
+            "distinct": true,
+            "reason": "老房子变成实体礼物有明确情感用途，也让人想看实物。材料中的摆件、买家晒图及送父母评价支持标题。"
+          },
+          {
+            "draftId": "2",
+            "title": "虚构案例：卖家没量衣长，让AI看照片估尺寸，结果被退货",
+            "entityKey": "服装卖家AI估算衣长案例",
+            "angleKey": "商品尺寸估算导致退货",
+            "interest": true,
+            "supported": true,
+            "distinct": true,
+            "reason": "具体操作失误带来退货损失，对商品上架有避坑价值。材料支持这条因果链，但仅是单一虚构自述案例，不能推断普遍发生率。"
+          },
+          {
+            "draftId": "3",
+            "title": "虚构招聘案例：用手机录双手拼积木，培训后录像合格才按有效时长结算",
+            "entityKey": "积木数据公司居家装配录像员",
+            "angleKey": "拼积木录像工作及结算门槛",
+            "interest": true,
+            "supported": true,
+            "distinct": true,
+            "reason": "拼积木录像成为工作内容具有好奇点，付款门槛也具体。标题保留培训与验收条件；材料没有实际收入，不能包装成真实求职机会。"
+          }
+        ]
+      }
+    }
+  ],
+  "topics": [
+    {
+      "id": "29e7c04c-3f9d-42bf-8b09-cac75d837dfd",
+      "fixture": false,
+      "title": "虚构案例：口播说错一句，“补句”能只重做这一句声音，保留其余原录音",
+      "direction": "实体：虚构口播修补工具“补句”。观看角度：修改局部口误，保留其余原录音。修正说错的句子，减少重新录音的折腾；需本人声音授权，且不支持所有方言。；内容兑现：展示案例中的修改前后音轨，说明局部重合成方式及授权、方言限制。",
+      "channelId": "fixture_source",
+      "signal": "【虚构测试资料】虚构工具“补句”允许创作者修改口播字幕后，只重新合成说错的那一句。测试者保留了其余原录音，展示了修改前后音轨；不支持所有方言，需要本人声音授权。",
+      "sourceContext": "采集于2026-10-23T13:16:08.642Z；未提供占比；来源见链接；探索依据：历史为空，无已知重复；探索局部口播修补的省事价值。热度未验证。",
+      "sourceUrl": "https://example.com/fixture/1",
+      "exploration": true,
+      "evidence": null,
+      "status": "candidate",
+      "frozenFire": null,
+      "frozenEvidence": null,
+      "selectedAt": null,
+      "automatic": false,
+      "createdAt": "2026-10-23T13:16:08.721Z",
+      "updatedAt": "2026-10-23T13:16:08.721Z"
+    },
+    {
+      "id": "dbce9a42-b294-4212-a855-e1afb0d74e80",
+      "fixture": false,
+      "title": "虚构案例：把老房子的照片做成桌面小屋，送给父母是什么样？",
+      "direction": "实体：虚构店铺“掌心小屋”的老房子微缩摆件。观看角度：把老房子照片变成送父母的实体礼物。获得一种将老房子照片做成纪念礼物的具体思路。；内容兑现：围绕案例中的买家晒图与“送父母”评价展示礼物形态；标价只能说明挂牌价格，不能推导利润或销量。",
+      "channelId": "fixture_source",
+      "signal": "【虚构测试资料】虚构店铺“掌心小屋”将顾客的老房子照片用AI辅助设计成桌面微缩摆件，页面有三条独立买家晒图和“送父母”的评价。标价199元，没有成本、利润及月销量信息。",
+      "sourceContext": "采集于2026-10-23T13:16:08.642Z；未提供占比；来源见链接；探索依据：历史为空，无已知重复；探索AI辅助制作家庭纪念礼物的实物吸引力。热度未验证。",
+      "sourceUrl": "https://example.com/fixture/2",
+      "exploration": true,
+      "evidence": null,
+      "status": "candidate",
+      "frozenFire": null,
+      "frozenEvidence": null,
+      "selectedAt": null,
+      "automatic": false,
+      "createdAt": "2026-10-23T13:16:08.721Z",
+      "updatedAt": "2026-10-23T13:16:08.721Z"
+    },
+    {
+      "id": "7488bbb0-5f5a-4ed6-b175-e3e05e3a1468",
+      "fixture": false,
+      "title": "虚构案例：卖家没量衣长，让AI看照片估尺寸，结果被退货",
+      "direction": "实体：虚构服装卖家的AI估算衣长案例。观看角度：商品尺寸靠猜造成退货，实测后再用AI排版。上架服装时先实测尺寸，再让AI排版，避免把照片估算当成商品尺寸。；内容兑现：交代未量尺、尺寸不符、退货及改用实测尺寸的过程；只讨论这个自述案例，不推断发生率。",
+      "channelId": "fixture_source",
+      "signal": "【虚构测试资料】虚构服装卖家用AI估算商品照片里的衣长，没有实际量尺。实物衣长与页面不符导致退货，之后改用实测尺寸再让AI排版。单一自述案例，没有统计发生率。",
+      "sourceContext": "采集于2026-10-23T13:16:08.642Z；未提供占比；来源见链接；探索依据：历史为空，无已知重复；探索AI使用失误带来的具体损失及纠正动作。热度未验证。",
+      "sourceUrl": "https://example.com/fixture/3",
+      "exploration": true,
+      "evidence": null,
+      "status": "candidate",
+      "frozenFire": null,
+      "frozenEvidence": null,
+      "selectedAt": null,
+      "automatic": false,
+      "createdAt": "2026-10-23T13:16:08.721Z",
+      "updatedAt": "2026-10-23T13:16:08.721Z"
+    },
+    {
+      "id": "711892cd-e248-4190-b1e6-310878338569",
+      "fixture": false,
+      "title": "虚构招聘案例：用手机录双手拼积木，培训后录像合格才按有效时长结算",
+      "direction": "实体：虚构积木数据公司的居家装配录像员。观看角度：看清录像工作的具体动作与付款门槛。了解培训、录像验收与有效时长结算条件，识别未通过验收就没有报酬的限制。；内容兑现：解释虚构招聘中的工作内容和付款条件；没有收入金额，不能估算收益，也不能作为真实招聘机会。",
+      "channelId": "fixture_source",
+      "signal": "【虚构测试资料，不是真实机会】积木数据公司招聘居家装配录像员，用手机录制双手组装积木。完成培训后，合格录像按有效时长结算；未通过验收的视频不付费。没有提供实际收入金额。",
+      "sourceContext": "采集于2026-10-23T13:16:08.642Z；未提供占比；来源见链接",
+      "sourceUrl": "https://example.com/fixture/0",
+      "exploration": false,
+      "evidence": null,
+      "status": "candidate",
+      "frozenFire": null,
+      "frozenEvidence": null,
+      "selectedAt": null,
+      "automatic": false,
+      "createdAt": "2026-10-23T13:16:08.721Z",
+      "updatedAt": "2026-10-23T13:16:08.721Z"
+    }
+  ]
+}

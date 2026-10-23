@@ -16,8 +16,10 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
   const stages = {
     queued: '正在启动采集',
     collecting: '正在采集',
+    researching: '正在寻找新来源',
     extracting: '正在提取线索',
-    generating: '正在生成候选',
+    generating: '正在打磨观看角度',
+    reviewing: '正在复核兴趣与证据',
     saving: '正在保存候选',
     finished: '采集已完成',
   };

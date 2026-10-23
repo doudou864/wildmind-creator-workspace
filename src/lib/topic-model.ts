@@ -39,7 +39,9 @@ export const topicSourceReportSchema = z.object({
 });
 export const topicProgressSchema = z.object({
   pid: z.number().default(0),
-  stage: z.enum(['queued', 'collecting', 'extracting', 'generating', 'saving', 'finished']).default('queued'),
+  stage: z
+    .enum(['queued', 'collecting', 'researching', 'extracting', 'generating', 'reviewing', 'saving', 'finished'])
+    .default('queued'),
   currentSource: z.string().default(''),
   sources: z.array(topicSourceReportSchema).default([]),
   sourceCount: z.number().default(0),

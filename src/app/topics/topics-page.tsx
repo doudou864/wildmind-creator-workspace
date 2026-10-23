@@ -15,7 +15,7 @@ import {
   type TopicData,
 } from '@/lib/topic-model';
 import { inboxTime } from '@/lib/inbox-model';
-import { PageHeader, Button, Card, Empty, Segmented, Tag } from '@/ui/components';
+import { PageHeader, Button, Card, Empty, Segmented } from '@/ui/components';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { request, useResource } from '@/ui/use-resource';
 type StatusFilter = 'candidate' | 'selected' | 'skipped' | 'published' | 'all';
@@ -70,7 +70,7 @@ export default function TopicsPage({
   const visible = filterTopics(topics, status, kind, channelId, query, fireEnabled);
   const channelScope = filterTopics(topics, status, kind, 'all', query, fireEnabled);
   const kindScope = filterTopics(topics, status, 'all', channelId, query, fireEnabled);
-  const focused = visible.find((t) => t.id === focusId) ?? visible[0];
+  const focused = visible.find((t) => t.id === focusId);
   const evidence = focused ? topicEvidence(focused, fireEnabled) : null;
   const exhausted = status === 'candidate' && !topics.some((t) => t.status === 'candidate');
   const selectedTopic = topics.find((t) => t.status === 'selected');
@@ -143,7 +143,7 @@ export default function TopicsPage({
         title="选题中心"
         summary={
           candidateCount
-            ? '挑一个方向，带去做图'
+            ? '挑出你愿意点开看的题'
             : selectedTopic
               ? '生成下一批候选，或继续已选方向'
               : '生成下一批候选，挑选新的方向'
@@ -173,7 +173,7 @@ export default function TopicsPage({
                 继续已选方向：{selectedTopic.title} →
               </Link>
             )}
-            {!exhausted && (
+            {topics.length > 0 && (
               <>
                 <Segmented<StatusFilter>
                   label="选题状态"
@@ -234,7 +234,11 @@ export default function TopicsPage({
                     >
                       <div className="topic-row-content">
                         <div className="topic-row-title">
-                          <button className="topic-title list-row" onClick={() => setFocusId(topic.id)}>
+                          <button
+                            className="topic-title list-row"
+                            aria-expanded={focused?.id === topic.id}
+                            onClick={() => setFocusId(focused?.id === topic.id ? '' : topic.id)}
+                          >
                             {topic.title} →
                           </button>
                           <div className="topic-row-actions">
@@ -246,14 +250,14 @@ export default function TopicsPage({
                                   disabledReason="当前无法保存，请稍后再试。"
                                   onClick={() => void updateTopic(topic, 'selected')}
                                 >
-                                  选中
+                                  想看
                                 </Button>
                                 <Button
                                   disabled={!canChange}
                                   disabledReason="当前无法保存，请稍后再试。"
                                   onClick={() => void updateTopic(topic, 'skipped')}
                                 >
-                                  跳过
+                                  无感
                                 </Button>
                               </>
                             ) : (
@@ -272,14 +276,9 @@ export default function TopicsPage({
                             )}
                           </div>
                         </div>
-                        <p className="topic-direction">{humanText(topic.direction)}</p>
-                        <div className="topic-row-footer">
-                          <span>{sourceName(topic.channelId)} · 热度未验证</span>
-                          {topic.exploration && <Tag>探索方向</Tag>}
-                          {topic.status === 'selected' && (
-                            <Link href={`/images?topic=${encodeURIComponent(topic.id)}`}>去做图 →</Link>
-                          )}
-                        </div>
+                        {topic.status === 'selected' && (
+                          <Link href={`/images?topic=${encodeURIComponent(topic.id)}`}>去做图 →</Link>
+                        )}
                       </div>
                     </article>
                   ))}
@@ -296,6 +295,10 @@ export default function TopicsPage({
                 {focused ? (
                   <>
                     <h3>{focused.title}</h3>
+                    <p>
+                      {sourceName(focused.channelId)}
+                      {focused.exploration ? ' · 探索方向' : ''}
+                    </p>
                     <p>{humanText(focused.direction)}</p>
                     <h4>原始线索</h4>
                     <blockquote>{humanText(focused.signal)}</blockquote>
