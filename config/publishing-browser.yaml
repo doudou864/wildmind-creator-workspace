@@ -91,6 +91,29 @@
         "vlog",
         "生活兴趣",
         "生活经验"
+      ],
+      "submitLabel": "立即投稿"
+    },
+    {
+      "id": "channels",
+      "name": "视频号",
+      "home": "https://channels.weixin.qq.com/platform",
+      "accountId": "sphkMSZNINXaCzb",
+      "accountNames": [
+        "摆烂的逗逗"
+      ],
+      "uploadUrl": "https://channels.weixin.qq.com/platform/post/create",
+      "videoInput": "input[accept=\"video/mp4,video/x-m4v,video/*\"]",
+      "titleInput": "input[placeholder=\"填写短标题有机会获得更多流量\"]",
+      "descriptionInput": "[contenteditable][data-placeholder=\"添加描述\"]",
+      "titleMax": 16,
+      "descriptionMax": null,
+      "uploadedText": "text \"删除\"",
+      "uploadingText": "取消上传",
+      "submitLabel": "发表",
+      "coverRatios": [
+        "3:4",
+        "4:3"
       ]
     },
     {

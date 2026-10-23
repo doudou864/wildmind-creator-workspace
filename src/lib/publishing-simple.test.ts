@@ -148,3 +148,22 @@ test('话题可含半角或全角井号，空白不会破坏自动保存，去�
   expect(parsePublishTags(' #AI  ＃效率工具\n#AI #创作 ')).toEqual(['AI', '效率工具', '创作']);
   expect(parsePublishTags('#  ')).toEqual([]);
 });
+
+test('已实测视频平台不因未公布的正文上限阻止审核发布，未核验平台仍阻止', async () => {
+  const f = await setup();
+  try {
+    const { publishSettingIssues, makePublishSetting } = await import('./publishing-model');
+    const platforms = (await loadConfig()).platforms;
+    const setting = makePublishSetting('channels', '测试视频', f.config);
+    const data = publishingData(f.db);
+    const issues = publishSettingIssues(draft(), setting, data, f.config, platforms, Date.now());
+    expect(issues).not.toContain('视频号发布模板待核验');
+    expect(issues).toContain('视频号账号尚未就绪');
+    const unverified = { ...f.config, templates: f.config.templates.map((t) => ({ ...t, videoVerified: false })) };
+    expect(publishSettingIssues(draft(), setting, data, unverified, platforms, Date.now())).toContain(
+      '视频号发布模板待核验',
+    );
+  } finally {
+    await f.close();
+  }
+});

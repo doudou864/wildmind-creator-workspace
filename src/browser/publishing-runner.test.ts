@@ -30,3 +30,43 @@ test('B站根据实际多行快照找到标签框，以回车创建独立标签'
   expect(fill).toHaveBeenCalledWith('@51', '摆烂的逗逗');
   expect(press).toHaveBeenCalledWith('@51', 'Enter');
 });
+
+test('视频号出现封面和删除入口时，上传进度未结束仍不能进入审核', async () => {
+  const { publishingUploadComplete } = await import('./publishing-runner');
+  const cfg = (await publishingBrowserConfig()).platforms.find((p) => p.id === 'channels')!;
+  expect(cfg.coverRatios).toEqual(['3:4', '4:3']);
+  expect(publishingUploadComplete('text "删除"\ntext "取消上传"\ntext "71%"', cfg)).toBe(false);
+  expect(publishingUploadComplete('text "删除"\ntext "发表"', cfg)).toBe(true);
+  expect(publishingUploadComplete('text "上传失败"\ntext "删除"', cfg)).toBe(false);
+});
+
+test('视频号通过原生话题入口生成标签，只有实际话题对象才算完成', async () => {
+  const cfg = (await publishingBrowserConfig()).platforms.find((p) => p.id === 'channels')!;
+  const calls: string[] = [];
+  let verifiedTags: string[] = ['#摆烂的逗逗'];
+  vi.mocked(runEgo).mockImplementation(async (script) => {
+    await new Function('taskSpace', 'console', `return (async()=>{${script}})()`)(
+      async () => ({
+        page: () => ({
+          fill: async () => {},
+          evaluate: async (_fn: unknown, args?: { selector: string; text: string }) => {
+            if (args) {
+              calls.push(args.text);
+              return { x: 1, y: 2 };
+            }
+            return verifiedTags;
+          },
+          mouse: { click: async () => {} },
+          keyboard: { type: async (value: string) => calls.push(value), press: async (key: string) => calls.push(key) },
+        }),
+      }),
+      { log: () => {} },
+    );
+    return true;
+  });
+  const copy = { title: '隔离测试', description: '隔离测试描述', tags: ['摆烂的逗逗'] };
+  await fillPublishingCopy({ spaceId: 999, label: 'p2' }, cfg, copy);
+  expect(calls).toEqual(['#话题', '摆烂的逗逗', 'Space']);
+  verifiedTags = [];
+  await expect(fillPublishingCopy({ spaceId: 999, label: 'p2' }, cfg, copy)).rejects.toThrow('原生话题未生成');
+});

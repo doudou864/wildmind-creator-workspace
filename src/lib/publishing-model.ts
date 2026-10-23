@@ -367,7 +367,7 @@ export function publishSettingIssues(
   if (
     !(draft.kind === 'video' ? (template.videoVerified ?? template.verified) : template.verified) ||
     template.titleMax === null ||
-    (draft.kind !== 'layout' && template.descriptionMax === null)
+    (draft.kind !== 'layout' && template.descriptionMax === null && !(draft.kind === 'video' && template.videoVerified))
   )
     issues.push(`${name}发布模板待核验`);
   if (!data.accounts.some((a) => a.platformId === setting.platformId && a.ready)) issues.push(`${name}账号尚未就绪`);

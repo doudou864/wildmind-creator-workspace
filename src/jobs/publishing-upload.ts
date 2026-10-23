@@ -172,5 +172,6 @@ export async function adaptUploadCopy(run: UploadRun, platformId: string) {
     p.copy.description = [p.copy.description, p.copy.tags.map((t) => '#' + t.replace(/^#+/, '')).join(' ')]
       .filter(Boolean)
       .join('\n');
-  if (Array.from(p.copy.description).length > cfg.descriptionMax) throw Error('正文超出平台限制，请修改后上传');
+  if (cfg.descriptionMax !== null && Array.from(p.copy.description).length > cfg.descriptionMax)
+    throw Error('正文超出平台限制，请修改后上传');
 }

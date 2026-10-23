@@ -24,7 +24,7 @@ vi.mock('../browser/publishing-runner', async (importOriginal) => {
   };
 });
 afterEach(() => vi.restoreAllMocks());
-test('恢复遗留 submitting 只核对结果，绝不再次点击发布', async () => {
+test.each(['bilibili', 'channels'])('%s 恢复遗留 submitting 只核对结果，绝不再次点击发布', async (platformId) => {
   const dir = await mkdtemp(path.join(tmpdir(), 'publishing-submit-fixture-'));
   const db = await initializeDatabase(path.join(dir, 'workspace.db'));
   try {
@@ -44,7 +44,7 @@ test('恢复遗留 submitting 只核对结果，绝不再次点击发布', async
       covers: {},
       platforms: [
         {
-          id: 'bilibili',
+          id: platformId,
           page: 'p2',
           stage: 'ready',
           attempted: false,
@@ -60,7 +60,7 @@ test('恢复遗留 submitting 只核对结果，绝不再次点击发布', async
       .values({
         id: 'fixture-receipt',
         batchId: batch.id,
-        platformId: 'bilibili',
+        platformId,
         status: 'submitting',
         title: '隔离测试',
         safeToRetry: false,

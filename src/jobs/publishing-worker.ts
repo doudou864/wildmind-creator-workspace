@@ -27,6 +27,7 @@ import {
   fillPublishingSettings,
   screenshotPublishing,
   publishingPageCall,
+  publishingUploadComplete,
 } from '../browser/publishing-runner.ts';
 
 export async function runPublishingUpload(db: WorkspaceDatabase, id: string, token: string) {
@@ -120,7 +121,7 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
           while (Date.now() < until) {
             active();
             const view = await publishingObservation(page);
-            if (view.snapshot.includes(cfg.uploadedText) && view.snapshot.includes('text')) {
+            if (publishingUploadComplete(view.snapshot, cfg)) {
               complete = true;
               break;
             }
@@ -172,7 +173,9 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
             );
           await publishingPageCall(
             page,
-            `await p.hover(${JSON.stringify(cfg.titleInput)});await p.mouse.wheel(0,-2000);console.log('WORKSPACE_RESULT:true');`,
+            cfg.id === 'channels'
+              ? `await p.evaluate(()=>Array.from(document.querySelectorAll('iframe')).forEach(f=>f.contentDocument?.querySelector('.input-editor')?.scrollIntoView({block:'center',behavior:'instant'})));console.log('WORKSPACE_RESULT:true');`
+              : `await p.hover(${JSON.stringify(cfg.titleInput)});await p.mouse.wheel(0,-2000);console.log('WORKSPACE_RESULT:true');`,
           );
           const view = await publishingObservation(page),
             file = path.resolve('data/jobs/publishing', id, `${item.id}-review.png`);
@@ -190,7 +193,7 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
               watchEvidence = await publishingObservation(accountPage);
             }
           }
-          if (!view.snapshot.includes(cfg.uploadedText) || /text \"(?:正在上传|上传中|上传失败)/.test(view.snapshot))
+          if (!publishingUploadComplete(view.snapshot, cfg))
             throw Error('平台尚未显示可审核的上传结果，请稍后继续核对');
           const review = await judge.read(
             z.object({

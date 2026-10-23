@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
 import { z } from 'zod';
 import { runEgo } from './ego.ts';
+import { channelsActionsScript } from './channels-publishing.ts';
 
 const platformSchema = z.object({
   categories: z.array(z.string()).default([]),
@@ -15,11 +16,20 @@ const platformSchema = z.object({
   titleInput: z.string(),
   descriptionInput: z.string().nullable(),
   titleMax: z.number(),
-  descriptionMax: z.number(),
+  descriptionMax: z.number().nullable(),
   uploadedText: z.string(),
+  uploadingText: z.string().optional(),
+  submitLabel: z.string().default('发布'),
   coverRatios: z.array(z.string()),
 });
 export type UploadPlatform = z.infer<typeof platformSchema>;
+export function publishingUploadComplete(snapshot: string, cfg: UploadPlatform) {
+  return (
+    snapshot.includes(cfg.uploadedText) &&
+    !/text "(?:正在上传|上传中|上传失败)/.test(snapshot) &&
+    !(cfg.uploadingText && snapshot.includes(cfg.uploadingText))
+  );
+}
 export async function publishingBrowserConfig() {
   return z
     .object({
@@ -36,7 +46,7 @@ export async function publishingPageCall(page: UploadPage, script: string) {
 export async function publishingObservation(page: UploadPage) {
   return (await publishingPageCall(
     page,
-    `console.log('WORKSPACE_RESULT:'+JSON.stringify({url:await p.url(),snapshot:await p.snapshot({scope:'full_page'}),controls:await p.evaluate(()=>[...document.querySelectorAll('input[type=checkbox],input[type=radio],[role=radio],[role=switch]')].map(e=>({label:(e.getAttribute('aria-label')||e.parentElement.parentElement.innerText||'').slice(0,160),name:e.getAttribute('name'),checked:e.checked??e.getAttribute('aria-checked')})))}));`,
+    `console.log('WORKSPACE_RESULT:'+JSON.stringify({url:await p.url(),snapshot:await p.snapshot({scope:'full_page'}),controls:await p.evaluate(()=>{const docs=[document,...Array.from(document.querySelectorAll('iframe')).flatMap(f=>{try{return f.contentDocument?[f.contentDocument]:[];}catch{return [];}})];return docs.flatMap(d=>Array.from(d.querySelectorAll('input[type=checkbox],input[type=radio],[role=radio],[role=switch],.select-value,.input-editor .topic')).filter(e=>e.getBoundingClientRect().width>0).map(e=>({label:(e.getAttribute('aria-label')||e.textContent||e.parentElement.parentElement.innerText||'').slice(0,160),name:e.getAttribute('name'),checked:e.checked??e.getAttribute('aria-checked'),kind:e.getAttribute('data-type')})));})}));`,
   )) as { url: string; snapshot: string };
 }
 export async function createPublishingSpace(name: string) {
@@ -68,7 +78,13 @@ export async function fillPublishingCopy(
   if (cfg.descriptionInput)
     code += `await p.fill(${JSON.stringify(cfg.descriptionInput)},${JSON.stringify(copy.description)});`;
   // Tags use native field entry. YouTube hashtags are part of the saved description.
-  if (cfg.id === 'bilibili') {
+  if (cfg.id === 'channels') {
+    code = channelsActionsScript + code;
+    for (const tag of copy.tags) {
+      code += `await channelsClick('.tag-inner','#话题');await p.keyboard.type(${JSON.stringify(tag)});await p.keyboard.press('Space');`;
+    }
+    code += `const tags=await p.evaluate(()=>Array.from(document.querySelectorAll('iframe')).flatMap(f=>Array.from(f.contentDocument?.querySelectorAll('.input-editor .topic[data-type="topic"]')??[]).map(e=>e.textContent.trim())));if(${JSON.stringify(copy.tags)}.some(t=>!tags.includes('#'+t)))throw Error('视频号原生话题未生成');`;
+  } else if (cfg.id === 'bilibili') {
     code += `const count=await p.evaluate(()=>document.querySelectorAll('.label-item-v2-container svg.close').length);for(let i=0;i<count;i++)await p.click('.label-item-v2-container svg.close >> nth=0');`;
     code += `const s=await p.snapshot({scope:'full_page'});const line=s.split('\\n').find(l=>l.includes('textbox')&&l.includes('[ref=')&&!l.includes('loc='));if(!line)throw Error('标签输入框未识别');const ref='@'+line.match(/ref=([0-9]+)/)[1];`;
     for (const tag of copy.tags) code += `await p.fill(ref,${JSON.stringify(tag)});await p.press(ref,'Enter');`;
@@ -82,6 +98,14 @@ export async function fillPublishingCopy(
 export async function fillPublishingCovers(page: UploadPage, cfg: UploadPlatform, covers: Record<string, string>) {
   const file = (ratio: string) => JSON.stringify(covers[ratio]);
   const scripts: Record<string, string> = {
+    channels:
+      channelsActionsScript +
+      ['3:4', '4:3']
+        .map(
+          (ratio, index) =>
+            `await channelsClick('.edit-btn',null,${index});let s${index}=await p.snapshot({scope:'full_page'});if(s${index}.includes('text "直接编辑"'))await channelsClick('button','直接编辑');await channelsWaitDialog(${JSON.stringify(index ? '编辑分享卡片' : '编辑个人主页卡片')},true);await p.setInputFiles('input[accept="image/jpeg,image/jpg,image/png"]',[${file(ratio)}]);await channelsClick('button','确认');await channelsWaitDialog(${JSON.stringify(index ? '编辑分享卡片' : '编辑个人主页卡片')},false);`,
+        )
+        .join(''),
     douyin: `await p.click('text="选择封面" >> nth=0');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('4:3')}]);await p.click('text="设置竖封面"');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('3:4')}]);await p.click('text="完成"');`,
     xiaohongshu: `await p.hover('.default.row');await p.click('text="编辑封面"');await p.waitForSelector('text="裁剪"',{timeout:30000});await p.setInputFiles('input[aria-label="上传封面图片"]',[${file('3:4')}]);await p.click('text="裁剪"');await p.click('text="3:4"');await p.click('text="完成"');await p.waitForSelector('text="裁剪"',{state:'hidden',timeout:40000});`,
     bilibili: `await p.click('text="添加封面"');await p.setInputFiles('input[accept="image/png, image/jpeg"]',[${file('4:3')}]);await p.click('text="个人空间封面（16:9）"');await p.setInputFiles('input[accept="image/png, image/jpeg"]',[${file('16:9')}]);await p.click('text="完成"');`,
@@ -105,6 +129,12 @@ export async function fillPublishingSettings(
 ) {
   const yes = aiGenerated === true;
   const scripts: Record<string, string> = {
+    channels:
+      channelsActionsScript +
+      `const original=await p.evaluate(()=>Array.from(document.querySelectorAll('iframe')).flatMap(f=>Array.from(f.contentDocument?.querySelectorAll('input[type=checkbox]')??[])).filter(e=>e.getBoundingClientRect().width>0).map(e=>e.checked));if(original.length!==1)throw Error('视频号原创声明控件发生变化');if(!original[0]){await channelsClick('input[type=checkbox]');await channelsWaitDialog('原创权益',true);await channelsClick('input[type=checkbox]',null,1);await channelsClick('button','声明原创');await channelsWaitDialog('原创权益',false);}` +
+      (yes
+        ? `const ai=await p.evaluate(()=>Array.from(document.querySelectorAll('iframe')).some(f=>Array.from(f.contentDocument?.querySelectorAll('.select-value')??[]).some(e=>e.getBoundingClientRect().width>0&&e.textContent.trim()==='含AI生成内容')));if(!ai){await channelsClick('.select-placeholder','选择视频标注');await channelsClick('.option-main','含AI生成内容');}`
+        : ''),
     douyin: yes
       ? `const s=await p.snapshot({scope:'full_page'});if(!s.includes('text "内容由AI生成"')){await p.click('text="请选择自主声明"');await p.click('text="内容由AI生成"');await p.click('text="确定"');}`
       : '',
@@ -132,6 +162,6 @@ export async function fillPublishingSettings(
 export async function waitPublishingAccount(page: UploadPage, cfg: UploadPlatform) {
   await publishingPageCall(
     page,
-    `try{await p.waitForFunction(id=>document.body.innerText.includes(id)||location.href.includes(id)||[...document.querySelectorAll('a[href]')].some(a=>a.href.includes(id)),${JSON.stringify(cfg.accountId)},{timeout:15000});}catch{}console.log('WORKSPACE_RESULT:true');`,
+    `try{await p.waitForFunction(id=>[document,...Array.from(document.querySelectorAll('iframe')).flatMap(f=>{try{return f.contentDocument?[f.contentDocument]:[];}catch{return [];}})].some(d=>d.body?.innerText.includes(id)||Array.from(d.querySelectorAll('a[href]')).some(a=>a.href.includes(id)))||location.href.includes(id),${JSON.stringify(cfg.accountId)},{timeout:15000});}catch{}console.log('WORKSPACE_RESULT:true');`,
   );
 }

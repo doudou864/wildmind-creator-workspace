@@ -1,4 +1,5 @@
 import { resumePublishingBrowser } from '../browser/publishing-task.ts';
+import { channelsActionsScript } from '../browser/channels-publishing.ts';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
 import { eq, sql } from 'drizzle-orm';
@@ -171,8 +172,14 @@ export async function runPublishingSubmit(db: WorkspaceDatabase, id: string, tok
               page,
               `let s=await p.snapshot({scope:'full_page'});if(!s.includes('text "保存或发布"'))await p.click('text="公开范围" >> nth=0');await p.click('[role=radio][name="PUBLIC"]');s=await p.snapshot();const line=s.split('\\n').find(l=>/button "(发布|保存)"/.test(l));if(!line)throw Error('发布按钮未识别');await p.click('@'+line.match(/ref=([0-9]+)/)[1]);console.log('WORKSPACE_RESULT:true');`,
             );
+          } else if (platform.id === 'channels') {
+            await publishingPageCall(
+              page,
+              channelsActionsScript +
+                `await channelsClick('button',${JSON.stringify(platform.submitLabel)});console.log('WORKSPACE_RESULT:true');`,
+            );
           } else {
-            const label = platform.id === 'bilibili' ? '立即投稿' : '发布';
+            const label = platform.submitLabel;
             await publishingPageCall(
               page,
               `await p.click(${JSON.stringify('text=' + JSON.stringify(label))});console.log('WORKSPACE_RESULT:true');`,
