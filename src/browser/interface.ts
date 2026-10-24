@@ -7,6 +7,7 @@ export type LoginResult = {
   statePath: string | null;
   spaceId?: number;
   page?: string;
+  pageAvailability?: 'closed' | 'user';
 };
 export interface WorkspaceBrowser {
   openLogin(platformId: string): Promise<{ spaceId: number; page: string; result?: LoginResult }>;

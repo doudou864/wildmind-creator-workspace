@@ -21,6 +21,23 @@ export async function checkConfirmations(
   )) {
     if (!item.spaceId || !item.page) throw new Error('微信确认任务缺少浏览器位置');
     const result = await browser.observeLogin(item.platformId, item.spaceId, item.page);
+    if (result.pageAvailability === 'closed') {
+      database.db
+        .update(attentionItems)
+        .set({ status: 'failed', reason: result.reason, updatedAt: now })
+        .where(eq(attentionItems.id, item.id))
+        .run();
+      const id = startCrawl(database, item.platformId, now);
+      await finishCrawl(database, id, { status: 'failed', reason: result.reason }, now);
+      continue;
+    }
+    if (result.state === 'unknown' && result.reason !== item.reason) {
+      database.db
+        .update(attentionItems)
+        .set({ reason: result.reason, updatedAt: now })
+        .where(eq(attentionItems.id, item.id))
+        .run();
+    }
     if (result.state === 'logged_in') {
       // Confirmation succeeded even if later data collection fails. Never expire it as an unconfirmed login.
       database.db

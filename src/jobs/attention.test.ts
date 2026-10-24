@@ -92,3 +92,43 @@ test('用户在微信确认后自动继续一次，处理完成移出清单', as
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('已关闭的微信登录页结束旧等待，不能永久挡住重新采集', async () => {
+  const dir = await mkdtemp(path.join(tmpdir(), 'fixture-closed-confirmation-'));
+  const db = await initializeDatabase(path.join(dir, 'workspace.db'));
+  try {
+    requireAttention(db, {
+      platformId: 'channels',
+      kind: 'confirmation',
+      reason: '等待微信',
+      deadline: '2026-10-24T15:00:00Z',
+      spaceId: 57,
+      page: 'p1',
+    });
+    const browser = new EgoBrowser(process.cwd(), async () => ({
+      url: 'https://channels.weixin.qq.com/',
+      positive: [],
+      negative: [],
+      unavailable: '登录页面已关闭，请重新启动该平台采集',
+      pageAvailability: 'closed',
+    }));
+    let continued = 0;
+    for (let i = 0; i < 2; i++)
+      await checkConfirmations(
+        db,
+        async () => {
+          continued++;
+        },
+        browser,
+        '2026-10-24T07:00:00Z',
+      );
+    expect(continued).toBe(0);
+    expect(pendingAttention(db)).toEqual([]);
+    expect(db.sqlite.prepare('SELECT status,reason FROM crawl_logs').all()).toEqual([
+      { status: 'failed', reason: '登录页面已关闭，请重新启动该平台采集' },
+    ]);
+  } finally {
+    db.sqlite.close();
+    await rm(dir, { recursive: true, force: true });
+  }
+});

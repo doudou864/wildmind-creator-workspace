@@ -133,6 +133,35 @@ test('等待确认的标签始终保留，空闲标签可复用，全部保留�
   expect(created).toBe(1);
 });
 
+test('微信等待确认期间用户接管或关闭页面，不再强行访问或循环报浏览器异常', async () => {
+  for (const spaces of [[], [{ id: 57, ownership: 'user' }]]) {
+    const browser = new EgoBrowser(process.cwd(), async (script) => {
+      let result: unknown;
+      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+      await new AsyncFunction(
+        'listTaskSpaces',
+        'taskSpace',
+        'console',
+        script.replace("const fs=await import('node:fs/promises');", 'const fs={};'),
+      )(
+        async () => spaces,
+        async () => {
+          throw new Error('不应操作已交接或关闭的页面');
+        },
+        {
+          log: (text: string) => {
+            result = JSON.parse(text.slice('WORKSPACE_RESULT:'.length));
+          },
+        },
+      );
+      return result;
+    });
+    const result = await browser.observeLogin('channels', 57);
+    expect(result.state).toBe('unknown');
+    expect(result.reason).toContain(spaces.length ? '由你控制' : '已关闭');
+  }
+});
+
 test('小红书登录等待必须覆盖跳转和登录提示消失，不能在半加载账号栏上提前结束', async () => {
   const config = (await loadBrowserConfig()).find((p) => p.id === 'xiaohongshu')!;
   let exercised = false;

@@ -156,16 +156,30 @@ console.log('WORKSPACE_RESULT:'+JSON.stringify(await observe(page)));`)) as {
     };
     return { ...this.result(config, observed), spaceId, page: label };
   }
-  async observeLogin(platformId: string, spaceId: number, label = 'p1') {
+  async observeLogin(platformId: string, spaceId: number, label = 'p1'): Promise<LoginResult> {
     const config = await this.config(platformId);
     const observed = (await this.execute(`${stateScript(this.root, config)}
-const task=await taskSpace(${spaceId});const page=task.page(${JSON.stringify(label)});
-const observed=await observe(page);console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));`)) as {
+const entry=(await listTaskSpaces()).find(s=>s.id===${spaceId});
+if(!entry || entry.ownership!=='agent') {
+ console.log('WORKSPACE_RESULT:'+JSON.stringify({pageAvailability:!entry?'closed':'user',unavailable:!entry?'登录页面已关闭，请重新启动该平台采集':'登录页面由你控制；确认后请恢复采集',url:cfg.url,positive:[],negative:[],risk:[]}));
+} else {
+ const task=await taskSpace(${spaceId});const page=task.page(${JSON.stringify(label)});
+ const observed=await observe(page);console.log('WORKSPACE_RESULT:'+JSON.stringify(observed));
+}`)) as {
       url: string;
       positive: string[];
       negative: string[];
       risk?: string[];
+      unavailable?: string;
+      pageAvailability?: 'closed' | 'user';
     };
+    if (observed.unavailable)
+      return {
+        ...this.result(config, observed),
+        state: 'unknown',
+        reason: observed.unavailable,
+        pageAvailability: observed.pageAvailability,
+      };
     return this.result(config, observed);
   }
   async finishLogin(platformId: string, spaceId: number, label: string) {

@@ -132,6 +132,7 @@ export async function runCollection(
       undefined,
       selectedPlatform,
     );
+    writeState(database, errorKey, {});
     const attempted = Array.isArray(state.attempted) ? (state.attempted as string[]) : [];
     const slot =
       mode === 'scheduled' ? dueSlot(now, Number(state.chosen), schedule.retries, attempted, !!state.succeeded) : mode;
