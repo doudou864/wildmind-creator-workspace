@@ -1,5 +1,7 @@
 # 本项目 Codex 任务默认：GPT-6 Sol，中等思考强度（2026-10-24 用户指定）。
 model: gpt-6-sol
+# 选题角度、句子撰写与最终复核专用；失败直接报告，不降级。
+topicEditorialModel: gpt-6-astra
 codexPath: /Users/a1234/.local/bin/codex
 timeoutMs: 180000
 reasoningEffort: medium

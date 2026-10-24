@@ -41,6 +41,9 @@ function fixtureJudge(read: (schema: unknown, prompt: string) => Promise<any>): 
             title: d.title,
             entityKey: d.entity,
             angleKey: d.angle,
+            viewerBenefit: d.viewerBenefit,
+            curiosity: d.curiosity,
+            payoff: d.payoff,
             interest: true,
             supported: true,
             distinct: true,
@@ -138,7 +141,12 @@ test('20候选原子保存、首选非FIRE定格，失败批次不留半批候�
       recommendFire: false,
     }));
     const judge = fixtureJudge(async () => ({ items }));
+    const calls = vi.spyOn(judge, 'read');
     expect(await generateTopics(db, judge, options)).toMatchObject({ count: 20 });
+    for (const stage of ['[topic:draft]', '[topic:edit]']) {
+      const call = calls.mock.calls.find((c) => c[1].startsWith(stage));
+      expect(call?.[3]).toBe('topicEditorial');
+    }
     const row = db.db.select().from(topics).get()!;
     const selected = decideTopic(db, row.id, 'selected', config);
     expect(selected.frozenFire).toBe(false);

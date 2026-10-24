@@ -6,14 +6,25 @@ import path from 'node:path';
 import { parse } from 'yaml';
 import { z } from 'zod';
 export interface Judgment {
-  read<T extends z.ZodType>(schema: T, prompt: string, images?: string[]): Promise<z.output<T>>;
+  read<T extends z.ZodType>(
+    schema: T,
+    prompt: string,
+    images?: string[],
+    purpose?: 'topicEditorial',
+  ): Promise<z.output<T>>;
 }
 export class CodexJudgment implements Judgment {
-  async read<T extends z.ZodType>(schema: T, prompt: string, images: string[] = []): Promise<z.output<T>> {
+  async read<T extends z.ZodType>(
+    schema: T,
+    prompt: string,
+    images: string[] = [],
+    purpose?: 'topicEditorial',
+  ): Promise<z.output<T>> {
     throwIfCollectionCancelled();
     const config = z
       .object({
         model: z.string().nullable(),
+        topicEditorialModel: z.string().min(1),
         codexPath: z.string(),
         timeoutMs: z.number().positive(),
         reasoningEffort: z.enum(['low', 'medium', 'high']),
@@ -33,7 +44,11 @@ export class CodexJudgment implements Judgment {
       approvalPolicy: 'never',
       webSearchMode: 'disabled',
       modelReasoningEffort: config.reasoningEffort,
-      ...(config.model ? { model: config.model } : {}),
+      ...(purpose === 'topicEditorial'
+        ? { model: config.topicEditorialModel }
+        : config.model
+          ? { model: config.model }
+          : {}),
     });
     countAI(images.length > 0);
     const result = await thread.run(

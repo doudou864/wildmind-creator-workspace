@@ -37,6 +37,9 @@ const verdict = (i: number, extra = {}) => ({
   title: `fixture题${i}`,
   entityKey: '同一宠物挂件',
   angleKey: `理由${i}`,
+  viewerBenefit: '发现自己会的技能的新用途',
+  curiosity: '',
+  payoff: '展示使用过程',
   interest: true,
   supported: true,
   distinct: true,
@@ -69,6 +72,12 @@ test('观点复核分别筛兴趣和事实，同实体换词不凑数，少量�
   const prompt = read.mock.calls[0] as unknown as [unknown, string];
   expect(prompt[1]).toContain('挂牌不是成交');
   expect(prompt[1]).toContain('强烈好奇');
+  expect((read.mock.calls[0] as unknown[])[3]).toBe('topicEditorial');
+  expect(result.items[0]).toMatchObject({
+    angle: '理由2',
+    viewerBenefit: '发现自己会的技能的新用途',
+    payoff: '展示使用过程',
+  });
 });
 
 test('没有原文、未知来源和没有观看理由不能进复核；已有句子不重复生成', async () => {
