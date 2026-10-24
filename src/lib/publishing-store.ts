@@ -75,7 +75,7 @@ export function publishingData(db: WorkspaceDatabase): PublishingData {
     handoffReady: true,
     uploadReady: true,
     publishReady: true,
-    message: '上传后请核对逐平台截图；首次公开发布仍等待本人审核确认。',
+    message: '上传后可审核再发布，也可直接点击发布完成上传与提交。',
   };
 }
 export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: string, expectedRevision?: number) {

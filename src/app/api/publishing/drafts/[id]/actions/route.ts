@@ -8,7 +8,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   try {
     const input = publishActionSchema.parse(await request.json());
     const { id } = await context.params;
-    if (input.action === 'upload')
+    if (input.action === 'upload' || input.action === 'upload-and-publish')
       return Response.json(await usingDatabase((db) => enqueuePublishingUpload(db, id, input)));
     if (input.action === 'publish-all')
       return Response.json(await usingDatabase((db) => enqueuePublishingSubmit(db, id, input)));

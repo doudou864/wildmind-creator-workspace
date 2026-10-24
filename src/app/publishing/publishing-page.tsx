@@ -503,7 +503,11 @@ export default function PublishingPage({
       setBusy(false);
     }
   }
-  async function action(kind: 'upload' | 'publish-all' | 'return', snapshotId?: string, onlyPlatform?: string) {
+  async function action(
+    kind: 'upload' | 'upload-and-publish' | 'publish-all' | 'return',
+    snapshotId?: string,
+    onlyPlatform?: string,
+  ) {
     if (!meta || busy || dirty || locked || stale) return;
     const time = Date.now();
     const ready = readyPublishReceipts(meta.id, draft, data, config, platforms, time, expiryHours);
@@ -528,20 +532,21 @@ export default function PublishingPage({
       setNow(time);
       return;
     }
-    if (kind === 'upload' && (!canUpload || issues.length)) return;
+    if ((kind === 'upload' || kind === 'upload-and-publish') && (!canUpload || issues.length || taskLocked)) return;
+    if (kind === 'upload-and-publish' && (draft.kind !== 'video' || !data.publishReady)) return;
     if (kind === 'return' && !data.handoffReady) return;
     const targets = uploadPlatformIds(meta.id, draft, data, config, time, expiryHours).filter(
       (id) => !onlyPlatform || id === onlyPlatform,
     );
-    if (kind === 'upload' && !targets.length) return;
-    const key = JSON.stringify({ batch: meta.id, revision: meta.revision, materials, targets });
+    if ((kind === 'upload' || kind === 'upload-and-publish') && !targets.length) return;
+    const key = JSON.stringify({ kind, batch: meta.id, revision: meta.revision, materials, targets });
     if (!uploadRequest.current || uploadRequest.current.key !== key)
       uploadRequest.current = { key, id: crypto.randomUUID() };
     setBusy(true);
     try {
       const payload = {
         action: kind,
-        ...(['upload', 'publish-all'].includes(kind) ? { expectedRevision: meta.revision } : {}),
+        ...(['upload', 'upload-and-publish', 'publish-all'].includes(kind) ? { expectedRevision: meta.revision } : {}),
         ...(kind === 'publish-all'
           ? {
               confirmed: true,
@@ -549,8 +554,13 @@ export default function PublishingPage({
               materials: approval!.materials,
               receipts: ready.map((r) => ({ id: r.id, expectedRevision: r.revision })),
             }
-          : kind === 'upload'
-            ? { requestId: uploadRequest.current.id, platformIds: targets, materials }
+          : kind === 'upload' || kind === 'upload-and-publish'
+            ? {
+                requestId: uploadRequest.current.id,
+                platformIds: targets,
+                materials,
+                ...(kind === 'upload-and-publish' ? { confirmed: true } : {}),
+              }
             : { snapshotId }),
       };
       const result = await request<PublishBatch>(`/api/publishing/drafts/${encodeURIComponent(meta.id)}/actions`, {
@@ -564,11 +574,13 @@ export default function PublishingPage({
       setReturning(null);
       setDirty(false);
       setNotice(
-        kind === 'publish-all'
-          ? '发布任务已受理，请以逐平台回执为准。'
-          : kind === 'upload'
-            ? '上传任务已受理；完成后请检查各平台截图，尚未发布。'
-            : '确认稿已退回排版中心。',
+        kind === 'upload-and-publish'
+          ? '任务已受理，将依次上传并发布，请查看逐平台回执。'
+          : kind === 'publish-all'
+            ? '发布任务已受理，请以逐平台回执为准。'
+            : kind === 'upload'
+              ? '上传任务已受理；完成后请检查各平台截图，尚未发布。'
+              : '确认稿已退回排版中心。',
       );
       await refresh();
     } catch (e) {
@@ -643,13 +655,13 @@ export default function PublishingPage({
           stage === 'uploaded'
             ? '上传完成，请检查下方平台截图，确认后点击发布'
             : stage === 'published'
-              ? '已发布，去平台查看作品'
+              ? '已有提交回执，请查看各平台发布与审核状态'
               : stage === 'blocked'
                 ? '先核实平台结果，再继续操作'
                 : stage === 'abandoned'
                   ? '已放弃这次上传，请到平台清理草稿'
                   : draft.kind === 'video'
-                    ? '填写内容并选平台，上传后审核，再发布'
+                    ? '填写内容并选平台，可先上传审核，也可直接发布'
                     : !draft.contentId
                       ? '先选一条作品'
                       : draft.kind === 'layout' && !snapshots.length
@@ -667,26 +679,36 @@ export default function PublishingPage({
         }}
         refreshing={busy}
         action={
-          <Button
-            variant="primary"
-            disabled={draft.kind === 'video' && readyReceipts.length > 0 ? !canPublish || inFlight : !canUpload}
-            disabledReason={
-              draft.kind === 'video' && readyReceipts.length > 0
-                ? '请先查看平台截图，并等待全部上传结束。'
-                : !data.uploadReady
-                  ? '平台上传尚不可用，当前可准备发布材料。'
-                  : draft.kind === 'layout' && !snapshots.length
-                    ? '请先在排版页检查并确认稿件。'
-                    : busy
-                      ? '正在处理，请稍候。'
-                      : issues.length
-                        ? issues.join('；')
-                        : '请等待保存完成，并核对发布状态。'
-            }
-            onClick={() => void action(draft.kind === 'video' && readyReceipts.length > 0 ? 'publish-all' : 'upload')}
-          >
-            {draft.kind === 'video' ? (readyReceipts.length > 0 ? '发布' : '上传') : '检查并上传'}
-          </Button>
+          draft.kind === 'video' ? (
+            <>
+              <Button
+                disabled={!canUpload || taskLocked}
+                disabledReason={issues.join('；') || '请等待保存完成；已有任务请从任务列表继续。'}
+                onClick={() => void action('upload')}
+              >
+                上传
+              </Button>
+              <Button
+                variant="primary"
+                disabled={
+                  readyReceipts.length ? !canPublish || inFlight : !canUpload || taskLocked || !data.publishReady
+                }
+                disabledReason={issues.join('；') || (taskLocked ? '请先核对平台截图和任务状态。' : '请等待保存完成。')}
+                onClick={() => void action(readyReceipts.length ? 'publish-all' : 'upload-and-publish')}
+              >
+                发布
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="primary"
+              disabled={!canUpload}
+              disabledReason={issues.join('；') || '请等待保存完成，并核对发布状态。'}
+              onClick={() => void action('upload')}
+            >
+              检查并上传
+            </Button>
+          )
         }
       />
       {!canUpload && draft.kind !== 'video' && (
@@ -755,7 +777,7 @@ export default function PublishingPage({
             <section className="card">
               <h2>
                 {stage === 'published'
-                  ? '已发布，去平台管理'
+                  ? '已提交，去平台查看状态'
                   : stage === 'abandoned'
                     ? '已放弃这次上传'
                     : stage === 'uploaded'
@@ -789,7 +811,7 @@ export default function PublishingPage({
                   <p>只改本地记录，保留回执；请到平台删除草稿。</p>
                 </>
               )}
-              {stage === 'published' && <p>已发布内容不能在这里删除或替换。</p>}
+              {stage === 'published' && <p>已提交内容请在平台管理，本页保留回执。</p>}
               {stage === 'blocked' && (
                 <p>
                   {taskLocked
@@ -1173,7 +1195,7 @@ export default function PublishingPage({
                 : taskLocked
                   ? '查看下方任务进度与平台截图。'
                   : data.uploadReady
-                    ? '选好平台后，点击上方上传。'
+                    ? '选好平台后，可上传或直接发布。'
                     : '暂不能上传到平台，填写内容会自动保存。'}
             </p>
           ) : !draft.settings.length ? (
@@ -1490,7 +1512,8 @@ export default function PublishingPage({
                           : '--'}
                       </p>
                       <p className="small">
-                        平台作品 ID：{receipt.platformPostId ?? '--'} · {receipt.publishedAt ?? '尚未发布'}
+                        平台作品 ID：{receipt.platformPostId ?? '--'} ·{' '}
+                        {receipt.publishedAt ?? (receipt.status === 'pending_review' ? '等待平台审核' : '暂无发布时间')}
                       </p>
                       {receipt.url && /^https?:\/\//.test(receipt.url) && (
                         <a href={receipt.url} target="_blank" rel="noreferrer">

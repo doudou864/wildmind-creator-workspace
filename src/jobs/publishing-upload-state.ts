@@ -4,6 +4,7 @@ import type { WorkspaceDatabase } from '../db/database.ts';
 const copy = z.object({ title: z.string(), description: z.string(), tags: z.array(z.string()) });
 export const uploadRunSchema = z.object({
   requestId: z.string(),
+  publishAuthorization: z.object({ approvedAt: z.string(), materials: z.string() }).optional(),
   video: z.string(),
   sha256: z.string(),
   covers: z.record(z.string(), z.string()),

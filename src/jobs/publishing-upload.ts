@@ -13,7 +13,10 @@ import { readPublishingTask, writePublishingTask, inspectPublishingProcess } fro
 import { readUploadRun, writeUploadRun, type UploadRun } from './publishing-upload-state.ts';
 import type { PublishingTask } from '../lib/publishing-task-model.ts';
 import { CodexJudgment } from '../ai/structured.ts';
-import { publishActionSchema } from '../lib/publishing-model.ts';
+import { publishingData } from '../lib/publishing-store.ts';
+import { loadConfig } from '../lib/config.ts';
+import { loadPublishingConfig } from '../lib/publishing-config.ts';
+import { publishActionSchema, publishMaterialKey, videoUploadIssues } from '../lib/publishing-model.ts';
 
 export async function launchPublishingUpload(db: WorkspaceDatabase, task: PublishingTask) {
   const directory = path.resolve('data/jobs/publishing', task.batchId);
@@ -52,15 +55,31 @@ export async function launchPublishingUpload(db: WorkspaceDatabase, task: Publis
     await output.close();
   }
 }
-export async function enqueuePublishingUpload(db: WorkspaceDatabase, id: string, raw: unknown) {
+export async function enqueuePublishingUpload(
+  db: WorkspaceDatabase,
+  id: string,
+  raw: unknown,
+  launch = launchPublishingUpload,
+) {
   const input = publishActionSchema.parse(raw);
-  if (input.action !== 'upload') throw Error('这里只接收上传');
+  if (input.action !== 'upload' && input.action !== 'upload-and-publish') throw Error('这里只接收视频上传任务');
   const batch = db.db.select().from(publishRecords).where(eq(publishRecords.id, id)).get();
   if (!batch || batch.abandonedAt) throw Error('任务不存在或已删除');
   const previous = readUploadRun(db, id);
   if (previous?.requestId === input.requestId) return batch;
   if (batch.revision !== input.expectedRevision || readPublishingTask(db, id)) throw Error('任务已更新，请刷新后操作');
   if (batch.draft.kind !== 'video' || !batch.draft.videoInput) throw Error('当前只支持视频上传');
+  const workspace = await loadConfig();
+  const templates = await loadPublishingConfig(workspace.platforms);
+  const data = publishingData(db);
+  if (publishMaterialKey(batch.draft, data, templates) !== input.materials) throw Error('发布材料已变化，请重新查看');
+  const issues = videoUploadIssues(batch.draft, data, templates);
+  if (issues.length) throw Error(issues.join('；'));
+  if (
+    input.platformIds.length !== batch.draft.settings.length ||
+    batch.draft.settings.some((s) => !input.platformIds.includes(s.platformId))
+  )
+    throw Error('平台与当前保存的选择不一致');
   const cfg = await publishingBrowserConfig();
   if (
     input.platformIds.some(
@@ -98,6 +117,11 @@ export async function enqueuePublishingUpload(db: WorkspaceDatabase, id: string,
   }
   const run: UploadRun = {
     requestId: input.requestId,
+    ...(input.action === 'upload-and-publish'
+      ? {
+          publishAuthorization: { approvedAt: new Date().toISOString(), materials: input.materials },
+        }
+      : {}),
     video: video.path,
     sha256: video.fingerprint.sha256,
     covers,
@@ -118,7 +142,7 @@ export async function enqueuePublishingUpload(db: WorkspaceDatabase, id: string,
     status: 'running',
     process: null,
     browser: null,
-    checkpoint: '准备上传',
+    checkpoint: input.action === 'upload-and-publish' ? '准备上传，完成后自动发布' : '准备上传',
     reason: null,
     updatedAt: new Date().toISOString(),
   };
@@ -147,7 +171,7 @@ export async function enqueuePublishingUpload(db: WorkspaceDatabase, id: string,
         .run();
   });
   try {
-    await launchPublishingUpload(db, task);
+    await launch(db, task);
   } catch (e) {
     const live = readPublishingTask(db, id);
     if (live?.status === 'running')

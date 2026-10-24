@@ -10,6 +10,10 @@ import { writeUploadRun, readUploadRun } from './publishing-upload-state';
 import * as browser from '../browser/publishing-runner';
 import { CodexJudgment } from '../ai/structured';
 import { runPublishingUpload } from './publishing-worker';
+vi.mock('../lib/local-videos', async (original) => ({
+  ...(await original<typeof import('../lib/local-videos')>()),
+  fingerprint: vi.fn(async () => ({ sha256: 'fixture' })),
+}));
 vi.mock('../browser/publishing-task', () => ({ resumePublishingBrowser: vi.fn(), pausePublishingBrowser: vi.fn() }));
 vi.mock('../browser/publishing-runner', async (importOriginal) => {
   const original = await importOriginal<typeof import('../browser/publishing-runner')>();

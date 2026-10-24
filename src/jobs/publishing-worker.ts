@@ -7,6 +7,8 @@ import type { WorkspaceDatabase } from '../db/database.ts';
 import { assets, publishRecords, publishReceipts } from '../db/schema.ts';
 import { readPublishingTask, writePublishingTask, publishingCheckpoint } from './publishing-tasks.ts';
 import { readUploadRun, writeUploadRun } from './publishing-upload-state.ts';
+import { prepareDirectPublishingSubmit, runPublishingSubmit } from './publishing-submit.ts';
+import { fingerprint } from '../lib/local-videos.ts';
 import { adaptUploadCopy } from './publishing-upload.ts';
 import { CodexJudgment } from '../ai/structured.ts';
 import { imageInfo } from '../lib/image-files.ts';
@@ -46,6 +48,7 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
     if (active().process?.pid !== process.pid) throw Error('后台进程尚未登记，未操作浏览器');
     const run = readUploadRun(db, id);
     if (!run) throw Error('上传资料不存在');
+    if ((await fingerprint(run.video)).sha256 !== run.sha256) throw Error('原视频内容已变化，未继续上传');
     const config = await publishingBrowserConfig(),
       judge = new CodexJudgment();
     if (active().browser?.pausedByTask) {
@@ -107,6 +110,8 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
         if (item.stage === 'upload') {
           if (item.attempted) throw Error('上次上传动作结果待核对，未重新选择视频文件');
           checkpoint('发送视频');
+          if ((await fingerprint(run.video)).sha256 !== run.sha256) throw Error('原视频内容已变化，未发送文件');
+          active();
           item.attempted = true;
           update();
           await beginVideoUpload(page, cfg, run.video);
@@ -264,7 +269,7 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
                 title: item.copy.title,
                 screenshotAssetId: assetId,
                 uploadedAt: now,
-                reason: '已上传，等待本人审核；尚未公开发布',
+                reason: run.publishAuthorization ? '已上传，将按本次授权发布' : '已上传，等待本人审核；尚未公开发布',
                 safeToRetry: false,
                 updatedAt: now,
               })
@@ -285,7 +290,11 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
         if (/控制权|ego|浏览器操作超时/.test(item.reason)) throw e;
       }
     }
-    const ready = run.platforms.every((p) => p.stage === 'ready');
+    if (await prepareDirectPublishingSubmit(db, id, token)) {
+      await runPublishingSubmit(db, id, token);
+      return;
+    }
+    const ready = !run.publishAuthorization && run.platforms.every((p) => p.stage === 'ready');
     await pausePublishingBrowser(active().browser!);
     saveTask({ browser: { ...active().browser!, pausedByTask: true } });
     saveTask({
@@ -296,7 +305,7 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
         run.platforms
           .filter((p) => p.reason)
           .map((p) => p.reason)
-          .join('；') || null,
+          .join('；') || (run.publishAuthorization ? '没有可继续提交的就绪平台，请查看逐平台回执' : null),
     });
     db.db
       .update(publishRecords)

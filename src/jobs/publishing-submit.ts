@@ -1,4 +1,4 @@
-import { resumePublishingBrowser } from '../browser/publishing-task.ts';
+import { resumePublishingBrowser, closePublishingBrowser } from '../browser/publishing-task.ts';
 import { channelsActionsScript } from '../browser/channels-publishing.ts';
 import { randomUUID } from 'node:crypto';
 import path from 'node:path';
@@ -107,6 +107,59 @@ export async function enqueuePublishingSubmit(db: WorkspaceDatabase, id: string,
   }
   return db.db.select().from(publishRecords).where(eq(publishRecords.id, id)).get()!;
 }
+// The original click authorizes only this frozen run. No authorization is inferred from readiness.
+export async function prepareDirectPublishingSubmit(db: WorkspaceDatabase, id: string, token: string) {
+  const run = readUploadRun(db, id);
+  if (!run?.publishAuthorization) return false;
+  const workspace = await loadConfig();
+  const config = await loadPublishingConfig(workspace.platforms);
+  const data = publishingData(db);
+  const batch = data.batches.find((b) => b.id === id);
+  if (!batch || batch.abandonedAt) throw Error('发布任务不存在或已删除');
+  const ready = readyPublishReceipts(
+    id,
+    batch.draft,
+    data,
+    config,
+    workspace.platforms,
+    Date.now(),
+    workspace.parameters.publishUploadExpiryHours,
+  ).filter((r) => run.platforms.some((p) => p.id === r.platformId && p.stage === 'ready'));
+  const previous = readState(db, 'publishing-approval:' + id);
+  const old = previous ? approvalSchema.parse(previous) : null;
+  // Previously submitted/unknown items remain read-only on recovery; never authorize an upload failure.
+  const receiptIds = [
+    ...new Set([...(old?.requestId === run.requestId ? old.receiptIds : []), ...ready.map((r) => r.id)]),
+  ];
+  if (
+    !receiptIds.some((rid) =>
+      data.receipts.some((r) => r.id === rid && !['published', 'pending_review'].includes(r.status)),
+    )
+  )
+    return false;
+  if ((await fingerprint(run.video)).sha256 !== run.sha256) throw Error('原视频内容已变化，请核对上传版本');
+  db.db.transaction(() => {
+    const task = readPublishingTask(db, id);
+    const live = db.db.select().from(publishRecords).where(eq(publishRecords.id, id)).get();
+    if (!task?.browser || task.token !== token || task.status !== 'running' || live?.revision !== batch.revision)
+      throw Error('任务已暂停或发生变化，未转入发布');
+    writeState(db, 'publishing-approval:' + id, {
+      requestId: run.requestId,
+      receiptIds,
+      approvedAt: run.publishAuthorization!.approvedAt,
+      materials: publishMaterialKey(batch.draft, data, config),
+    });
+    // Keep the same process/token so pause/delete continues to own the entire operation.
+    writePublishingTask(db, { ...task, operation: 'publish', checkpoint: '上传已就绪，按本次授权发布', reason: null });
+    db.db
+      .update(publishRecords)
+      .set({ state: 'running', revision: batch.revision + 1, updatedAt: new Date().toISOString() })
+      .where(eq(publishRecords.id, id))
+      .run();
+  });
+  return true;
+}
+
 export async function runPublishingSubmit(db: WorkspaceDatabase, id: string, token: string) {
   const active = () => {
     const t = readPublishingTask(db, id);
@@ -243,20 +296,37 @@ export async function runPublishingSubmit(db: WorkspaceDatabase, id: string, tok
       }
     }
     const task = active();
-    const completed = approval.receiptIds.every((receiptId) => {
-      const receipt = db.db.select().from(publishReceipts).where(eq(publishReceipts.id, receiptId)).get();
-      return receipt && ['published', 'pending_review'].includes(receipt.status);
-    });
+    const receipts = db.db.select().from(publishReceipts).where(eq(publishReceipts.batchId, id)).all();
+    const completed = run.platforms.every((item) =>
+      receipts.some((r) => r.platformId === item.id && ['published', 'pending_review'].includes(r.status)),
+    );
+    let browser = task.browser;
+    let cleanupReason: string | null = null;
+    if (completed && browser) {
+      try {
+        await closePublishingBrowser(browser);
+        browser = null;
+      } catch (e) {
+        cleanupReason = '已提交，浏览器清理未完成：' + (e instanceof Error ? e.message : '请查看任务');
+      }
+    }
+    const current = active();
     writePublishingTask(db, {
-      ...task,
+      ...current,
+      browser,
       status: completed ? 'completed' : 'attention',
+      operation: run.platforms.some((p) => p.stage !== 'ready') ? 'upload' : 'publish',
       process: null,
       checkpoint: completed ? '已提交，请查看逐平台发布与审核结果' : '提交检查结束，请查看逐平台回执',
-      reason: null,
+      reason: cleanupReason,
     });
     db.db
       .update(publishRecords)
-      .set({ state: 'finished', revision: sql`${publishRecords.revision} + 1`, updatedAt: new Date().toISOString() })
+      .set({
+        state: completed ? 'finished' : 'prepared',
+        revision: sql`${publishRecords.revision} + 1`,
+        updatedAt: new Date().toISOString(),
+      })
       .where(eq(publishRecords.id, id))
       .run();
   } catch (e) {

@@ -180,6 +180,19 @@ export const publishActionSchema = z.discriminatedUnion('action', [
     .strict(),
   z
     .object({
+      action: z.literal('upload-and-publish'),
+      expectedRevision: z.number().int().nonnegative(),
+      requestId: z.string().uuid(),
+      confirmed: z.literal(true),
+      platformIds: z
+        .array(z.string().min(1))
+        .min(1)
+        .refine((ids) => new Set(ids).size === ids.length),
+      materials: z.string().min(1).max(2000000),
+    })
+    .strict(),
+  z
+    .object({
       action: z.literal('publish-all'),
       expectedRevision: z.number().int().nonnegative(),
       requestId: z.string().uuid(),
