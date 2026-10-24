@@ -3,6 +3,8 @@ import { parse } from 'yaml';
 import { z } from 'zod';
 import { loadConfig } from '../lib/config.ts';
 import { randomBetween, shanghaiDate } from '../browser/policy.ts';
+import type { WorkspaceDatabase } from '../db/database.ts';
+import { readState, writeState } from '../collectors/state.ts';
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 export async function loadSchedule() {
   const schedule = z
@@ -28,6 +30,21 @@ export function scheduleForDay(start: string, end: string, random = Math.random)
     max = minuteOfDay(end);
   if (max < min) throw new Error('随机启动时间范围无效');
   return randomBetween([min, max], random);
+}
+export function dailySchedule(database: WorkspaceDatabase, date: string, start: string, end: string) {
+  return database.sqlite
+    .transaction(() => {
+      const key = `schedule:${date}`;
+      const saved = readState(database, key);
+      const previous = Number(saved?.chosen);
+      const chosen =
+        Number.isInteger(previous) && previous >= minuteOfDay(start) && previous <= minuteOfDay(end)
+          ? previous
+          : scheduleForDay(start, end);
+      if (!saved || chosen !== previous) writeState(database, key, { ...saved, chosen });
+      return chosen;
+    })
+    .immediate();
 }
 export function dueSlot(now: Date, chosen: number, retries: string[], attempted: string[], succeeded: boolean) {
   if (succeeded) return null;

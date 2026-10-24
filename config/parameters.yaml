@@ -11,8 +11,8 @@ baselineSamples: 20
 baselineMinimum: 5
 anomalyHigh: 3
 anomalyLow: 0.3
-syncWindow: '10:32–10:45'
-retryTimes: ['11:00', '11:30']
+syncWindow: '14:30–14:40'
+retryTimes: ['15:00', '15:30']
 topicCandidateCount: 20
 topicExploreMin: 2
 topicExploreMax: 3

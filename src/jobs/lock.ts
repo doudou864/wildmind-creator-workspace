@@ -11,7 +11,17 @@ export async function acquireJobLock(filename: string) {
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
     }
-    const pid = Number(await readFile(filename, 'utf8'));
+    let value: string;
+    try {
+      value = await readFile(filename, 'utf8');
+    } catch (error) {
+      // The owner may release between our exclusive-create failure and this read.
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null;
+      throw error;
+    }
+    // Exclusive creation precedes writing the PID; another worker may see that brief empty file.
+    if (!value.trim()) return null;
+    const pid = Number(value);
     if (!Number.isInteger(pid) || pid <= 0) throw new Error('采集锁损坏，请检查 data/jobs 下锁文件');
     try {
       process.kill(pid, 0);

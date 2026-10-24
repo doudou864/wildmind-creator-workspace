@@ -25,7 +25,7 @@ import { readState, writeState } from '../collectors/state.ts';
 import { startCrawl, finishCrawl } from './crawl-log.ts';
 import { requireAttention, notifyAttention, pendingAttention, resolveAttention } from './attention.ts';
 import { checkConfirmations } from './confirmations.ts';
-import { loadSchedule, scheduleForDay, dueSlot, shanghaiDate, platformSchedule } from './schedule.ts';
+import { loadSchedule, dailySchedule, dueSlot, shanghaiDate, platformSchedule } from './schedule.ts';
 export async function runCollection(
   mode: 'manual' | 'scheduled' | 'resume',
   spaceOverride?: number,
@@ -78,21 +78,12 @@ export async function runCollection(
     const date = shanghaiDate(now);
     const key = `schedule:${date}:${selectedPlatform}`;
     // Keep the same daily random window for the batch; only retry/result state is per platform.
-    const scheduleRelease = await acquireJobLock('data/jobs/schedule-choice.pid');
-    let chosen = readState(database, `schedule:${date}`)?.chosen;
-    if (scheduleRelease) {
-      try {
-        chosen = readState(database, `schedule:${date}`)?.chosen ?? scheduleForDay(schedule.start, schedule.end);
-        if (!readState(database, `schedule:${date}`)) writeState(database, `schedule:${date}`, { chosen });
-      } finally {
-        await scheduleRelease();
-      }
-    }
-    if (chosen === undefined) return; // another worker is choosing; the next poll will resume
-
-    const state =
-      readState(database, key) ??
-      platformSchedule(readState(database, `schedule:${date}`), Number(chosen), selectedPlatform);
+    const chosen = dailySchedule(database, date, schedule.start, schedule.end);
+    const state: Record<string, unknown> = {
+      ...(readState(database, key) ??
+        platformSchedule(readState(database, `schedule:${date}`), chosen, selectedPlatform)),
+      chosen,
+    };
     writeState(database, key, state);
     // Poll only confirmation tasks, never click the login button repeatedly.
     await checkConfirmations(
