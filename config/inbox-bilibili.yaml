@@ -5,6 +5,8 @@ body: '.ci-content'
 time: '.ci-action .date'
 title: '.article-wrap .name'
 next: '.bcc-pagination-next'
+currentPage: '.bcc-pagination-item.selected'
+pageReadyTimeoutMs: 15000
 maxPages: 30
 batchSize: 20
 selfNames: [摆烂的逗逗]

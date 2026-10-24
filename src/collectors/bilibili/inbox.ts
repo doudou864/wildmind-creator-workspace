@@ -8,6 +8,7 @@ import { CollectionSession } from '../../browser/collection-session.ts';
 import { loadConfig } from '../../lib/config.ts';
 import { shanghaiDate } from '../../browser/policy.ts';
 import { storeInboxReading, inboxSource, refreshThemes, type incomingMessageSchema } from '../../lib/inbox-store.ts';
+import { advanceCommentPage } from './pagination.ts';
 export async function collectBilibiliInbox(
   db: WorkspaceDatabase,
   session: CollectionSession,
@@ -23,6 +24,8 @@ export async function collectBilibiliInbox(
       time: z.string(),
       title: z.string(),
       next: z.string(),
+      currentPage: z.string(),
+      pageReadyTimeoutMs: z.number().int().positive(),
       maxPages: z.number().int().positive(),
       batchSize: z.number().int().positive(),
       selfNames: z.array(z.string()),
@@ -65,7 +68,7 @@ export async function collectBilibiliInbox(
       complete = true;
       break;
     }
-    await session.click(cfg.next);
+    await advanceCommentPage(session, cfg, fingerprint);
   }
   for (let i = 0; i < all.length; i += cfg.batchSize)
     await storeInboxReading(
