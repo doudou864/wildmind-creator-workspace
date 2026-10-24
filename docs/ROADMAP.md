@@ -365,3 +365,7 @@ U0、U1 与批次第0段、U2–U7 已完成；U7 仅交付方案，停止等待
 ### 2026-10-24 Codex 任务模型与思考强度 ✅
 
 `bd5999d` 按用户指定，将项目 AI 判断与生图执行模型设为 GPT-6 Sol，思考强度 medium；生图新建/续接均显式传入共享思考配置。用实际 CodexJudgment 做隔离调用，返回 {"ok":true}；未调用平台或真实生图。npm run format 与完整 check 通过（208项测试）。[官方参数说明](https://learn.chatgpt.com/docs/config-file/config-basic#reasoning-effort)。
+
+### 2026-10-24 B站评论翻页等待与电脑控制复核
+
+`44fe7e6` 补齐翻页后“页码+非空新内容”双校验，超时不重复点击并报告具体页码；211测试及完整check通过。真实页面1→8通过，新函数8→10通过并在起号日前边界停止，未重跑评论分类/入库。电脑控制可读取微信，视频号本次已登录，但未执行桌面“允许”，后台定时器尚未接入原生控制，不冒充无人值守完成；[验收](verification/collection-afternoon/README.md)。
