@@ -371,6 +371,11 @@ export async function collectDouyin(
             `本页属于${JSON.stringify(post)}，${tab}。即使截图滚动后标题不可见，指标仍归这条作品。`,
             post,
           );
+          if (
+            !due.needed &&
+            !missingDailyPostMetrics(workspace, config.platformId, post, readings, config.aliases).length
+          )
+            break;
           if (state.text.includes('展开更多') && tab === '流量分析' && segment === 0) {
             await detail.click(config.expandSources);
             continue;
@@ -380,6 +385,11 @@ export async function collectDouyin(
           if (segment === config.maxScreens - 1) throw new Error('详情截图未完成');
           await detail.scroll();
         }
+        if (
+          !due.needed &&
+          !missingDailyPostMetrics(workspace, config.platformId, post, readings, config.aliases).length
+        )
+          break;
       }
       if (due.needed) completed[post.key] = due.due;
     } catch (error) {

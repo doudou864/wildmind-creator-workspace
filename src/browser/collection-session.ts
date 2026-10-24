@@ -111,7 +111,7 @@ export class CollectionSession {
   async openDetail(title: string, titleSelector: string) {
     await consumePage();
     const label = await this.run<string>(
-      `const titles=await page.evaluate(selector=>Array.from(document.querySelectorAll(selector)).map(e=>e.textContent.trim()),${JSON.stringify(titleSelector)});const index=titles.indexOf(${JSON.stringify(title)});if(index<0)throw new Error('列表中未找到目标作品');await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).actionDelayMs)});const [next]=await Promise.all([page.waitForEvent('popup',{timeout:60000}),page.click(${JSON.stringify(titleSelector)}+' >> nth='+index)]);console.log('WORKSPACE_RESULT:'+JSON.stringify(next.label));`,
+      `const titles=await page.evaluate(selector=>Array.from(document.querySelectorAll(selector)).map(e=>e.textContent.replace(/\\s+/g,' ').trim()),${JSON.stringify(titleSelector)});const title=${JSON.stringify(title.replace(/\s+/g, ' ').trim())};if(titles.filter(t=>t===title).length!==1)throw new Error('列表中目标作品不存在或标题不唯一');await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).actionDelayMs)});const [next]=await Promise.all([page.waitForEvent('popup',{timeout:60000}),page.click(${JSON.stringify(titleSelector)}+':text-is('+JSON.stringify(title)+')')]);console.log('WORKSPACE_RESULT:'+JSON.stringify(next.label));`,
     );
     return new CollectionSession(this.spaceId, label, this.execute);
   }
