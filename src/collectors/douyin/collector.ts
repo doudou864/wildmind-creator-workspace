@@ -89,7 +89,7 @@ export async function collectDouyin(
         })
       : await judgment.read(
           screenshotReading,
-          `只按截图提取数据；不输出比较增减、排名、舍弃指标或估计值。raw保留单位和百分号；不要加法或单位换算。流量来源各行单独按原标签返回（包含${JSON.stringify(Object.values(config.sourceGroups).flat())}），归组由程序处理；数据不足为null。缺失不可见的指标不输出。没有相关数据时相应数组为空。失败填写reason。发布时间带+08:00；账号dataDate只写YYYY-MM-DD。只取“作品数据”和“粉丝数据”的指定日期账号指标，不取“数据总览”。原文记录只要诊断、性别/年龄/地域、观看时段、流量来源；不要设备/兴趣/评论热词。\n允许的数值指标：${JSON.stringify(allowedMetrics)}\n${context}`,
+          `只按截图提取数据；不输出比较增减、排名、舍弃指标或估计值。raw保留单位和百分号；不要加法或单位换算。流量来源各行单独按原标签返回（包含${JSON.stringify(Object.values(config.sourceGroups).flat())}），归组由程序处理；数据不足为null。缺失不可见的指标不输出。没有相关数据时相应数组为空。失败填写reason。发布时间带+08:00；账号dataDate只写YYYY-MM-DD。只取“作品数据”和“粉丝数据”的指定日期账号指标，不取“数据总览”。原文记录只要诊断、性别/年龄/地域、观看时段、流量来源；不要设备/兴趣/评论热词。\n允许的数值指标：${JSON.stringify(allowedMetrics)}\n以下对应表中的平台原标签也属于允许指标，按截图原标签提取，由程序转换：${JSON.stringify(kind === 'account' ? config.accountAliases : config.aliases)}\n${context}`,
           [sourcePath],
         );
     await writeFile(
