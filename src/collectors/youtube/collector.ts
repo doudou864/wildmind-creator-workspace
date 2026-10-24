@@ -22,7 +22,7 @@ import { screenshotReading } from '../recognition.ts';
 import { requireCoreMetrics } from '../validate.ts';
 import { captureMonthly } from '../monthly.ts';
 import { writeState } from '../state.ts';
-import { durationSeconds, subscriberChange } from './values.ts';
+import { durationSeconds, subscriberChange, reportDateRange, requireReportDates } from './values.ts';
 
 export async function collectYoutube(
   database: WorkspaceDatabase,
@@ -116,6 +116,7 @@ export async function collectYoutube(
     const file = `${folder}/report-${i}.png`;
     await session.capture(file);
     paths.push(file);
+    requireReportDates(reportDateRange(state.text), incoming);
     const reading = await judgment.read(
       screenshotReading,
       `只看可见表格完整行，提取这几条作品的指标，不取合计、不取比例小字。允许指标${JSON.stringify(allowed)}；元数据${JSON.stringify(incoming)}。日期沿用元数据。平均观看时长保留原始分:秒，不心算。破折号留null；当前截图没有目标行则posts为空,status为ok。account/records/signals为空。`,

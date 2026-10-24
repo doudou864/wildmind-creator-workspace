@@ -12,6 +12,7 @@ export type ExportConfig = {
   confirm: string;
   batchSize: number;
   maxSegments: number;
+  readyTimeoutMs: number;
 };
 type Card = { title: string; date: string; selected: boolean };
 export async function exportRecentPosts(
@@ -28,7 +29,9 @@ export async function exportRecentPosts(
 ) {
   const readCards = () =>
     session.run<Card[]>(
-      `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(cfg=>{const d=[document,...Array.from(document.querySelectorAll('iframe')).map(f=>{try{return f.contentDocument}catch{return null}})].find(d=>d?.querySelector(cfg.card));if(!d)throw new Error('稿件选择列表不存在');return Array.from(d.querySelectorAll(cfg.card)).map(e=>({title:e.querySelector(cfg.title)?.textContent?.trim()??'',date:e.querySelector(cfg.date)?.textContent?.trim()??'',selected:e.classList.contains('active')}));},${JSON.stringify(cfg)})));`,
+      `const cfg=${JSON.stringify(cfg)};
+await page.waitForFunction(cfg=>{const d=[document,...Array.from(document.querySelectorAll('iframe')).map(f=>{try{return f.contentDocument}catch{return null}})].find(d=>d?.querySelector(cfg.card));const cards=d?Array.from(d.querySelectorAll(cfg.card)):[];return cards.length>0&&cards.every(e=>e.querySelector(cfg.title)?.textContent?.trim()&&e.querySelector(cfg.date)?.textContent?.trim());},cfg,{timeout:cfg.readyTimeoutMs});
+console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(cfg=>{const d=[document,...Array.from(document.querySelectorAll('iframe')).map(f=>{try{return f.contentDocument}catch{return null}})].find(d=>d?.querySelector(cfg.card));if(!d)throw new Error('稿件选择列表不存在');return Array.from(d.querySelectorAll(cfg.card)).map(e=>({title:e.querySelector(cfg.title)?.textContent?.trim()??'',date:e.querySelector(cfg.date)?.textContent?.trim()??'',selected:e.classList.contains('active')}));},cfg)));`,
     );
   const key = (p: { title: string; date: string }) => JSON.stringify([p.title, p.date]);
   const recent = (p: Card) =>
@@ -40,7 +43,10 @@ export async function exportRecentPosts(
   for (let segment = 0; segment < cfg.maxSegments; segment++) {
     await session.inspect(platformId, cfg.scroll);
     cards = await readCards();
-    if (!cards.length || new Set(cards.map(key)).size !== cards.length) throw new Error('稿件选择列表为空或身份重复');
+    if (!cards.length) throw new Error('稿件选择列表为空');
+    if (cards.some((p) => !p.title || !p.date)) throw new Error('稿件标题或发布时间尚未加载完整');
+    if (new Set(cards.map(key)).size !== cards.length)
+      throw new Error('稿件选择列表有重复标题和发布时间，无法唯一匹配');
     // The visible selector is newest first. Verify that order before using an old-date boundary.
     if (
       cards.some(

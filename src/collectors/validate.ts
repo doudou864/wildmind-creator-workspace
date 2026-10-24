@@ -1,5 +1,34 @@
 import type { WorkspaceConfig } from '../lib/config.ts';
 import { metricFor, type CapturedReading, type CollectedPost } from './storage.ts';
+export function missingDailyPostMetrics(
+  config: WorkspaceConfig,
+  platformId: string,
+  post: CollectedPost,
+  readings: CapturedReading[],
+  aliases: Record<string, string>,
+) {
+  const seen = new Set(
+    readings.flatMap((r) =>
+      (r.postKey && r.postKey !== post.key ? [] : r.reading.posts)
+        .filter((p) => p.title === post.title && p.publishedAt === post.publishedAt)
+        .flatMap((p) => p.metrics.map((m) => metricFor(config, platformId, 'post', post.form, m.label, aliases)?.id)),
+    ),
+  );
+  return config.metrics.filter(
+    (m) =>
+      m.scope === 'post' &&
+      m.kind === 'number' &&
+      m.bindings.some(
+        (b) =>
+          b.platformId === platformId &&
+          (b.form === post.form || b.form === 'all') &&
+          b.level === 'core' &&
+          b.status === 'confirmed' &&
+          b.frequency === 'daily',
+      ) &&
+      !seen.has(m.id),
+  );
+}
 export function requireCoreMetrics(
   config: WorkspaceConfig,
   platformId: string,

@@ -32,6 +32,7 @@ import {
 } from '../storage.ts';
 import { loadDouyinConfig } from './config.ts';
 import { selectAccountDate } from './dates.ts';
+import { missingDailyPostMetrics } from '../validate.ts';
 export async function collectDouyin(
   database: WorkspaceDatabase,
   session: CollectionSession,
@@ -343,7 +344,13 @@ export async function collectDouyin(
       days,
       !!readState(database, `anomaly:${post.key}`)?.active,
     );
-    if (!due.needed || (completed[post.key] && due.due.every((d) => completed[post.key].includes(d)))) continue;
+    const missingDaily = missingDailyPostMetrics(workspace, config.platformId, post, readings, config.aliases);
+    if (
+      !missingDaily.length &&
+      (!due.needed || (completed[post.key] && due.due.every((d) => completed[post.key].includes(d))))
+    )
+      continue;
+    if (missingDaily.length) progress(`列表缺少${missingDaily.map((m) => m.name).join('、')}，补读详情：${post.title}`);
     const detail = await session.openDetail(post.title, config.titleSelector);
     let closeDetail = true;
     try {
@@ -374,7 +381,7 @@ export async function collectDouyin(
           await detail.scroll();
         }
       }
-      completed[post.key] = due.due;
+      if (due.needed) completed[post.key] = due.due;
     } catch (error) {
       if (error instanceof Error && /控制权|ego 操作失败|浏览器操作超时/.test(error.message)) closeDetail = false;
       throw error;

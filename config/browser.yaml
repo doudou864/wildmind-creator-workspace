@@ -37,7 +37,7 @@ platforms:
       dm: https://channels.weixin.qq.com/platform/private_msg
     confirmation:
       button: 'text="微信快捷登录"'
-      message: 请在微信里确认登录
+      message: 等待电脑桌面上的微信登录弹窗确认“允许”（不在浏览器内）；网页登录成功后自动继续
       deadline: "23:00"
     url: https://channels.weixin.qq.com/
     domains: [channels.weixin.qq.com]

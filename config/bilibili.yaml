@@ -14,6 +14,7 @@ selection:
   confirm: '.arcp-queue-confirm'
   batchSize: 10
   maxSegments: 100
+  readyTimeoutMs: 15000
 aliases:
   封标点击率: 封标点击率星级
   3秒跳出率: 3 秒跳出率

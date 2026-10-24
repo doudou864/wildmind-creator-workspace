@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import type { CollectionSession } from '../../browser/collection-session';
 import { exportRecentPosts } from './export';
+import { runInNewContext } from 'node:vm';
 test('11条近期稿件分两次选择导出，排除起号前旧稿并保留各自CSV来源', async () => {
   const folder = await mkdtemp(path.join(tmpdir(), 'bili-export-'));
   const cards = Array.from({ length: 12 }, (_, i) => ({
@@ -43,6 +44,7 @@ test('11条近期稿件分两次选择导出，排除起号前旧稿并保留各
         confirm: '.confirm',
         batchSize: 10,
         maxSegments: 10,
+        readyTimeoutMs: 15000,
       },
       '.export',
       folder,
@@ -60,4 +62,70 @@ test('11条近期稿件分两次选择导出，排除起号前旧稿并保留各
   } finally {
     await rm(folder, { recursive: true, force: true });
   }
+});
+
+test('稿件选择骨架先出现时等待标题和日期，不能把两个空骨架当重复作品', async () => {
+  let loaded = false;
+  const checks: boolean[] = [];
+  const cards = [0, 1].map((i) => ({
+    querySelector: (selector: string) => ({
+      textContent: loaded ? (selector === '.title' ? `fixture旧稿${i}` : `2025年01月0${2 - i}日 12:00:00`) : '',
+    }),
+    classList: { contains: () => false },
+  }));
+  const document = {
+    querySelector: () => cards[0],
+    querySelectorAll: (selector: string) => (selector === 'iframe' ? [] : cards),
+  };
+  const page = {
+    waitForFunction: async (fn: (cfg: unknown) => boolean, cfg: unknown) => {
+      checks.push(!!fn(cfg));
+      loaded = true;
+      checks.push(!!fn(cfg));
+      expect(checks.at(-1)).toBe(true);
+    },
+    evaluate: async (fn: (cfg: unknown) => unknown, cfg: unknown) => fn(cfg),
+  };
+  const session = {
+    inspect: async () => ({ scroll: { top: 0, height: 100, total: 100 } }),
+    click: async () => {},
+    run: async (script: string) => {
+      let result: unknown;
+      await runInNewContext(`(async()=>{${script}})()`, {
+        page,
+        document,
+        console: {
+          log: (value: string) => {
+            result = JSON.parse(value.slice('WORKSPACE_RESULT:'.length));
+          },
+        },
+      });
+      return result;
+    },
+  } as unknown as CollectionSession;
+  expect(
+    await exportRecentPosts(
+      session,
+      'bilibili',
+      {
+        choose: '.choose',
+        card: '.card',
+        title: '.title',
+        date: '.date',
+        scroll: '.scroll',
+        confirm: '.confirm',
+        batchSize: 10,
+        maxSegments: 10,
+        readyTimeoutMs: 15000,
+      },
+      '.export',
+      '/fixture',
+      [],
+      '2026-09-17',
+      30,
+      new Date('2026-10-24T06:30:00Z'),
+      () => {},
+    ),
+  ).toEqual([]);
+  expect(checks).toEqual([false, true]);
 });

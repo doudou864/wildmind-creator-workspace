@@ -41,6 +41,7 @@ export async function collectBilibili(
         confirm: z.string(),
         batchSize: z.number().int().positive(),
         maxSegments: z.number().int().positive(),
+        readyTimeoutMs: z.number().int().positive(),
       }),
       matchWindowDays: z.number(),
       historyRange: z.tuple([z.number(), z.number()]),
