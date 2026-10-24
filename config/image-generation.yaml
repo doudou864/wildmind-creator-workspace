@@ -1,6 +1,6 @@
-# 只走本机 ChatGPT 套餐；model 是 Codex 执行模型，null 使用其默认模型。
+# 只走本机 ChatGPT 套餐；model 是 Codex 执行模型，思考强度沿用 ai.yaml。
 method: codex-sdk
-model: null
+model: gpt-6-sol
 timeoutMs: 600000
 dailyLimit: 30
 maxCropFraction: 0.02

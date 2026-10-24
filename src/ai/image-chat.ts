@@ -22,7 +22,9 @@ export type ChatTransport = (input: {
   onText: (text: string) => void;
 }) => Promise<{ threadId: string; files: string[]; text: string }>;
 export const streamImageChat: ChatTransport = async (input) => {
-  const ai = z.object({ codexPath: z.string() }).parse(parse(await readFile('config/ai.yaml', 'utf8')));
+  const ai = z
+    .object({ codexPath: z.string(), reasoningEffort: z.enum(['low', 'medium', 'high']) })
+    .parse(parse(await readFile('config/ai.yaml', 'utf8')));
   const login = await promisify(execFile)(ai.codexPath, ['login', 'status'], { timeout: 15000 });
   if (!/Logged in using ChatGPT/.test(login.stdout + login.stderr)) throw Error('Codex 未使用 ChatGPT 登录');
   const directory = path.resolve('data/ai/images');
@@ -55,6 +57,7 @@ export const streamImageChat: ChatTransport = async (input) => {
     sandboxMode: 'workspace-write' as const,
     approvalPolicy: 'never' as const,
     webSearchMode: 'disabled' as const,
+    modelReasoningEffort: ai.reasoningEffort,
     ...(input.config.model ? { model: input.config.model } : {}),
   };
   const thread = input.threadId ? codex.resumeThread(input.threadId, options) : codex.startThread(options);

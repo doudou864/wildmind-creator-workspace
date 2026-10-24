@@ -27,7 +27,9 @@ export function imageFailure(error: unknown) {
   return /[\u4e00-\u9fff]/.test(message) ? message : 'Codex 生图失败，本次未保存素材，请检查本机 Codex 后重试。';
 }
 export async function generateImage(prompt: string, reference: string | string[] | null, config: GenerationConfig) {
-  const ai = z.object({ codexPath: z.string() }).parse(parse(await readFile('config/ai.yaml', 'utf8')));
+  const ai = z
+    .object({ codexPath: z.string(), reasoningEffort: z.enum(['low', 'medium', 'high']) })
+    .parse(parse(await readFile('config/ai.yaml', 'utf8')));
   const login = await promisify(execFile)(ai.codexPath, ['login', 'status'], { timeout: 15000 });
   if (!/Logged in using ChatGPT/.test(login.stdout + login.stderr))
     throw new Error('Codex 未使用 ChatGPT 登录，请先在本机登录。');
@@ -57,6 +59,7 @@ export async function generateImage(prompt: string, reference: string | string[]
     sandboxMode: 'workspace-write',
     approvalPolicy: 'never',
     webSearchMode: 'disabled',
+    modelReasoningEffort: ai.reasoningEffort,
     ...(config.model ? { model: config.model } : {}),
   });
   const result = await thread.run(
