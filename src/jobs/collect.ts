@@ -26,6 +26,7 @@ import { startCrawl, finishCrawl } from './crawl-log.ts';
 import { requireAttention, notifyAttention, pendingAttention, resolveAttention } from './attention.ts';
 import { checkConfirmations } from './confirmations.ts';
 import { loadSchedule, dailySchedule, dueSlot, shanghaiDate, platformSchedule } from './schedule.ts';
+import { collectWithAvailability } from '../collectors/availability.ts';
 export async function runCollection(
   mode: 'manual' | 'scheduled' | 'resume',
   spaceOverride?: number,
@@ -105,18 +106,31 @@ export async function runCollection(
             const paths: string[] = [];
             const id = startCrawl(database, platformId);
             try {
-              await collector(database, new CollectionSession(spaceId, page), new CodexJudgment(), paths);
-              await collectPlatformInbox(
-                database,
-                platformId,
-                new CollectionSession(spaceId, page),
-                new CodexJudgment(),
-                paths,
+              const outcome = await collectWithAvailability(() =>
+                collector(database, new CollectionSession(spaceId, page), new CodexJudgment(), paths),
               );
-              await finishCrawl(database, id, { status: 'success', archivePaths: paths });
+              if (!outcome.dataPending)
+                await collectPlatformInbox(
+                  database,
+                  platformId,
+                  new CollectionSession(spaceId, page),
+                  new CodexJudgment(),
+                  paths,
+                );
+              await finishCrawl(database, id, {
+                status: 'success',
+                archivePaths: paths,
+                dataPending: outcome.dataPending,
+              });
               const current = readState(database, key) ?? state;
               const prior = Array.isArray(current.successfulPlatforms) ? (current.successfulPlatforms as string[]) : [];
-              writeState(database, key, { ...current, successfulPlatforms: [...new Set([...prior, platformId])] });
+              writeState(database, key, {
+                ...current,
+                successfulPlatforms: outcome.dataPending
+                  ? prior.filter((id) => id !== platformId)
+                  : [...new Set([...prior, platformId])],
+                ...(outcome.dataPending ? { succeeded: false } : {}),
+              });
             } catch (error) {
               await finishCrawl(database, id, {
                 status: 'failed',
@@ -225,26 +239,35 @@ export async function runCollection(
         const collector = collectors.get(id);
         if (!collector) throw new Error('该平台采集器尚未接入，未伪造成功');
         throwIfCollectionCancelled();
-        const result = await collector(
-          database,
-          new CollectionSession(activeSpace, activePage),
-          new CodexJudgment(),
-          paths,
-        );
-        await collectPlatformInbox(
-          database,
-          id,
-          new CollectionSession(activeSpace, activePage),
-          new CodexJudgment(),
-          paths,
-        );
+        const session = new CollectionSession(activeSpace, activePage);
+        const outcome = await collectWithAvailability(() => collector(database, session, new CodexJudgment(), paths));
+        if (!outcome.dataPending)
+          await collectPlatformInbox(
+            database,
+            id,
+            new CollectionSession(activeSpace, activePage),
+            new CodexJudgment(),
+            paths,
+          );
         throwIfCollectionCancelled();
         refreshReviews(database, await loadConfig());
-        await finishCrawl(database, crawlId, { status: 'success', archivePaths: paths });
+        await finishCrawl(database, crawlId, {
+          status: 'success',
+          archivePaths: paths,
+          dataPending: outcome.dataPending,
+        });
         resolveAttention(database, id);
-        successful.add(id);
-        writeState(database, key, { ...readState(database, key), successfulPlatforms: [...successful] });
-        console.log(JSON.stringify({ platform: id, status: 'success', ...result }));
+        // A successful check of delayed platform data can still refresh at the remaining retry times.
+        if (outcome.dataPending) successful.delete(id);
+        else successful.add(id);
+        writeState(database, key, {
+          ...readState(database, key),
+          successfulPlatforms: [...successful],
+          ...(outcome.dataPending ? { succeeded: false } : {}),
+        });
+        console.log(
+          JSON.stringify({ platform: id, status: 'success', ...outcome.result, dataPending: outcome.dataPending }),
+        );
       } catch (error) {
         allSucceeded = false;
         collectionFailed = true;

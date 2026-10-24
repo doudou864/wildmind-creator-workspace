@@ -26,6 +26,7 @@ export type PlatformData = {
   status: 'pending' | 'success' | 'failed';
   lastSuccess: string | null;
   error: string | null;
+  dataPending?: { through: string; note: string };
   days: Day[];
   works: Work[];
   baselines: Record<string, number | null>;

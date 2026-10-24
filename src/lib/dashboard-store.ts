@@ -31,6 +31,7 @@ export function dashboardData(db: WorkspaceDatabase, config: WorkspaceConfig, no
       status: latest?.status === 'running' ? 'pending' : (latest?.status ?? 'pending'),
       lastSuccess: runs.find((r) => r.status === 'success')?.finishedAt ?? null,
       error: latest?.reason ?? null,
+      dataPending: latest?.status === 'success' ? latest.telemetry?.dataPending : undefined,
       days: [...days.values()].sort((a, b) => a.date.localeCompare(b.date)),
       works: review.posts
         .filter((p) => p.platformId === platform.id)

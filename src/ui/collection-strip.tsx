@@ -3,7 +3,14 @@ import { useEffect, useState } from 'react';
 import { Button } from './components';
 import { request, useResource } from './use-resource';
 import { dataDate, freshness } from './data-freshness';
-type Platform = { id: string; name: string; status?: string; lastSuccess?: string | null; reason?: string | null };
+type Platform = {
+  id: string;
+  name: string;
+  status?: string;
+  lastSuccess?: string | null;
+  reason?: string | null;
+  dataPending?: { through: string; note: string };
+};
 export function CollectionStrip({
   platforms,
   today,
@@ -116,6 +123,9 @@ export function CollectionStrip({
                 </span>
               </div>
               <small>{p.lastSuccess ? freshness(p.lastSuccess, today) : '尚无成功记录'}</small>
+              {p.status === 'success' && p.dataPending && (
+                <small>平台数据更新至 {p.dataPending.through.slice(5)}，等待更新</small>
+              )}
               <Button
                 disabled={!!data.legacyRunning || starting === 'all' || starting === p.id || !!running}
                 disabledReason={

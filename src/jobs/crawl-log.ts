@@ -20,7 +20,8 @@ export async function finishCrawl(
   database: WorkspaceDatabase,
   id: string,
   result:
-    { status: 'success'; archivePaths?: string[] } | { status: 'failed'; reason: string; archivePaths?: string[] },
+    | { status: 'success'; archivePaths?: string[]; dataPending?: { through: string; note: string } }
+    | { status: 'failed'; reason: string; archivePaths?: string[] },
   now = new Date().toISOString(),
 ) {
   if (result.status === 'failed' && !result.reason.trim()) throw new Error('失败必须记录原因');
@@ -31,7 +32,12 @@ export async function finishCrawl(
     .update(crawlLogs)
     .set({
       status: result.status,
-      telemetry: activeRuns.get(id) ?? null,
+      telemetry: activeRuns.has(id)
+        ? {
+            ...activeRuns.get(id)!,
+            ...(result.status === 'success' && result.dataPending ? { dataPending: result.dataPending } : {}),
+          }
+        : null,
       reason: result.status === 'failed' ? result.reason : null,
       archivePaths: paths,
       finishedAt: now,

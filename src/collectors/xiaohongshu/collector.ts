@@ -24,6 +24,7 @@ import {
 } from '../storage.ts';
 import { screenshotReading } from '../recognition.ts';
 import { readState, writeState } from '../state.ts';
+import { requireDailyDataDate } from '../availability.ts';
 export async function collectXiaohongshu(
   database: WorkspaceDatabase,
   session: CollectionSession,
@@ -92,10 +93,17 @@ export async function collectXiaohongshu(
       `只看截图，原数字保留单位，未知为null，禁止猜值。允许指标${JSON.stringify(allowed)}。来源比例按“视频推荐来源占比/搜索来源占比/首页推荐来源占比/其他来源占比”，同类中位数加“同类中位数”前缀。不要将周总量当日数据。${prompt}`,
       [file],
     );
+    const json = file.replace('.png', '.json');
+    await writeFile(
+      json,
+      JSON.stringify({ sourcePath: file, capturedAt: new Date().toISOString(), kind, reading: result }),
+    );
+    paths.push(json);
     if (result.status !== 'ok') throw new Error(result.reason ?? '截图识别失败');
     if (kind === 'account') {
       result.posts = [];
-      if (result.account.dataDate !== yesterday) throw new Error('小红书单日提示日期不符，禁止使用七日合计');
+      if (!result.account.metrics.length) throw new Error('小红书单日提示未识别到指标');
+      requireDailyDataDate(result.account.dataDate, yesterday);
     } else {
       result.account = { dataDate: null, metrics: [] };
       if (post)
@@ -113,9 +121,7 @@ export async function collectXiaohongshu(
       reading: result,
     };
     readings.push(capture);
-    const json = file.replace('.png', '.json');
     await writeFile(json, JSON.stringify(capture));
-    paths.push(json);
     return capture;
   }
   await session.navigate(cfg.listUrl, cfg.listReady);
@@ -225,7 +231,7 @@ export async function collectXiaohongshu(
     await recognize(
       session,
       'account',
-      `只取趋势图悬停提示中的${label}，日期必须为${yesterday}，不要顶部总数或近7天合计。其他数组为空。`,
+      `只取趋势图最右端悬停提示中的${label}及实际显示日期，不要顶部总数或近7天合计。即使日期早于${yesterday}，也按截图实际日期和数字返回ok，由程序判定平台更新进度；无法看清才失败。其他数组为空。`,
       undefined,
       true,
     );

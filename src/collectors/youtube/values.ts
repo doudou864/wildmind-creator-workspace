@@ -1,4 +1,5 @@
 import { displayedPrecision, parseDisplayedNumber, normalizeDataDate } from '../../core/collection.ts';
+import { PlatformDataPending } from '../availability.ts';
 export function reportDateRange(text: string) {
   const match = text.match(/(\d{4})\/(\d{1,2})\/(\d{1,2})\s*[–—−-]\s*(\d{4})\/(\d{1,2})\/(\d{1,2})/);
   if (!match) throw new Error('YouTube报表日期范围未能确认，未写入数据');
@@ -16,7 +17,8 @@ export function requireReportDates(
 ) {
   const pending = posts.filter((p) => normalizeDataDate(p.publishedAt) > range.end);
   if (pending.length)
-    throw new Error(
+    throw new PlatformDataPending(
+      range.end,
       `YouTube报表仅更新至${range.end}，${pending.length}条新作品尚未进入报表：${pending.map((p) => p.title).join('、')}；等待平台更新后重试，未将缺失指标填零`,
     );
 }
