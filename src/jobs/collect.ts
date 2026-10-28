@@ -1,3 +1,4 @@
+import { recheckLoginAttention } from './recheck-attention.ts';
 import { executionEvent, traceExecution } from './execution-log.ts';
 import { throwIfCollectionCancelled, CollectionCancelled, collectionSignal } from './cancellation.ts';
 import { existingCollectionSpace } from '../browser/collection-space.ts';
@@ -67,12 +68,6 @@ export async function runCollection(
       mode === 'scheduled' &&
       manualOnly &&
       !pendingAttention(database).some((item) => item.platformId === selectedPlatform && item.kind === 'confirmation')
-    )
-      return;
-    if (
-      mode === 'scheduled' &&
-      !manualOnly &&
-      (readState(database, pausedKey) ?? readState(database, 'browser:paused'))?.paused
     )
       return;
     if (selectedPlatform && !schedule.platforms.includes(selectedPlatform)) throw Error('平台不在采集配置中');
@@ -172,6 +167,14 @@ export async function runCollection(
     const slot =
       mode === 'scheduled' ? dueSlot(now, Number(state.chosen), schedule.retries, attempted, !!state.succeeded) : mode;
     if (!slot) return;
+    const recovered = await recheckLoginAttention(database, selectedPlatform);
+    if (recovered.length) {
+      writeState(database, retryKey, { id: recovered[0].spaceId });
+      writeState(database, pausedKey, { paused: false });
+    }
+    if (mode === 'scheduled' && (readState(database, pausedKey) ?? readState(database, 'browser:paused'))?.paused)
+      return;
+
     const pending = pendingAttention(database).filter(
       (x) => x.platformId === selectedPlatform && x.kind !== 'capacity',
     );
@@ -181,7 +184,12 @@ export async function runCollection(
     );
     const candidates =
       mode === 'resume'
-        ? [...new Set(pending.filter((x) => x.kind !== 'confirmation').map((x) => x.platformId))]
+        ? [
+            ...new Set([
+              ...pending.filter((x) => x.kind !== 'confirmation').map((x) => x.platformId),
+              ...(recovered.length ? [selectedPlatform] : []),
+            ]),
+          ]
         : schedule.platforms.filter((id) =>
             mode === 'manual'
               ? !pending.some((x) => x.platformId === id && x.kind === 'confirmation')
