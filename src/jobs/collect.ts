@@ -61,9 +61,20 @@ export async function runCollection(
         archivePaths: unfinished.archivePaths,
       });
     }
-    if (mode === 'scheduled' && (readState(database, pausedKey) ?? readState(database, 'browser:paused'))?.paused)
-      return;
     const schedule = await loadSchedule();
+    const manualOnly = schedule.manualOnly.includes(selectedPlatform);
+    if (
+      mode === 'scheduled' &&
+      manualOnly &&
+      !pendingAttention(database).some((item) => item.platformId === selectedPlatform && item.kind === 'confirmation')
+    )
+      return;
+    if (
+      mode === 'scheduled' &&
+      !manualOnly &&
+      (readState(database, pausedKey) ?? readState(database, 'browser:paused'))?.paused
+    )
+      return;
     if (selectedPlatform && !schedule.platforms.includes(selectedPlatform)) throw Error('平台不在采集配置中');
     const collectors = new Map<string, (...args: Parameters<typeof collectDouyin>) => Promise<object>>([
       [(await loadDouyinConfig()).platformId, collectDouyin],
@@ -87,6 +98,7 @@ export async function runCollection(
       chosen,
     };
     writeState(database, key, state);
+    let completedConfirmation = false;
     // Poll only confirmation tasks, never click the login button repeatedly.
     await checkConfirmations(
       database,
@@ -127,6 +139,10 @@ export async function runCollection(
                 archivePaths: paths,
                 dataPending: outcome.dataPending,
               });
+              completedConfirmation = true;
+              resolveAttention(database, platformId);
+              writeState(database, pausedKey, { paused: false });
+              writeState(database, retryKey, {});
               const current = readState(database, key) ?? state;
               const prior = Array.isArray(current.successfulPlatforms) ? (current.successfulPlatforms as string[]) : [];
               writeState(database, key, {
@@ -151,6 +167,7 @@ export async function runCollection(
       undefined,
       selectedPlatform,
     );
+    if (completedConfirmation || (mode === 'scheduled' && manualOnly)) return;
     const attempted = Array.isArray(state.attempted) ? (state.attempted as string[]) : [];
     const slot =
       mode === 'scheduled' ? dueSlot(now, Number(state.chosen), schedule.retries, attempted, !!state.succeeded) : mode;

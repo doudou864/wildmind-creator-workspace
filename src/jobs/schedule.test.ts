@@ -32,3 +32,18 @@ test('同日各平台共享一次随机选择，改窗口保留旧成功与尝�
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test('视频号仅手动触发，定时只可续接已发起的微信确认，不能启动新一轮', async () => {
+  const { scheduledPlatforms } = await import('./schedule');
+  const cfg = await loadSchedule();
+  expect(cfg.manualOnly).toEqual(['channels']);
+  expect(scheduledPlatforms(cfg.platforms, cfg.manualOnly, [])).not.toContain('channels');
+  expect(scheduledPlatforms(cfg.platforms, cfg.manualOnly, ['channels'])).toContain('channels');
+  expect(scheduledPlatforms(cfg.platforms, cfg.manualOnly, [])).toEqual([
+    'douyin',
+    'bilibili',
+    'youtube',
+    'xiaohongshu',
+  ]);
+  expect(cfg.platforms).toContain('channels');
+});

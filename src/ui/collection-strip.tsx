@@ -23,6 +23,7 @@ export function CollectionStrip({
 }) {
   const { data, error, refresh } = useResource<{
     today?: string;
+    manualOnly?: string[];
     attention?: { platform: string; reason: string; at: string }[];
     running: boolean;
     legacyRunning?: boolean;
@@ -63,7 +64,7 @@ export function CollectionStrip({
       setNotice(e instanceof Error ? e.message : '停止失败');
     }
   }
-  async function start(platform?: string) {
+  async function start(platform?: string, resume = false) {
     setStarting(platform ?? 'all');
     setNotice('');
     setStopping([]);
@@ -75,7 +76,7 @@ export function CollectionStrip({
       }>('/api/collection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ platform }),
+        body: JSON.stringify({ platform, ...(resume ? { action: 'resume' } : {}) }),
       });
       setNotice(
         result.errors.length
@@ -140,6 +141,7 @@ export function CollectionStrip({
                   {blocked.reason}（{dataDate(blocked.at)}）
                 </p>
               )}
+              {data.manualOnly?.includes(p.id) && <small>仅手动采集</small>}
               <CollectionHistory platform={p.id} />
               {p.status === 'success' && p.dataPending && (
                 <small>平台数据更新至 {p.dataPending.through.slice(5)}，等待更新</small>
@@ -149,9 +151,9 @@ export function CollectionStrip({
                 disabledReason={
                   data.legacyRunning ? '旧版整批任务结束后即可并行启动' : '该平台正在采集，其他平台可单独启动'
                 }
-                onClick={() => void start(p.id)}
+                onClick={() => void start(p.id, !!blocked)}
               >
-                重新采集
+                {blocked ? '已处理，恢复采集' : '重新采集'}
               </Button>
               {running && (
                 <Button

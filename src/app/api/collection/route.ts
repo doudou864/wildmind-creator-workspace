@@ -28,6 +28,7 @@ export async function GET() {
   });
   return Response.json({
     today: shanghaiDate(),
+    manualOnly: (await loadSchedule()).manualOnly,
     attention: await usingDatabase(async (db) =>
       pendingAttention(db).map((item) => ({ platform: item.platformId, reason: item.reason, at: item.updatedAt })),
     ),
@@ -42,10 +43,12 @@ export async function POST(request: Request) {
   if (!isLocalOrigin(request)) return Response.json({ error: '请从本机工作台启动采集' }, { status: 403 });
   try {
     const body = await request.json();
-    if (body.action !== undefined && body.action !== 'stop') throw Error('采集操作无效');
+    if (body.action !== undefined && body.action !== 'stop' && body.action !== 'resume') throw Error('采集操作无效');
     if (body.platform !== undefined && typeof body.platform !== 'string') throw Error('平台参数无效');
     return Response.json(
-      body.action === 'stop' ? await stopCollection(body.platform) : await startCollection(body.platform),
+      body.action === 'stop'
+        ? await stopCollection(body.platform)
+        : await startCollection(body.platform, body.action === 'resume' ? 'resume' : 'manual'),
       { status: 202 },
     );
   } catch (e) {

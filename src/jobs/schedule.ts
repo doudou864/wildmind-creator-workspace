@@ -12,10 +12,12 @@ export async function loadSchedule() {
       schedule: z.object({
         timezone: z.literal('Asia/Shanghai'),
         platforms: z.array(z.string()),
+        manualOnly: z.array(z.string()).default([]),
         launchdLabel: z.string(),
       }),
     })
     .parse(parse(await readFile('config/collection.yaml', 'utf8'))).schedule;
+  if (schedule.manualOnly.some((id) => !schedule.platforms.includes(id))) throw Error('手动采集平台必须在平台列表内');
   const { parameters } = await loadConfig();
   const [start, end] = parameters.syncWindow.split('–').map((value) => time.parse(value));
   if (!start || !end) throw new Error('主抓取时间窗口无效');
@@ -73,4 +75,9 @@ export function platformSchedule(legacy: Record<string, unknown> | null | undefi
     succeeded: !!legacy?.succeeded || successful.length > 0,
     successfulPlatforms: successful,
   };
+}
+
+// A manual login confirmation may finish its existing run; it cannot start a new scheduled run.
+export function scheduledPlatforms(platforms: string[], manualOnly: string[], confirmations: string[]) {
+  return platforms.filter((id) => !manualOnly.includes(id) || confirmations.includes(id));
 }

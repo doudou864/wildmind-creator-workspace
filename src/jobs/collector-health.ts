@@ -31,7 +31,7 @@ export async function currentHealth(db: WorkspaceDatabase) {
   const [config, schedule] = await Promise.all([loadConfig(), loadSchedule()]);
   return collectorHealth(
     db,
-    config.platforms.filter((p) => schedule.platforms.includes(p.id)),
+    config.platforms.filter((p) => schedule.platforms.includes(p.id) && !schedule.manualOnly.includes(p.id)),
   );
 }
 export async function notifyCollectorHealth(

@@ -1,3 +1,6 @@
+import { openDatabase } from '../db/database.ts';
+import { pendingAttention } from './attention.ts';
+import { scheduledPlatforms } from './schedule.ts';
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile, open, rm } from 'node:fs/promises';
 import { acquireJobLock } from './lock.ts';
@@ -42,13 +45,28 @@ export function collectionArgs(platform: string | undefined, allowed: string[], 
   ];
 }
 export async function startCollection(platform?: string, mode: CollectionMode = 'manual') {
-  const { platforms } = await loadSchedule();
+  const { platforms, manualOnly } = await loadSchedule();
   collectionArgs(platform, platforms, mode);
+  let targets = platform ? [platform] : platforms;
+  if (mode === 'scheduled') {
+    const db = openDatabase();
+    try {
+      targets = scheduledPlatforms(
+        targets,
+        manualOnly,
+        pendingAttention(db)
+          .filter((item) => item.kind === 'confirmation')
+          .map((item) => item.platformId),
+      );
+    } finally {
+      db.sqlite.close();
+    }
+  }
   if (await legacyCollectionRunning())
     throw Error('上一版采集任务仍在运行，完成后即可按平台并行采集；选题取材可独立运行');
   await mkdir('data/jobs', { recursive: true });
   const results = await Promise.all(
-    (platform ? [platform] : platforms).map(async (id) => {
+    targets.map(async (id) => {
       const release = await acquireJobLock(`data/jobs/collection-launch-${id}.pid`);
       if (!release) return { id, started: false };
       try {

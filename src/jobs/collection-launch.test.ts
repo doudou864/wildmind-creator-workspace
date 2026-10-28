@@ -10,7 +10,12 @@ vi.mock('node:fs/promises', () => ({
   open: async () => ({ fd: 12, close: vi.fn() }),
 }));
 vi.mock('./lock.ts', () => ({ acquireJobLock: async () => mocks.release }));
-vi.mock('./schedule.ts', () => ({ loadSchedule: async () => ({ platforms: ['douyin', 'bilibili'] }) }));
+vi.mock('./schedule.ts', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./schedule.ts')>()),
+  loadSchedule: async () => ({ platforms: ['douyin', 'bilibili'], manualOnly: [] }),
+}));
+vi.mock('../db/database.ts', () => ({ openDatabase: () => ({ sqlite: { close: vi.fn() } }) }));
+vi.mock('./attention.ts', () => ({ pendingAttention: () => [] }));
 import { startCollection, stopCollection } from './collection-control';
 beforeEach(() => {
   mocks.readFile.mockRejectedValue(Error('no process'));
