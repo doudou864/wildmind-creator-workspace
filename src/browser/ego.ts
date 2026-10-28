@@ -1,3 +1,4 @@
+import { traceExecution, executionEvent } from '../jobs/execution-log.ts';
 import { collectionSignal, throwIfCollectionCancelled, CollectionCancelled } from '../jobs/cancellation.ts';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -19,46 +20,65 @@ export function egoFailure(output: string) {
 // The CLI owns the browser; no platform HTTP/API calls occur here.
 export function runEgo(script: string): Promise<unknown> {
   throwIfCollectionCancelled();
-  return new Promise((resolve, reject) => {
-    const child = spawn('ego-browser', ['nodejs'], { stdio: ['pipe', 'pipe', 'pipe'] });
-    let output = '';
-    const timeout = setTimeout(() => {
-      child.kill();
-      reject(new Error('浏览器操作超时；请查看 ego 窗口，未自动重试'));
-    }, 90_000);
-    const signal = collectionSignal();
-    const abort = () => {
-      child.kill();
-      reject(new CollectionCancelled());
-    };
-    signal?.addEventListener('abort', abort, { once: true });
-    child.once('close', () => signal?.removeEventListener('abort', abort));
-    if (signal?.aborted) abort();
-    child.stdout.on('data', (chunk) => {
-      output += chunk.toString();
-    });
-    child.stderr.on('data', (chunk) => {
-      output += chunk.toString();
-    }); // ego prints console output on stderr; only parse our marker.
-    child.on('error', () => {
-      clearTimeout(timeout);
-      reject(new Error('无法启动 ego-browser，请确认已安装并正在运行'));
-    });
-    child.on('close', (code) => {
-      clearTimeout(timeout);
-      if (code !== 0) {
-        reject(new Error(egoFailure(output)));
-        return;
-      }
-      const line = output.split('\n').findLast((line) => line.startsWith('WORKSPACE_RESULT:'));
-      try {
-        resolve(JSON.parse(line!.slice('WORKSPACE_RESULT:'.length)));
-      } catch {
-        reject(new Error('浏览器没有返回可核验结果'));
-      }
-    });
-    child.stdin.end(script);
-  });
+  const operations = [
+    ...new Set(
+      script.match(
+        /(?:page|task|t)\.(?:goto|click|evaluate|screenshot|waitFor\w+|handOff|finish|pages|cdp|close|snapshot|fill)\b/g,
+      ) ?? [],
+    ),
+  ].join(', ');
+  return traceExecution(
+    `浏览器操作 ${operations || '工作区检查'}`,
+    () =>
+      new Promise((resolve, reject) => {
+        const child = spawn('ego-browser', ['nodejs'], { stdio: ['pipe', 'pipe', 'pipe'] });
+        let output = '';
+        const timeout = setTimeout(() => {
+          child.kill();
+          reject(new Error('浏览器操作超时；请查看 ego 窗口，未自动重试'));
+        }, 90_000);
+        const signal = collectionSignal();
+        const abort = () => {
+          child.kill();
+          reject(new CollectionCancelled());
+        };
+        signal?.addEventListener('abort', abort, { once: true });
+        child.once('close', () => signal?.removeEventListener('abort', abort));
+        if (signal?.aborted) abort();
+        child.stdout.on('data', (chunk) => {
+          output += chunk.toString();
+        });
+        child.stderr.on('data', (chunk) => {
+          output += chunk.toString();
+        }); // ego prints console output on stderr; only parse our marker.
+        child.on('error', () => {
+          clearTimeout(timeout);
+          reject(new Error('无法启动 ego-browser，请确认已安装并正在运行'));
+        });
+        child.on('close', (code) => {
+          clearTimeout(timeout);
+          if (code !== 0) {
+            executionEvent(
+              '浏览器底层错误',
+              'failed',
+              output
+                .split('\n')
+                .filter((line) => /Error|EGO_|net::|Timeout|at /.test(line))
+                .join('\n') || '未返回错误详情',
+            );
+            reject(new Error(egoFailure(output)));
+            return;
+          }
+          const line = output.split('\n').findLast((line) => line.startsWith('WORKSPACE_RESULT:'));
+          try {
+            resolve(JSON.parse(line!.slice('WORKSPACE_RESULT:'.length)));
+          } catch {
+            reject(new Error('浏览器没有返回可核验结果'));
+          }
+        });
+        child.stdin.end(script);
+      }),
+  );
 }
 
 // Pending login tabs are reserved until the user completes or the request expires.

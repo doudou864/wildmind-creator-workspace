@@ -1,3 +1,4 @@
+import { executionEvent, traceExecution } from './execution-log.ts';
 import { throwIfCollectionCancelled, CollectionCancelled, collectionSignal } from './cancellation.ts';
 import { existingCollectionSpace } from '../browser/collection-space.ts';
 import { collectPlatformInbox } from '../collectors/platform-inbox.ts';
@@ -106,16 +107,20 @@ export async function runCollection(
             const paths: string[] = [];
             const id = startCrawl(database, platformId);
             try {
+              executionEvent('平台指标读取', 'started');
               const outcome = await collectWithAvailability(() =>
                 collector(database, new CollectionSession(spaceId, page), new CodexJudgment(), paths),
               );
+              executionEvent('平台指标读取', 'success', outcome.dataPending?.note);
               if (!outcome.dataPending)
-                await collectPlatformInbox(
-                  database,
-                  platformId,
-                  new CollectionSession(spaceId, page),
-                  new CodexJudgment(),
-                  paths,
+                await traceExecution('评论与私信采集', () =>
+                  collectPlatformInbox(
+                    database,
+                    platformId,
+                    new CollectionSession(spaceId, page),
+                    new CodexJudgment(),
+                    paths,
+                  ),
                 );
               await finishCrawl(database, id, {
                 status: 'success',
@@ -146,12 +151,10 @@ export async function runCollection(
       undefined,
       selectedPlatform,
     );
-    writeState(database, errorKey, {});
     const attempted = Array.isArray(state.attempted) ? (state.attempted as string[]) : [];
     const slot =
       mode === 'scheduled' ? dueSlot(now, Number(state.chosen), schedule.retries, attempted, !!state.succeeded) : mode;
     if (!slot) return;
-    writeState(database, errorKey, {});
     const pending = pendingAttention(database).filter(
       (x) => x.platformId === selectedPlatform && x.kind !== 'capacity',
     );
@@ -178,6 +181,7 @@ export async function runCollection(
       if (mode !== 'scheduled') throw Error('所选平台需要先处理登录或浏览器确认，请查看待处理原因');
       return;
     }
+    writeState(database, errorKey, {});
     if (mode === 'scheduled')
       writeState(database, key, {
         ...state,
@@ -213,6 +217,7 @@ export async function runCollection(
         mode === 'scheduled' && (Date.now() - Date.parse(date + 'T00:00:00+08:00')) / 60000 > Number(state.chosen) + 1;
       const paths: string[] = [];
       try {
+        executionEvent('登录检查', 'started');
         const [login] = await browser.checkLogins([id]);
         if (login.state === 'awaiting_confirmation') {
           const config = (await loadBrowserConfig()).find((p) => p.id === id)!;
@@ -236,18 +241,17 @@ export async function runCollection(
         if (login.state === 'logged_out') throw new AttentionRequired(login.reason, 'login');
         if (login.reason.startsWith('需要处理：')) throw new AttentionRequired(login.reason, 'risk');
         if (login.state !== 'logged_in') throw new Error(login.reason);
+        executionEvent('登录检查', 'success');
+        executionEvent('平台指标读取', 'started');
         const collector = collectors.get(id);
         if (!collector) throw new Error('该平台采集器尚未接入，未伪造成功');
         throwIfCollectionCancelled();
         const session = new CollectionSession(activeSpace, activePage);
         const outcome = await collectWithAvailability(() => collector(database, session, new CodexJudgment(), paths));
+        executionEvent('平台指标读取', 'success', outcome.dataPending?.note);
         if (!outcome.dataPending)
-          await collectPlatformInbox(
-            database,
-            id,
-            new CollectionSession(activeSpace, activePage),
-            new CodexJudgment(),
-            paths,
+          await traceExecution('评论与私信采集', () =>
+            collectPlatformInbox(database, id, session, new CodexJudgment(), paths),
           );
         throwIfCollectionCancelled();
         refreshReviews(database, await loadConfig());

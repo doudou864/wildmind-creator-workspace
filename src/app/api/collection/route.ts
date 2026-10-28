@@ -1,3 +1,5 @@
+import { shanghaiDate } from '@/jobs/schedule';
+import { pendingAttention } from '@/jobs/attention';
 import { crawlLogs } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { isLocalOrigin } from '@/lib/local-origin';
@@ -25,6 +27,10 @@ export async function GET() {
     });
   });
   return Response.json({
+    today: shanghaiDate(),
+    attention: await usingDatabase(async (db) =>
+      pendingAttention(db).map((item) => ({ platform: item.platformId, reason: item.reason, at: item.updatedAt })),
+    ),
     running: legacyRunning || activePlatforms.length > 0,
     legacyRunning,
     activePlatforms,

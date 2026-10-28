@@ -1905,3 +1905,27 @@ dialog.asset-drawer {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
+.collection-history {
+  overflow-wrap: anywhere;
+}
+.collection-history[open] {
+  max-height: 480px;
+  overflow-y: auto;
+}
+.collection-history button {
+  text-align: left;
+  margin: 4px 0;
+}
+.collection-history pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.collection-history ol {
+  padding-left: 18px;
+}
+.collection-history li {
+  border-bottom: 1px solid var(--line-soft);
+  padding: 6px 0;
+}

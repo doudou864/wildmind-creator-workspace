@@ -1,4 +1,5 @@
 'use client';
+import { CollectionHistory } from './collection-history';
 import { useEffect, useState } from 'react';
 import { Button } from './components';
 import { request, useResource } from './use-resource';
@@ -21,11 +22,14 @@ export function CollectionStrip({
   onUpdate: () => void;
 }) {
   const { data, error, refresh } = useResource<{
+    today?: string;
+    attention?: { platform: string; reason: string; at: string }[];
     running: boolean;
     legacyRunning?: boolean;
     activePlatforms?: string[];
     issue: { reason?: string; at?: string } | null;
   }>('/api/collection', { running: false, issue: null }, true);
+  const currentDate = data.today ?? today;
   const [starting, setStarting] = useState<string | null>(null),
     [notice, setNotice] = useState(''),
     [stopping, setStopping] = useState<string[]>([]);
@@ -42,6 +46,9 @@ export function CollectionStrip({
       setStopping([]);
     }
   }, [data.activePlatforms, data.legacyRunning, stopping]);
+  useEffect(() => {
+    if (!data.running && notice.startsWith('已启动')) setNotice('本轮执行已结束，请查看各平台结果');
+  }, [data.running, notice]);
   async function stop(platform?: string) {
     try {
       await request('/api/collection', {
@@ -101,7 +108,10 @@ export function CollectionStrip({
       </div>
       <div className="collection-platforms">
         {platforms.map((p) => {
-          const ok = p.status === 'success' && !!p.lastSuccess && dataDate(p.lastSuccess) === today;
+          const ok = p.status === 'success' && !!p.lastSuccess && dataDate(p.lastSuccess) === currentDate;
+          const blocked = data.attention
+            ?.filter((item) => item.platform === p.id)
+            .sort((a, b) => b.at.localeCompare(a.at))[0];
           const running = data.running && data.activePlatforms?.includes(p.id);
           return (
             <div className="collection-platform" key={p.id}>
@@ -113,16 +123,24 @@ export function CollectionStrip({
                     ? stopping.includes(p.id)
                       ? '正在停止'
                       : '采集中'
-                    : p.reason === '已停止本次采集'
-                      ? '已停止'
-                      : ok
-                        ? '采集成功'
-                        : p.status === 'failed'
-                          ? '采集失败'
-                          : '今天未更新'}
+                    : blocked
+                      ? '等待处理'
+                      : p.reason === '已停止本次采集'
+                        ? '已停止'
+                        : ok
+                          ? '采集成功'
+                          : p.status === 'failed'
+                            ? '采集失败'
+                            : '今天未更新'}
                 </span>
               </div>
-              <small>{p.lastSuccess ? freshness(p.lastSuccess, today) : '尚无成功记录'}</small>
+              <small>{p.lastSuccess ? freshness(p.lastSuccess, currentDate) : '尚无成功记录'}</small>
+              {blocked && (
+                <p>
+                  {blocked.reason}（{dataDate(blocked.at)}）
+                </p>
+              )}
+              <CollectionHistory platform={p.id} />
               {p.status === 'success' && p.dataPending && (
                 <small>平台数据更新至 {p.dataPending.through.slice(5)}，等待更新</small>
               )}
