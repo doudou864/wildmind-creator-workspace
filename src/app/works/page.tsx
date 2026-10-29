@@ -91,7 +91,7 @@ export default async function Page({
           {selected ? (
             <>
               <ArchiveButton kind="content" id={selected.id} afterArchive="/works" />
-              <nav className="group-navigation" aria-label="作品平台">
+              <nav className="subnav" aria-label="作品平台">
                 {published.map((p) => (
                   <Link
                     key={p.id}

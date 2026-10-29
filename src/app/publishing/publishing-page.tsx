@@ -732,7 +732,7 @@ export default function PublishingPage({
         </p>
       )}
       {draft.kind !== 'video' && (
-        <nav className="creation-steps" aria-label="发布准备步骤">
+        <nav className="subnav" aria-label="发布准备步骤">
           <a href="#publish-source">选成片 / 确认稿 →</a>
           <a href="#publish-platforms">选平台 →</a>
           <a href={draft.kind === 'layout' ? '#publish-platforms' : '#publish-copy'}>
@@ -741,11 +741,10 @@ export default function PublishingPage({
           <a href="#publish-check">检查并上传 →</a>
         </nav>
       )}
-      <div className="publish-mode" role="group" aria-label="发布来源">
-        {modes.map((mode, i) => (
+      <div className="subnav" role="group" aria-label="发布来源">
+        {modes.map((mode) => (
           <Button
             key={mode.value}
-            className={draft.kind === mode.value ? 'active' : ''}
             aria-pressed={draft.kind === mode.value}
             disabled={busy}
             disabledReason="正在处理，请稍候。"
@@ -753,7 +752,7 @@ export default function PublishingPage({
               if (mode.value !== draft.kind) protect(() => fresh(mode.value));
             }}
           >
-            <strong>{mode.label}</strong>
+            {mode.label}
           </Button>
         ))}
       </div>

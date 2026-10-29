@@ -381,15 +381,6 @@
 .layout-columns {
   display: block;
 }
-.layout-platform-tabs {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-}
-.layout-platform-tabs [aria-pressed='true'] {
-  background: var(--ink);
-  color: var(--card);
-}
 .layouts-workspace .layout-blocks,
 .layouts-workspace .layout-editor {
   height: auto;
@@ -400,9 +391,6 @@
 .layouts-workspace .layout-ai textarea {
   min-height: 60px;
   max-height: none;
-}
-.layout-platform-tabs .button {
-  text-align: left;
 }
 
 .free-document {

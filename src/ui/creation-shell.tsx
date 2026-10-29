@@ -78,7 +78,7 @@ export function CreationStageNav({
     return '/create?' + p.toString();
   }
   return (
-    <nav className="creation-stage-tabs" aria-label="创作步骤">
+    <nav className="subnav" aria-label="创作步骤">
       {steps.map((s) => (
         <Link key={s.id} href={href(s.id)} aria-current={step === s.id ? 'step' : undefined}>
           {s.label}

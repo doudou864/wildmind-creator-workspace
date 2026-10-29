@@ -348,7 +348,7 @@ export default function LayoutsPage({
       </Card>
       {document && (
         <>
-          <nav className="layout-platform-tabs" aria-label="排版平台">
+          <nav className="subnav" aria-label="排版平台">
             {config.platforms.map((p) => {
               const v = document.variants[p.id];
               const issues = layoutIssues(v, p.id, data.assets, config);

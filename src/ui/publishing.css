@@ -6,42 +6,6 @@
 .publishing-workspace .topics-heading {
   margin: 4px 0;
 }
-.publish-mode {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  border: 1px solid var(--line);
-  border-radius: 6px;
-  overflow: hidden;
-  background: var(--card);
-}
-.publish-mode > button {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  text-align: left;
-  padding: 18px;
-  border: 0;
-  border-right: 1px solid var(--line);
-  background: transparent;
-}
-.publish-mode > button:last-child {
-  border: 0;
-}
-.publish-mode > button.active {
-  background: var(--ink);
-  color: var(--card);
-}
-.publish-mode > button.active .eyebrow {
-  color: var(--card);
-}
-.publish-mode strong {
-  font-size: 14px;
-  font-weight: 600;
-}
-.publish-mode > button > span:last-child {
-  font-size: 11px;
-  margin-left: auto;
-}
 .publish-grid {
   display: grid;
   grid-template-columns: minmax(280px, 1fr) minmax(500px, 2fr) minmax(260px, 0.95fr);
