@@ -435,14 +435,15 @@
 }
 .inbox-work-cards {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
 }
 .inbox-work-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 14px;
-  padding: 20px;
+  grid-template-columns: minmax(0, 1fr) auto 16px;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
   text-align: left;
   background: var(--card);
   color: var(--ink);
@@ -458,14 +459,16 @@
   outline-offset: 2px;
 }
 .inbox-work-card strong {
-  grid-column: 1 / -1;
-  font-size: 15px;
-  line-height: 1.6;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
   overflow-wrap: anywhere;
 }
 .inbox-work-count {
   color: var(--ink-2);
   font-size: 12px;
+  white-space: nowrap;
+  text-align: right;
 }
 .inbox-work-count b {
   color: var(--ink);

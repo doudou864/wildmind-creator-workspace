@@ -160,10 +160,8 @@ export default function InboxPage({
       <details className="card inbox-sources">
         <summary>
           {data.sources.length} 个来源 · {data.sources.filter((s) => s.status === 'ready').length} 个已读取
-          {data.sources
-            .filter((s) => s.status === 'failed')
-            .map((s) => ` · 读取失败（${platformName(s.platformId)}${channelName(s.channel)}）`)
-            .join('')}
+          {data.sources.some((s) => s.status === 'failed') &&
+            ` · ${data.sources.filter((s) => s.status === 'failed').length} 个读取失败`}
           {data.sources.some((s) => s.status === 'unavailable') ? ' · 部分来源暂无入口' : ''}
         </summary>
         {data.sources.length ? (

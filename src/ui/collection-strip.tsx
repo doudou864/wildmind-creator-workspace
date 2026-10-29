@@ -148,30 +148,32 @@ export function CollectionStrip({
               {p.status === 'success' && p.dataPending && (
                 <small>平台数据更新至 {p.dataPending.through.slice(5)}，等待更新</small>
               )}
-              <Button
-                disabled={!!data.legacyRunning || starting === 'all' || starting === p.id || !!running}
-                disabledReason={
-                  data.legacyRunning ? '旧版整批任务结束后即可并行启动' : '该平台正在采集，其他平台可单独启动'
-                }
-                onClick={() => void start(p.id, !!blocked)}
-              >
-                {blocked && !running ? '已处理，恢复采集' : '重新采集'}
-              </Button>
-              {running && (
-                <Button
-                  disabled={stopping.includes(p.id)}
-                  disabledReason="停止请求已发送"
-                  onClick={() => void stop(p.id)}
-                >
-                  {data.legacyRunning ? '停止本轮采集' : '停止采集'}
-                </Button>
-              )}
               {!running && p.reason && p.status === 'failed' && p.reason !== '已停止本次采集' && (
                 <details>
                   <summary>失败原因</summary>
                   <p>{p.reason}</p>
                 </details>
               )}
+              <div className="collection-platform-actions">
+                <Button
+                  disabled={!!data.legacyRunning || starting === 'all' || starting === p.id || !!running}
+                  disabledReason={
+                    data.legacyRunning ? '旧版整批任务结束后即可并行启动' : '该平台正在采集，其他平台可单独启动'
+                  }
+                  onClick={() => void start(p.id, !!blocked)}
+                >
+                  {blocked && !running ? '已处理，恢复采集' : '重新采集'}
+                </Button>
+                {running && (
+                  <Button
+                    disabled={stopping.includes(p.id)}
+                    disabledReason="停止请求已发送"
+                    onClick={() => void stop(p.id)}
+                  >
+                    {data.legacyRunning ? '停止本轮采集' : '停止采集'}
+                  </Button>
+                )}
+              </div>
             </div>
           );
         })}
