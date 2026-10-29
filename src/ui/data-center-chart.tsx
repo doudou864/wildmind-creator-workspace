@@ -19,7 +19,7 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
       text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
     chart.setOption({
       animation: false,
-      grid: { left: 80, right: 35, top: 35, bottom: 175 },
+      grid: { left: 80, right: 35, top: 32, bottom: 148 },
       tooltip: {
         trigger: 'axis',
         confine: true,
@@ -42,7 +42,7 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
           formatter: (_id: string, index: number) => {
             const row = distribution.rows[index];
             const title = workTitle(row.title);
-            const shortTitle = title.length > 18 ? `${title.slice(0, 18)}…` : title;
+            const shortTitle = title.length > 16 ? `${title.slice(0, 16)}…` : title;
             const value = row.value == null ? '—' : `${row.approximate ? '约 ' : ''}${display(row.value)}`;
             return `{${row.value == null ? 'missing' : 'value'}|D${day}：${value}}\n${shortTitle}`;
           },
@@ -50,7 +50,7 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
             value: { color: theme.accent, fontFamily: theme.font, fontSize: 12, fontWeight: 600, lineHeight: 20 },
             missing: { color: theme.muted, fontFamily: theme.font, fontSize: 12, lineHeight: 20 },
           },
-          rotate: 35,
+          rotate: 30,
           color: theme.muted,
           fontFamily: theme.font,
           fontSize: 11,
@@ -123,7 +123,7 @@ export function DataCenterChart({ distribution, day }: { distribution: PlaybackD
     <div style={{ overflowX: 'auto' }}>
       <div
         className="data-center-chart"
-        style={{ minWidth: Math.max(600, distribution.rows.length * 105), height: 435 }}
+        style={{ minWidth: Math.max(600, distribution.rows.length * 105), height: 330 }}
         ref={ref}
         role="img"
         aria-label={`D${day}各作品播放量与中位数虚线`}
