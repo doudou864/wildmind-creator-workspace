@@ -1,6 +1,7 @@
 'use client';
 import { publishingProgress } from '@/lib/publishing-progress';
 import { useState } from 'react';
+import Link from 'next/link';
 import { Button, Card, Empty } from './components';
 import { request } from './use-resource';
 import type { PublishBatch, PublishingData } from '@/lib/publishing-model';
@@ -86,6 +87,9 @@ export function PublishingTasks({
                 <p className="publishing-task-summary" role="status">
                   {progress.summary}
                 </p>
+                {batch.draft.contentId && (
+                  <Link href={`/works?content=${encodeURIComponent(batch.draft.contentId)}`}>查看作品数据 →</Link>
+                )}
                 <div className="publishing-platform-results">
                   {progress.rows.map(({ platformId, receipt, label, next }) => (
                     <details key={platformId} className="publishing-platform-result">

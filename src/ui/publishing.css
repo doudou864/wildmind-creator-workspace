@@ -573,3 +573,29 @@
 .publishing-result-attention {
   color: var(--accent);
 }
+
+.publish-cover-handoff {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px 24px;
+  align-items: start;
+  margin-bottom: 16px;
+}
+.publish-cover-handoff > h2,
+.publish-cover-handoff > [role='alert'] {
+  grid-column: 1 / -1;
+}
+.publish-handoff-image {
+  width: 220px;
+  height: 170px;
+  object-fit: contain;
+  background: var(--bg);
+}
+.publish-cover-handoff fieldset {
+  border: 0;
+  padding: 0;
+  min-width: 0;
+}
+.publish-cover-handoff > .button {
+  justify-self: start;
+}

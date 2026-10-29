@@ -1,5 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import Link from 'next/link';
+import { imageRatioLabel, topicCoverDraft, type CoverChatDraft } from './image-topic-handoff';
 import type { ImageConfig, ImageData } from '@/lib/image-model';
 import type { ImageConversation } from '@/lib/image-conversations';
 import { AssetImage } from './asset-image';
@@ -18,7 +20,7 @@ type Turn = {
   skillName?: string | null;
   ratio?: string;
 };
-type Draft = { text: string; skillId: string; ratio: string };
+type Draft = CoverChatDraft;
 type Saved = { active: string; drafts: Record<string, Draft> };
 const key = 'wildmind-image-conversations';
 const blank = (): Draft => ({ text: '', skillId: '', ratio: '' });
@@ -29,11 +31,13 @@ export function ImageChatStudio({
   initialData,
   today,
   syncWindow,
+  initialTopic = null,
 }: {
   config: ImageConfig;
   initialData: ImageData;
   today: string;
   syncWindow: string;
+  initialTopic?: string | null;
 }) {
   const { data, refresh, error: resourceError } = useResource('/api/images', initialData);
   const [sessions, setSessions] = useState<ImageConversation[]>([]);
@@ -55,7 +59,11 @@ export function ImageChatStudio({
   const history = useRef<HTMLDivElement>(null);
   const nearBottom = useRef(true);
   const draft = drafts[active] ?? blank();
-  const current = sessions.find((s) => s.id === active);
+  const current =
+    sessions.find((s) => s.id === active) ??
+    (draft.topicId
+      ? { id: active, title: draft.topicTitle || '待发送的封面草稿', archived: false, running: false }
+      : undefined);
   const running = !!busySession || sessions.some((s) => s.running);
   const ratios = [...new Set(config.purposes.flatMap((p) => p.ratios))];
   const purpose = config.purposes.find((p) => p.contentMode === 'free')!;
@@ -98,7 +106,11 @@ export function ImageChatStudio({
               Object.entries(raw.drafts).filter(([id, value]) => {
                 const d = value as Draft;
                 return (
-                  uuid(id) && d && ['text', 'skillId', 'ratio'].every((k) => typeof d[k as keyof Draft] === 'string')
+                  uuid(id) &&
+                  d &&
+                  ['text', 'skillId', 'ratio'].every((k) => typeof d[k as keyof Draft] === 'string') &&
+                  (d.topicId === undefined || typeof d.topicId === 'string') &&
+                  (d.topicTitle === undefined || typeof d.topicTitle === 'string')
                 );
               }),
             );
@@ -120,11 +132,30 @@ export function ImageChatStudio({
         } catch {
           /* Retain server history if a browser draft is damaged. */
         }
+        let nextDrafts = saved?.drafts ?? {};
+        let id = saved?.active ?? result.sessions.find((s) => !s.archived)?.id ?? crypto.randomUUID();
+        let handoffError = '';
+        if (initialTopic && new URL(window.location.href).searchParams.get('topic') === initialTopic) {
+          try {
+            const incoming = topicCoverDraft(initialTopic, data.topics);
+            const nextId = crypto.randomUUID();
+            const next = { ...nextDrafts, [nextId]: incoming };
+            // Persist before consuming the URL, so refresh never loses a handed-off draft.
+            localStorage.setItem(key, JSON.stringify({ active: nextId, drafts: next }));
+            id = nextId;
+            nextDrafts = next;
+            const url = new URL(window.location.href);
+            url.searchParams.delete('topic');
+            window.history.replaceState(null, '', url.pathname + url.search);
+          } catch (e) {
+            handoffError = e instanceof Error ? e.message : '选题未能带入，请重试。';
+          }
+        }
         setSessions(result.sessions);
-        setDrafts(saved?.drafts ?? {});
-        const id = saved?.active ?? result.sessions.find((s) => !s.archived)?.id ?? crypto.randomUUID();
+        setDrafts(nextDrafts);
         setArchived(result.sessions.find((s) => s.id === id)?.archived ?? false);
         activate(id);
+        if (handoffError) setError(handoffError);
       } catch (e) {
         if (live) {
           setError(String(e));
@@ -175,6 +206,20 @@ export function ImageChatStudio({
     setMutating(true);
     setError('');
     try {
+      if (action !== 'create' && drafts[id]?.topicId && !sessions.some((s) => s.id === id)) {
+        await request('/api/images/chat/sessions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'create', id }),
+        });
+        if (action === 'archive' && drafts[id]?.topicTitle) {
+          await request('/api/images/chat/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'rename', id, title: drafts[id].topicTitle!.slice(0, 100) }),
+          });
+        }
+      }
       await request('/api/images/chat/sessions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -285,7 +330,16 @@ export function ImageChatStudio({
       ]).catch((e) => setError(String(e)));
     }
   }
-  const visible = sessions.filter(
+  const localDrafts: ImageConversation[] = Object.entries(drafts)
+    .filter(([id, value]) => value.topicId && !sessions.some((s) => s.id === id))
+    .map(([id, value]) => ({
+      id,
+      title: value.topicTitle || '待发送的封面草稿',
+      archived: false,
+      running: false,
+      updatedAt: '',
+    }));
+  const visible = [...localDrafts, ...sessions].filter(
     (s) => s.archived === archived && s.title.toLowerCase().includes(search.toLowerCase()),
   );
   const sendingHere = busySession === active || current?.running;
@@ -422,11 +476,21 @@ export function ImageChatStudio({
                           </a>
                           <figcaption>
                             <span className="mono">
-                              {asset ? `${asset.ratio} · ${asset.width} × ${asset.height}` : '原图'}
+                              {asset
+                                ? `${imageRatioLabel(asset.width, asset.height, ratios, asset.ratio)} · ${asset.width} × ${asset.height}`
+                                : '原图'}
                             </span>
                             <a href={`/api/images/assets/${id}/file`} download>
                               下载原图 →
                             </a>
+                            {asset && (
+                              <Link
+                                className="button"
+                                href={`/publishing?${new URLSearchParams({ asset: id, ...(draft.topicId ? { topic: draft.topicId } : {}) })}`}
+                              >
+                                用于发布 →
+                              </Link>
+                            )}
                           </figcaption>
                         </figure>
                       );

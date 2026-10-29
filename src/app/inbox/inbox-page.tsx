@@ -3,9 +3,11 @@ import { ReplyDraft } from '@/ui/reply-draft';
 import { MessageNavigation } from '@/ui/message-navigation';
 import { inboxSummary } from '@/ui/inbox-summary';
 import { groupInbox, inboxGroupKey } from '@/ui/inbox-groups';
+import { matchesInboxWorkScope, type InboxWorkScope } from '@/ui/inbox-work-scope';
+import { workTitle } from '@/ui/data-freshness';
 import { ReplyActions, ReplyToast, type ReplyDestinations } from '@/ui/reply-actions';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Platform } from '@/lib/config';
 import {
   isMessageArchived,
@@ -46,6 +48,7 @@ export default function InboxPage({
   initialMessageId,
   initialThemeId = null,
   initialFilters = {},
+  initialWorkScope = null,
   today,
   syncWindow,
 }: {
@@ -53,6 +56,7 @@ export default function InboxPage({
   initialPriority?: boolean;
   initialThemeId?: string | null;
   initialFilters?: Partial<InboxFilters>;
+  initialWorkScope?: InboxWorkScope | null;
   initialMessageId: string | null;
   config: InboxConfig;
   platforms: Platform[];
@@ -62,6 +66,8 @@ export default function InboxPage({
 }) {
   const { data, error, refresh } = useResource('/api/inbox', initialData);
   const [priority, setPriority] = useState(initialPriority);
+  const [workScope, setWorkScope] = useState(initialWorkScope);
+  const autoOpenWork = useRef(!!initialWorkScope && !initialMessageId);
   const [filters, setFilters] = useState<InboxFilters>({
     ...blankFilters,
     ...initialFilters,
@@ -69,7 +75,9 @@ export default function InboxPage({
     themeId: initialThemeId,
   });
   const [linkedMessageId, setLinkedMessageId] = useState(initialMessageId);
-  const initialMessage = initialData.items.find((m) => m.id === initialMessageId);
+  const initialMessage = initialData.items.find(
+    (m) => m.id === initialMessageId && matchesInboxWorkScope(m, initialWorkScope),
+  );
   const [selected, setSelected] = useState<{ key: string; title: string; platformId: string } | null>(
     initialMessage
       ? {
@@ -96,11 +104,27 @@ export default function InboxPage({
   const filtered = filterInbox(data.items, data.themes, filters).filter(
     (m) =>
       (filters.reply === 'archived' ? isMessageArchived(m) : !isMessageArchived(m)) &&
+      matchesInboxWorkScope(m, workScope) &&
       (!linkedMessageId || m.id === linkedMessageId) &&
       (!priority || valuableIds.has(m.id)),
   );
   const groups = groupInbox(filtered, data.items);
   const selectedGroup = groups.find((g) => g.key === selected?.key);
+  const scopedPost =
+    workScope?.status === 'ready' ? workScope.posts.find((post) => post.id === workScope.postId) : null;
+  useEffect(() => {
+    if (!autoOpenWork.current) return;
+    autoOpenWork.current = false;
+    if (groups.length) setSelected(groups[0]);
+  }, [groups]);
+  function clearWorkScope() {
+    setWorkScope(null);
+    setSelected(null);
+    const url = new URL(window.location.href);
+    url.searchParams.delete('content');
+    url.searchParams.delete('post');
+    window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
+  }
   function filter(patch: Partial<InboxFilters>) {
     setLinkedMessageId(null);
     setSelected(null);
@@ -190,6 +214,16 @@ export default function InboxPage({
           <Empty>尚无评论或私信读取记录</Empty>
         )}
       </details>
+      {workScope && (
+        <div className="deal-linked" role={workScope.status === 'invalid' ? 'alert' : 'status'}>
+          <span>
+            {workScope.status === 'ready'
+              ? `当前作品：${workTitle(workScope.title)}${scopedPost ? ` · ${platformName(scopedPost.platformId)}` : ''}`
+              : workScope.message}
+          </span>
+          <Button onClick={clearWorkScope}>清除作品范围</Button>
+        </div>
+      )}
       <details
         className="inbox-filter-disclosure"
         open={
@@ -325,7 +359,7 @@ export default function InboxPage({
               setSelected(null);
             }}
           >
-            查看全部消息
+            {workScope ? '查看此作品其他消息' : '查看全部消息'}
           </Button>
         </div>
       )}
@@ -372,7 +406,17 @@ export default function InboxPage({
           );
         })}
         {!groups.length && (
-          <Empty>{data.recordsReady ? '当前没有符合条件的消息' : '尚未读取消息，完成读取后出现'}</Empty>
+          <Empty>
+            {workScope?.status === 'invalid'
+              ? '请清除作品范围，或从作品数据重新打开。'
+              : scopedPost && !scopedPost.platformPostId
+                ? '尚未确认该平台作品标识，暂时无法匹配评论。'
+                : workScope
+                  ? '这条作品在当前筛选下没有符合条件的消息。'
+                  : data.recordsReady
+                    ? '当前没有符合条件的消息'
+                    : '尚未读取消息，完成读取后出现'}
+          </Empty>
         )}
       </div>
       {selected && (

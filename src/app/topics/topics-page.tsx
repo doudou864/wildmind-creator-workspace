@@ -277,7 +277,7 @@ export default function TopicsPage({
                           </div>
                         </div>
                         {topic.status === 'selected' && (
-                          <Link href={`/images?topic=${encodeURIComponent(topic.id)}`}>去做图 →</Link>
+                          <Link href={`/images?topic=${encodeURIComponent(topic.id)}`}>用此选题制作封面 →</Link>
                         )}
                       </div>
                     </article>

@@ -14,6 +14,7 @@ import { isVisibleRecord } from '@/ui/visible-records';
 import { dataDate, workTitle } from '@/ui/data-freshness';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { WorkPageHeader } from '@/ui/work-page-header';
+import { defaultWork, newestPosts } from '@/ui/work-selection';
 import { shanghaiDate } from '@/browser/policy';
 import { WorksPlaybackCard } from '@/ui/works-playback-card';
 import DataCenterPage from '../data-center/data-center-page';
@@ -35,18 +36,17 @@ export default async function Page({
   const playback = await usingDatabase((db) => worksPlaybackData(db, config, settings));
   const items = all.contents.filter(isVisibleRecord).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   const requested = typeof query.content === 'string' ? all.contents.find((c) => c.id === query.content) : undefined;
+  if (query.content && !requested) notFound();
   const requestedId = requested?.mergedInto ?? requested?.id;
   const requestedPost = typeof query.post === 'string' ? all.posts.find((p) => p.id === query.post) : undefined;
   if (query.post && !requestedPost) notFound();
   const selected =
     items.find((c) => c.id === (requestedId ?? requestedPost?.contentId)) ??
-    (!query.content && !query.post ? items[0] : undefined);
+    (!query.content && !query.post ? defaultWork(items, all.posts) : undefined);
   if ((query.content || query.post) && !selected) notFound();
-  const published = selected ? all.posts.filter((p) => p.contentId === selected.id) : [];
-  const post =
-    published.find((p) => p.id === query.post) ??
-    published.find((p) => p.platformId === settings.platformId) ??
-    published[0];
+  if (requestedPost && requestedPost.contentId !== selected?.id) notFound();
+  const published = selected ? newestPosts(all.posts.filter((p) => p.contentId === selected.id)) : [];
+  const post = published.find((p) => p.id === query.post) ?? published[0];
   const detail =
     post?.platformId === settings.platformId
       ? await usingDatabase((db) => ({
@@ -93,6 +93,12 @@ export default async function Page({
           {selected ? (
             <>
               <ArchiveButton kind="content" id={selected.id} afterArchive="/works" />
+              <Link
+                className="button"
+                href={`/inbox?${new URLSearchParams({ content: selected.id, ...(post ? { post: post.id } : {}), channel: 'comment' })}`}
+              >
+                筛选这条作品的评论 →
+              </Link>
               <nav className="subnav" aria-label="作品平台">
                 {published.map((p) => (
                   <Link

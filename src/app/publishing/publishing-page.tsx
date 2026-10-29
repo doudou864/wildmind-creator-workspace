@@ -7,6 +7,13 @@ import { ContentPicker } from '@/ui/content-picker';
 import { AutosaveStatus } from '@/ui/autosave-status';
 import type { SaveContext } from '@/ui/autosave-queue';
 import { shouldSyncPublishingEditor } from '@/lib/publishing-editor-sync';
+import {
+  editableCoverBatch,
+  handoffAsset,
+  handoffTopic,
+  initialPublishingBatch,
+  prepareCoverHandoff,
+} from '@/lib/publishing-cover-handoff';
 import { PublishingTasks } from '@/ui/publishing-tasks';
 import { useAutosave } from '@/ui/use-autosave';
 import { useEditSession } from '@/ui/use-edit-session';
@@ -75,11 +82,17 @@ export default function PublishingPage({
   expiryHours,
   initialContent = null,
   initialKind = 'video',
+  initialAsset = null,
+  initialTopic = null,
+  initialBatchId = null,
   managementPages = {},
 }: {
   managementPages?: Record<string, string>;
   initialContent?: string | null;
   initialKind?: PublishKind;
+  initialAsset?: string | null;
+  initialTopic?: string | null;
+  initialBatchId?: string | null;
   config: PublishingConfig;
   layoutConfig: LayoutConfig;
   platforms: Platform[];
@@ -89,12 +102,12 @@ export default function PublishingPage({
   expiryHours: number;
 }) {
   const { data, error, refresh } = useResource('/api/publishing', initialData);
-  const initialBatch =
-    !initialContent && initialKind === 'video'
-      ? (data.batches
-          .filter((b) => b.draft.kind === 'video' && b.draft.videoInput && !b.abandonedAt && b.state !== 'finished')
-          .sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0] ?? null)
-      : null;
+  const initialBatch = initialPublishingBatch(data, {
+    batchId: initialBatchId,
+    assetId: initialAsset,
+    contentId: initialContent,
+    kind: initialKind,
+  });
   const [draft, setDraft] = useState<PublishDraft>(() =>
     initialBatch
       ? structuredClone(initialBatch.draft)
@@ -125,6 +138,23 @@ export default function PublishingPage({
   const [dirty, setDirty] = useState(false),
     [busy, setBusy] = useState(false),
     [notice, setNotice] = useState('');
+  const [incomingAsset, setIncomingAsset] = useState(initialAsset);
+  const [incomingTopic, setIncomingTopic] = useState(initialTopic);
+  const [handoffTarget, setHandoffTarget] = useState('');
+  const [handoffRatio, setHandoffRatio] = useState('');
+  const [handoffTitle, setHandoffTitle] = useState(handoffTopic(data, initialTopic)?.title ?? '');
+  const [replacement, setReplacement] = useState('');
+  const [handoffError, setHandoffError] = useState('');
+  const [handoffSaving, setHandoffSaving] = useState(false);
+  const [handoffUncertain, setHandoffUncertain] = useState(false);
+  const handoffPending = useRef(false);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [local, setLocal] = useState<LocalMedia[]>([]),
     [mediaLoading, setMediaLoading] = useState(false);
   const urls = useRef<string[]>([]),
@@ -159,7 +189,7 @@ export default function PublishingPage({
     [retry, setRetry] = useState<PublishReceipt | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const sessionDirty = useEditSession(
-    `publishing:${initialContent ?? 'new'}:${initialKind}`,
+    `publishing:${initialBatchId ?? initialContent ?? 'new'}:${initialKind}:${initialAsset ?? ''}`,
     { draft, meta, local, instruction },
     dirty,
     (saved) => {
@@ -206,6 +236,16 @@ export default function PublishingPage({
   const saved = !!meta && !dirty && !local.length;
   const eligibleTemplates = config.templates.filter((t) => t.kinds.includes(draft.kind));
   const currentVideo = data.videos.find((v) => v.id === draft.videoId);
+  const incoming = incomingAsset ? handoffAsset(data, config, incomingAsset) : null;
+  const incomingTopicMissing = !!incomingTopic && !handoffTopic(data, incomingTopic);
+  const receivingBatch = data.batches.find((batch) => batch.id === handoffTarget);
+  const receivingRatio = handoffRatio || (incoming?.ratios.length === 1 ? incoming.ratios[0] : '');
+  const receivingCover = receivingBatch
+    ? (receivingBatch.draft.videoInput?.covers[receivingRatio] ??
+      videoDraftCovers(receivingBatch.draft, data, config).find((cover) => cover.ratio === receivingRatio)?.asset?.id)
+    : null;
+  const replacementKey = JSON.stringify([handoffTarget, receivingBatch?.revision, receivingRatio, receivingCover]);
+  const replacing = !!receivingCover && receivingCover !== incomingAsset;
   async function copyText(item: PublishSetting) {
     const snapshot = data.snapshots.find((s) => draft.snapshotIds.includes(s.id) && s.platform === item.platformId);
     const body = snapshot
@@ -258,7 +298,7 @@ export default function PublishingPage({
     }
   }, [liveBatch, dirty, meta?.revision, meta?.state]);
   useEffect(() => {
-    if (meta || dirty || !draft.contentId) return;
+    if (initialBatchId || incomingAsset || meta || dirty || !draft.contentId) return;
     const active = data.batches.find(
       (b) =>
         b.draft.contentId === draft.contentId &&
@@ -270,7 +310,7 @@ export default function PublishingPage({
       setMeta(active);
       setDraft(structuredClone(active.draft));
     }
-  }, [data.batches, meta, dirty, draft.contentId, draft.kind]);
+  }, [data.batches, meta, dirty, draft.contentId, draft.kind, initialBatchId, incomingAsset]);
   const inFlight = data.receipts.some(
     (r) => r.batchId === meta?.id && ['queued', 'uploading', 'submitting'].includes(r.status),
   );
@@ -297,8 +337,9 @@ export default function PublishingPage({
     setLocal([]);
     setMediaLoading(false);
   }
-  async function protect(action: () => void) {
-    if (busy) return;
+  async function protect(action: () => void | Promise<void>) {
+    if (busy || handoffSaving) return;
+    const expectedSession = editSession.current;
     if (local.length || mediaLoading) {
       setNotice('正在保存素材，请稍候再切换。');
       return;
@@ -307,7 +348,8 @@ export default function PublishingPage({
       setNotice('当前内容尚未保存，请填写主题并检查保存提示后再切换。');
       return;
     }
-    action();
+    if (expectedSession !== editSession.current || !mounted.current) return;
+    await action();
   }
   function fresh(kind: PublishKind) {
     editSession.current++;
@@ -322,6 +364,8 @@ export default function PublishingPage({
     setDirty(false);
     setInstruction('');
     setNotice('');
+    if (!incomingAsset)
+      window.history.replaceState(null, '', kind === 'video' ? '/publishing' : `/publishing?kind=${kind}`);
   }
   function change(patch: Partial<PublishDraft>) {
     if (locked || busy) return;
@@ -631,8 +675,74 @@ export default function PublishingPage({
     setDirty(false);
     setInstruction('');
     setNotice('已载入最新发布状态。');
+    if (!incomingAsset) window.history.replaceState(null, '', `/publishing?batch=${encodeURIComponent(batch.id)}`);
   }
-  if (draft.kind === 'layout' && draft.contentId && !data.snapshots.some((s) => s.contentId === draft.contentId)) {
+  async function receiveCover() {
+    if (!incomingAsset || !handoffTarget || handoffPending.current || handoffUncertain) return;
+    handoffPending.current = true;
+    setHandoffError('');
+    try {
+      await protect(async () => {
+        const session = editSession.current;
+        setHandoffSaving(true);
+        setBusy(true);
+        let submitted = false;
+        try {
+          const latest = await request<PublishingData>('/api/publishing');
+          if (!mounted.current || session !== editSession.current) return;
+          const prepared = prepareCoverHandoff(latest, config, {
+            assetId: incomingAsset,
+            batchId: handoffTarget === 'new' ? null : handoffTarget,
+            ratio: receivingRatio,
+            title: handoffTitle,
+            topicId: incomingTopic,
+            replaceConfirmed: !replacing || replacement === replacementKey,
+          });
+          if (prepared.batch && prepared.batch.revision !== receivingBatch?.revision)
+            throw Error('目标草稿已更新，请查看最新封面后重新确认。');
+          submitted = true;
+          const result = await request<PublishBatch>(
+            prepared.batch
+              ? `/api/publishing/drafts/${encodeURIComponent(prepared.batch.id)}`
+              : '/api/publishing/drafts',
+            {
+              method: prepared.batch ? 'PATCH' : 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                ...(prepared.batch ? { 'If-Match': String(prepared.batch.revision) } : {}),
+              },
+              body: JSON.stringify(prepared.draft),
+            },
+          );
+          if (!mounted.current || session !== editSession.current) return;
+          loadBatch(result);
+          setIncomingAsset(null);
+          window.history.replaceState(null, '', `/publishing?batch=${encodeURIComponent(result.id)}`);
+          setNotice(`已将 ${receivingRatio} 封面保存到这条发布草稿，尚未上传或发布。`);
+          await refresh();
+        } catch (e) {
+          if (!mounted.current || session !== editSession.current) return;
+          setHandoffError(e instanceof Error ? e.message : '封面未能保存');
+          if (submitted) setHandoffUncertain(true);
+          setReplacement('');
+          await refresh();
+        } finally {
+          if (mounted.current) {
+            setHandoffSaving(false);
+            setBusy(false);
+          }
+        }
+      });
+    } finally {
+      handoffPending.current = false;
+    }
+  }
+  if (
+    !incomingAsset &&
+    draft.kind === 'layout' &&
+    draft.contentId &&
+    !data.snapshots.some((s) => s.contentId === draft.contentId)
+  ) {
     return (
       <main className="workspace publishing-workspace">
         <WorkspaceHeader current="/publishing" date={today} syncWindow={syncWindow} />
@@ -715,6 +825,140 @@ export default function PublishingPage({
           )
         }
       />
+      {initialBatchId && !data.batches.some((batch) => batch.id === initialBatchId) && !meta && (
+        <p role="alert">指定的发布记录不存在或已隐藏，请从下方任务列表选择一条记录。</p>
+      )}
+      {incoming && (
+        <section className="card publish-cover-handoff" aria-label="封面交接">
+          <h2>将这张封面用于发布</h2>
+          {incoming.error ? (
+            <p role="alert">{incoming.error}</p>
+          ) : (
+            <>
+              <AssetImage
+                className="publish-handoff-image"
+                src={assetUrl(incoming.asset!.id)}
+                alt={incoming.asset!.title}
+                width={incoming.asset!.width}
+                height={incoming.asset!.height}
+              />
+              <fieldset className="image-form" disabled={busy || handoffSaving || handoffUncertain}>
+                <label>
+                  保存到
+                  <select
+                    aria-label="封面保存到"
+                    value={handoffTarget}
+                    onChange={(event) => {
+                      setHandoffTarget(event.target.value);
+                      setHandoffRatio('');
+                      setReplacement('');
+                      setHandoffError('');
+                    }}
+                  >
+                    <option value="">请选择发布草稿</option>
+                    <option value="new">新建视频发布</option>
+                    {data.batches
+                      .filter((batch) => editableCoverBatch(batch, data))
+                      .map((batch) => (
+                        <option key={batch.id} value={batch.id}>
+                          {batch.draft.commonCopy.title || '未填写主题'}
+                        </option>
+                      ))}
+                  </select>
+                </label>
+                {handoffTarget && (
+                  <>
+                    <label>
+                      封面比例
+                      <select
+                        aria-label="带入封面比例"
+                        value={receivingRatio}
+                        onChange={(event) => {
+                          setHandoffRatio(event.target.value);
+                          setReplacement('');
+                        }}
+                      >
+                        <option value="">请选择比例</option>
+                        {incoming.ratios.map((ratio) => (
+                          <option key={ratio} value={ratio}>
+                            {ratio}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {handoffTarget === 'new' && (
+                      <label>
+                        主题
+                        <input
+                          aria-label="新发布主题"
+                          value={handoffTitle}
+                          maxLength={200}
+                          placeholder="填写这条视频的主题"
+                          onChange={(event) => setHandoffTitle(event.target.value)}
+                        />
+                      </label>
+                    )}
+                    {replacing && (
+                      <label>
+                        <input
+                          type="checkbox"
+                          checked={replacement === replacementKey}
+                          onChange={(event) => setReplacement(event.target.checked ? replacementKey : '')}
+                        />
+                        确认替换这条草稿现有的 {receivingRatio} 封面
+                      </label>
+                    )}
+                  </>
+                )}
+                {incomingTopicMissing && (
+                  <div role="alert">
+                    <p>来源选题已归档或不再可用，取消关联后可继续使用这张封面。</p>
+                    <Button onClick={() => setIncomingTopic(null)}>不关联选题</Button>
+                  </div>
+                )}
+                {handoffTarget &&
+                  handoffTarget !== 'new' &&
+                  (!receivingBatch || !editableCoverBatch(receivingBatch, data)) && (
+                    <p role="alert">目标草稿已不可编辑，请选择另一条草稿或新建视频发布。</p>
+                  )}
+                <Button
+                  variant="primary"
+                  disabled={
+                    !handoffTarget ||
+                    !receivingRatio ||
+                    incomingTopicMissing ||
+                    (handoffTarget === 'new' && !handoffTitle.trim()) ||
+                    (handoffTarget !== 'new' && (!receivingBatch || !editableCoverBatch(receivingBatch, data))) ||
+                    (replacing && replacement !== replacementKey)
+                  }
+                  onClick={() => void receiveCover()}
+                >
+                  {handoffSaving ? '正在保存…' : '保存封面并继续发布准备'}
+                </Button>
+              </fieldset>
+            </>
+          )}
+          {handoffError && <p role="alert">{handoffError}</p>}
+          {handoffUncertain && (
+            <p role="alert">这次保存未能确认。请核对下方任务记录，避免重复新建；确认记录后可从任务列表继续。</p>
+          )}
+          <Button
+            disabled={handoffSaving}
+            onClick={() =>
+              void protect(() => {
+                setIncomingAsset(null);
+                window.history.replaceState(
+                  null,
+                  '',
+                  meta ? `/publishing?batch=${encodeURIComponent(meta.id)}` : '/publishing',
+                );
+              })
+            }
+          >
+            取消带入封面
+          </Button>
+        </section>
+      )}
       {!canUpload && draft.kind !== 'video' && (
         <p className="publish-upload-reason">
           {issues.length

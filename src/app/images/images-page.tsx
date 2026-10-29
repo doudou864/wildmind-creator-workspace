@@ -15,6 +15,7 @@ export default function ImagesPage(props: {
       initialData={props.initialData}
       today={props.today}
       syncWindow={props.syncWindow}
+      initialTopic={props.initialTopic}
     />
   );
 }
