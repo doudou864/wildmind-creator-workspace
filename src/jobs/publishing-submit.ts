@@ -24,6 +24,7 @@ import {
   publishingPageCall,
   screenshotPublishing,
   publishingUploadComplete,
+  publishingSubmissionPending,
 } from '../browser/publishing-runner.ts';
 const approvalSchema = z.object({
   requestId: z.string(),
@@ -253,8 +254,14 @@ export async function runPublishingSubmit(db: WorkspaceDatabase, id: string, tok
             page,
             `try{await p.waitForFunction(expected=>location.href.split('?')[0]===expected.url&&[document,...Array.from(document.querySelectorAll('iframe')).flatMap(f=>{try{return f.contentDocument?[f.contentDocument]:[];}catch{return [];}})].some(d=>d.body?.innerText.includes(expected.text)),${JSON.stringify({ url: platform.submitResultUrl, text: item.copy.description || item.copy.title })},{timeout:30000});}catch{}console.log('WORKSPACE_RESULT:true');`,
           );
-        const observation = await publishingObservation(page),
-          file = path.resolve('data/jobs/publishing', id, platform.id + '-submit-result.png');
+        let observation = await publishingObservation(page);
+        const until = Date.now() + cfg.submitTimeoutMs;
+        while (publishingSubmissionPending(observation.snapshot) && Date.now() < until) {
+          active();
+          await new Promise((resolve) => setTimeout(resolve, cfg.pollMs));
+          observation = await publishingObservation(page);
+        }
+        const file = path.resolve('data/jobs/publishing', id, platform.id + '-submit-result.png');
         await screenshotPublishing(page, file);
         const result = await judge.read(
           z.object({

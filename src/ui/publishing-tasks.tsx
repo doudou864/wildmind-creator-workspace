@@ -1,9 +1,10 @@
 'use client';
+import { publishingProgress } from '@/lib/publishing-progress';
 import { useState } from 'react';
 import { Button, Card, Empty } from './components';
 import { request } from './use-resource';
 import type { PublishBatch, PublishingData } from '@/lib/publishing-model';
-import { publishingTaskNames, type PublishingTaskAction } from '@/lib/publishing-task-model';
+import { type PublishingTaskAction } from '@/lib/publishing-task-model';
 
 export function PublishingTasks({
   data,
@@ -12,8 +13,12 @@ export function PublishingTasks({
   onSelect,
   onRefresh,
   onDeleted,
+  platformNames = {},
+  receiptStates = {},
 }: {
   data: PublishingData;
+  platformNames?: Record<string, string>;
+  receiptStates?: Record<string, import('@/lib/publishing-model').PublishReceipt['status']>;
   selectedId: string | null;
   onNew: () => void;
   onSelect: (batch: PublishBatch) => void;
@@ -43,12 +48,23 @@ export function PublishingTasks({
   }
   const batches = data.batches.filter((b) => !b.abandonedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return (
-    <Card title="上传任务" meta={<Button onClick={onNew}>新的一条</Button>}>
+    <Card title="发布任务" meta={<Button onClick={onNew}>新的一条</Button>}>
       {error && <p role="alert">{error}</p>}
       {batches.length ? (
         <div className="publishing-task-list">
           {batches.map((batch) => {
             const task = data.tasks?.find((t) => t.batchId === batch.id);
+            const receipts = data.receipts
+              .filter((r) => r.batchId === batch.id)
+              .map((r) => ({ ...r, status: receiptStates[r.id] ?? r.status }));
+            const progress = publishingProgress(
+              batch.draft.settings.map((s) => s.platformId),
+              receipts,
+              task,
+            );
+            const hasSubmission = receipts.some(
+              (r) => ['published', 'pending_review', 'submitting'].includes(r.status) || r.failureStage === 'publish',
+            );
             const disabled = pending.includes(batch.id) || task?.status === 'deleting' || task?.status === 'pausing';
             return (
               <div key={batch.id} className="publishing-task-item">
@@ -58,19 +74,36 @@ export function PublishingTasks({
                   onClick={() => onSelect(batch)}
                 >
                   <strong>{batch.draft.commonCopy.title || '未填写主题'}</strong>
-                  <span className="small">
-                    {task
-                      ? task.status === 'running' && task.operation === 'publish'
-                        ? '正在发布'
-                        : publishingTaskNames[task.status]
-                      : batch.state === 'draft'
-                        ? '草稿 · 尚未上传'
-                        : batch.state === 'prepared'
-                          ? '上传完成 · 待审核'
-                          : '查看发布状态'}{' '}
-                    →
-                  </span>
+                  <span className="small">{progress.headline} →</span>
                 </button>
+                <p className="publishing-task-summary" role="status">
+                  {progress.summary}
+                </p>
+                <div className="publishing-platform-results">
+                  {progress.rows.map(({ platformId, receipt, label, next }) => (
+                    <section key={platformId} className="publishing-platform-result">
+                      <strong>{platformNames[platformId] ?? platformId}</strong>
+                      <strong
+                        className={
+                          ['unknown', 'failed', 'expired'].includes(receipt?.status ?? '')
+                            ? 'publishing-result-attention'
+                            : ''
+                        }
+                      >
+                        {label}
+                      </strong>
+                      <div>
+                        <p>{next}</p>
+                        {receipt?.reason && <p className="small">{receipt.reason}</p>}
+                      </div>
+                      {receipt?.url && /^https?:\/\//.test(receipt.url) && (
+                        <a href={receipt.url} target="_blank" rel="noreferrer">
+                          查看作品 →
+                        </a>
+                      )}
+                    </section>
+                  ))}
+                </div>
                 {task && (
                   <p className="small" title={task.reason || task.checkpoint}>
                     {task.reason || task.checkpoint}
@@ -91,7 +124,7 @@ export function PublishingTasks({
                             ? '核对发布结果'
                             : '继续处理'}
                       </Button>
-                      {task.operation !== 'publish' && (
+                      {task.operation !== 'publish' && !hasSubmission && (
                         <Button disabled={disabled} onClick={() => setRebuildId(batch.id)}>
                           重建浏览器并继续上传
                         </Button>

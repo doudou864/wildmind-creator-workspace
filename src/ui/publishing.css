@@ -545,3 +545,27 @@
 .publishing-task-select[aria-current='true'] {
   background: var(--bg);
 }
+
+.publishing-task-summary {
+  font-weight: 600;
+  margin: 12px 0;
+}
+.publishing-platform-results {
+  border-top: 1px solid var(--line-soft);
+  margin-bottom: 12px;
+}
+.publishing-platform-result {
+  display: grid;
+  grid-template-columns: 100px 230px minmax(0, 1fr) 100px;
+  gap: 12px;
+  align-items: start;
+  padding: 12px 0;
+  border-bottom: 1px dashed var(--line-soft);
+}
+.publishing-platform-result p {
+  margin: 0 0 4px;
+  overflow-wrap: anywhere;
+}
+.publishing-result-attention {
+  color: var(--accent);
+}

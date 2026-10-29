@@ -32,10 +32,14 @@ export function publishingUploadComplete(snapshot: string, cfg: UploadPlatform) 
     !(cfg.uploadingText && snapshot.includes(cfg.uploadingText))
   );
 }
+export function publishingSubmissionPending(snapshot: string) {
+  return /(?:正在发布|提交中|正在提交)/.test(snapshot);
+}
 export async function publishingBrowserConfig() {
   return z
     .object({
       pollMs: z.number().positive(),
+      submitTimeoutMs: z.number().positive(),
       uploadTimeoutMs: z.number().positive(),
       platforms: z.array(platformSchema),
     })
@@ -80,10 +84,9 @@ export async function fillPublishingCopy(
 ) {
   let code = `await p.fill(${JSON.stringify(cfg.titleInput)},${JSON.stringify(copy.title)});`;
   if (cfg.descriptionInput)
-    code +=
-      cfg.id === 'xiaohongshu'
-        ? `await p.click(${JSON.stringify(cfg.descriptionInput)});await p.keyboard.press('ControlOrMeta+A');await p.keyboard.press('Backspace');${copy.description ? `await p.keyboard.insertText(${JSON.stringify(copy.description)});` : ''}`
-        : `await p.fill(${JSON.stringify(cfg.descriptionInput)},${JSON.stringify(copy.description)});`;
+    code += ['xiaohongshu', 'douyin'].includes(cfg.id)
+      ? `await p.click(${JSON.stringify(cfg.descriptionInput)});await p.keyboard.press('ControlOrMeta+A');await p.keyboard.press('Backspace');${copy.description ? `await p.keyboard.insertText(${JSON.stringify(copy.description)});` : ''}`
+      : `await p.fill(${JSON.stringify(cfg.descriptionInput)},${JSON.stringify(copy.description)});`;
   // Tags use native field entry. YouTube hashtags are part of the saved description.
   if (cfg.id === 'channels') {
     code = channelsActionsScript + code;
@@ -96,6 +99,12 @@ export async function fillPublishingCopy(
     code += `const s=await p.snapshot({scope:'full_page'});const line=s.split('\\n').find(l=>l.includes('textbox')&&l.includes('[ref=')&&!l.includes('loc='));if(!line)throw Error('标签输入框未识别');const ref='@'+line.match(/ref=([0-9]+)/)[1];`;
     for (const tag of copy.tags)
       code += `await p.fill(ref,${JSON.stringify(tag)});await p.press(ref,'Enter');await p.waitForFunction(tag=>[...document.querySelectorAll('.label-item-v2-container')].some(e=>e.textContent.trim()===tag),${JSON.stringify(tag)},{timeout:10000});`;
+  } else if (cfg.id === 'douyin' && cfg.descriptionInput) {
+    code += `await p.focus(${JSON.stringify(cfg.descriptionInput)});await p.keyboard.press('ControlOrMeta+End');`;
+    for (const [index, tag] of copy.tags.entries()) {
+      code += `await p.keyboard.type(${JSON.stringify('#' + tag)});await p.waitForTimeout(1200);await p.keyboard.press('Enter');await p.waitForFunction(tag=>[...document.querySelectorAll('.zone-container [data-mention]')].some(e=>e.textContent.trim()==='#'+tag),${JSON.stringify(tag)},{timeout:10000});const tail${index}=await p.evaluate(()=>[...document.querySelectorAll('.zone-container [data-string]')].map(e=>e.textContent).join('').replace(/\\u200b/g,''));if(tail${index}.endsWith(' '))await p.keyboard.press('Backspace');`;
+    }
+    code += `const applied=await p.evaluate(()=>({lines:document.querySelectorAll('.zone-container .ace-line').length,tags:[...document.querySelectorAll('.zone-container [data-mention]')].map(e=>e.textContent.trim()),text:[...document.querySelectorAll('.zone-container [data-string]')].map(e=>e.textContent).join('').replace(/\\u200b/g,'')}));if(${JSON.stringify(copy.tags)}.some(tag=>!applied.tags.includes('#'+tag)))throw Error('抖音原生话题未生成');if(${JSON.stringify(!copy.description)}&&(applied.lines!==1||/\\s/.test(applied.text)))throw Error('抖音话题仍有空格或换行，未通过排版核验');`;
   } else if (cfg.id !== 'youtube' && cfg.descriptionInput) {
     code += `await p.focus(${JSON.stringify(cfg.descriptionInput)});await p.keyboard.press('ControlOrMeta+End');`;
     for (const tag of copy.tags)

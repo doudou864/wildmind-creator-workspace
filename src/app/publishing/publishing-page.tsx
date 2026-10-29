@@ -1413,6 +1413,20 @@ export default function PublishingPage({
           {draft.kind === 'video' ? (
             <PublishingTasks
               data={data}
+              platformNames={Object.fromEntries(platforms.map((p) => [p.id, p.name]))}
+              receiptStates={Object.fromEntries(
+                data.receipts.map((r) => [
+                  r.id,
+                  receiptStatus(
+                    r,
+                    data.batches.find((b) => b.id === r.batchId)?.draft ?? draft,
+                    data,
+                    config,
+                    now,
+                    expiryHours,
+                  ),
+                ]),
+              )}
               selectedId={meta?.id ?? null}
               onNew={() => void protect(() => fresh('video'))}
               onSelect={(batch) => {

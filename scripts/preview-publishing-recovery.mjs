@@ -8,9 +8,9 @@ import React,{useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {PublishingTasks} from './src/ui/publishing-tasks';
 const stamp=new Date().toISOString();
-const batch={id:'fixture-recovery',fixture:true,revision:0,createdAt:stamp,state:'running',draft:{commonCopy:{title:'隔离测试：浏览器关闭后的上传恢复'}}};
+const batch={id:'fixture-recovery',fixture:true,revision:0,createdAt:stamp,state:'running',draft:{commonCopy:{title:'隔离测试：浏览器关闭后的上传恢复'},settings:[]}};
 window.__calls=[];
-window.__data={batches:[batch],tasks:[{batchId:batch.id,token:'fixture',operation:'upload',status:'interrupted',checkpoint:'小红书 · 填写主题和话题',reason:'原浏览器工作区已关闭；材料已保留',browser:{spaceId:999,name:'fixture'},process:null,updatedAt:stamp}]};
+window.__data={batches:[batch],receipts:[],tasks:[{batchId:batch.id,token:'fixture',operation:'upload',status:'interrupted',checkpoint:'小红书 · 填写主题和话题',reason:'原浏览器工作区已关闭；材料已保留',browser:{spaceId:999,name:'fixture'},process:null,updatedAt:stamp}]};
 window.fetch=()=>Promise.reject(Error('隔离测试禁止网络'));
 window.__request=async(url,init)=>{
  const body=JSON.parse(init.body); window.__calls.push({url,...body});

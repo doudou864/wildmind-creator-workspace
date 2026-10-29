@@ -24,7 +24,11 @@ vi.mock('../browser/publishing-runner', async (importOriginal) => {
   };
 });
 afterEach(() => vi.restoreAllMocks());
-test.each(['bilibili', 'channels'])('%s 恢复遗留 submitting 只核对结果，绝不再次点击发布', async (platformId) => {
+test.each([
+  ['bilibili', false],
+  ['channels', false],
+  ['bilibili', true],
+] as const)('%s 恢复遗留 submitting 只核对结果，绝不再次点击发布（过渡态 %s）', async (platformId, transitional) => {
   const dir = await mkdtemp(path.join(tmpdir(), 'publishing-submit-fixture-'));
   const db = await initializeDatabase(path.join(dir, 'workspace.db'));
   try {
@@ -78,17 +82,30 @@ test.each(['bilibili', 'channels'])('%s 恢复遗留 submitting 只核对结果�
       return new Function('p', 'console', `return (async()=>{${script}})()`)({ waitForFunction }, { log: () => {} });
     });
     vi.mocked(browser.publishingObservation).mockResolvedValue({ url: 'https://example.test', snapshot: '无法核验' });
-    vi.spyOn(CodexJudgment.prototype, 'read').mockResolvedValue({
-      status: 'unknown',
+    if (transitional) {
+      const config = await browser.publishingBrowserConfig();
+      vi.spyOn(browser, 'publishingBrowserConfig').mockResolvedValue({ ...config, pollMs: 1 });
+      vi.mocked(browser.publishingObservation)
+        .mockResolvedValueOnce({ url: 'https://example.test', snapshot: '提交中...' })
+        .mockResolvedValue({ url: 'https://example.test', snapshot: '稿件投递成功' });
+    }
+    const judge = vi.spyOn(CodexJudgment.prototype, 'read').mockResolvedValue({
+      status: transitional ? 'published' : 'unknown',
       postId: null,
       url: null,
       evidence: '隔离测试：未找到可核验回执',
     });
+    vi.mocked(browser.publishingObservation).mockClear();
     await runPublishingSubmit(db, batch.id, task.token);
+    if (transitional) {
+      expect(browser.publishingObservation).toHaveBeenCalledTimes(2);
+      expect(judge.mock.calls[0][1]).toContain('稿件投递成功');
+      expect(judge.mock.calls[0][1]).not.toContain('提交中');
+    }
     if (platformId === 'channels') expect(waitForFunction).toHaveBeenCalledTimes(1);
     else expect(browser.publishingPageCall).not.toHaveBeenCalled();
     expect(db.db.select().from(publishReceipts).get()).toMatchObject({
-      status: 'unknown',
+      status: transitional ? 'published' : 'unknown',
       safeToRetry: false,
       reason: '隔离测试：未找到可核验回执',
     });

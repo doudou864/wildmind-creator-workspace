@@ -1,6 +1,7 @@
 # 2026-10-23 真实视频上传页面核验；公开发布另行确认。
 {
   "pollMs": 3000,
+  "submitTimeoutMs": 60000,
   "uploadTimeoutMs": 1200000,
   "platforms": [
     {

@@ -159,3 +159,76 @@ test('视频号通过原生话题入口生成标签，只有实际话题对象�
   verifiedTags = [];
   await expect(fillPublishingCopy({ spaceId: 999, label: 'p2' }, cfg, copy)).rejects.toThrow('原生话题未生成');
 });
+
+test('抖音连续创建原生话题并去掉平台补入的可编辑空格，不再插入换行', async () => {
+  const cfg = (await publishingBrowserConfig()).platforms.find((p) => p.id === 'douyin')!;
+  let selected = false,
+    text = '',
+    tags: string[] = [];
+  const typed: string[] = [];
+  let extraWhitespace = '';
+  vi.mocked(runEgo).mockImplementation(async (script) => {
+    await new Function('taskSpace', 'console', `return (async()=>{${script}})()`)(
+      async () => ({
+        page: () => ({
+          fill: async (selector: string) => {
+            if (selector === cfg.descriptionInput) throw Error('富文本不能fill');
+          },
+          click: async () => {},
+          focus: async () => {},
+          waitForTimeout: async () => {},
+          waitForFunction: async () => {},
+          keyboard: {
+            type: async (value: string) => {
+              typed.push(value);
+              text += value;
+            },
+            press: async (key: string) => {
+              if (key === 'ControlOrMeta+A') selected = true;
+              if (key === 'Backspace') {
+                if (selected) {
+                  text = '';
+                  tags = [];
+                  selected = false;
+                } else text = text.slice(0, -1);
+              }
+              if (key === 'Enter') {
+                tags.push(text);
+                text = ' ';
+              }
+            },
+          },
+          evaluate: async (fn: Function) =>
+            new Function('document', `return (${fn.toString()})()`)({
+              querySelectorAll: (selector: string) =>
+                selector.includes('ace-line')
+                  ? [{}]
+                  : selector.includes('data-mention')
+                    ? tags.map((textContent) => ({ textContent }))
+                    : [{ textContent: '\u200b' + text + extraWhitespace }],
+            }),
+        }),
+      }),
+      { log: () => {} },
+    );
+    return true;
+  });
+  await fillPublishingCopy({ spaceId: 999, label: 'p2' }, cfg, {
+    title: '隔离测试',
+    description: '',
+    tags: ['摆烂的逗逗', 'AI副业'],
+  });
+  expect(typed).toEqual(['#摆烂的逗逗', '#AI副业']);
+  expect(tags).toEqual(typed);
+  expect(text).toBe('');
+  extraWhitespace = '\n';
+  await expect(
+    fillPublishingCopy({ spaceId: 999, label: 'p2' }, cfg, { title: '隔离测试', description: '', tags: ['AI副业'] }),
+  ).rejects.toThrow('空格或换行');
+});
+test('提交中的页面只是过渡态，不应立即产出失败或未知回执', async () => {
+  const { publishingSubmissionPending } = await import('./publishing-runner');
+  expect(publishingSubmissionPending('text "正在发布"')).toBe(true);
+  expect(publishingSubmissionPending('button text "提交中..."')).toBe(true);
+  expect(publishingSubmissionPending('稿件投递成功')).toBe(false);
+});
