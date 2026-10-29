@@ -108,3 +108,19 @@ export function missingAccountDates(lastDate: string | null, yesterday: string) 
     dates.push(new Date(time).toISOString().slice(0, 10));
   return dates;
 }
+
+// Recent charts may omit the year. Resolve the displayed month/day deterministically,
+// bounded by the configured recent window; never ask screenshot recognition to invent it.
+export function normalizeChartDate(value: string | null, today: string, maxAgeDays: number) {
+  if (!value) throw Error('图表日期无法识别');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) return normalizeDataDate(value);
+  const match = value.trim().match(/^(\d{1,2})[./-](\d{1,2})$/);
+  if (!match) throw Error('图表日期格式无法识别');
+  const suffix = `${match[1].padStart(2, '0')}-${match[2].padStart(2, '0')}`;
+  let year = Number(today.slice(0, 4));
+  if (`${year}-${suffix}` > today) year--;
+  const date = normalizeDataDate(`${year}-${suffix}`);
+  const days = (Date.parse(today) - Date.parse(date)) / 86400000;
+  if (days < 0 || days > maxAgeDays) throw Error('图表月日不在当前近期范围，不能确认年份');
+  return date;
+}

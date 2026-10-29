@@ -1,3 +1,5 @@
+import { readState } from './state.ts';
+import type { InboxSource } from '../lib/inbox-model.ts';
 import { traceExecution } from '../jobs/execution-log.ts';
 import { collectDouyinComments } from './douyin/comments.ts';
 import { throwIfCollectionCancelled } from '../jobs/cancellation.ts';
@@ -23,7 +25,14 @@ export async function collectPlatformInbox(
   let channel: 'comment' | 'dm' = 'comment';
   async function stage(kind: 'comment' | 'dm', run: () => Promise<unknown>) {
     channel = kind;
-    await traceExecution(kind === 'comment' ? '评论读取' : '私信读取', run);
+    const started = new Date().toISOString();
+    await traceExecution(kind === 'comment' ? '评论读取' : '私信读取', async () => {
+      await run();
+      const sources = (readState(db, 'inbox:sources')?.items ?? []) as InboxSource[];
+      const current = sources.find((s) => s.platformId === platformId && s.channel === kind);
+      if (current?.status === 'failed' && current.capturedAt && current.capturedAt >= started)
+        throw Error(current.reason ?? '本阶段未读取完整');
+    });
   }
   try {
     if (platformId === 'douyin') {

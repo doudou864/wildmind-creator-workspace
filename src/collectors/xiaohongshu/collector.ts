@@ -13,7 +13,13 @@ import { CollectionSession } from '../../browser/collection-session.ts';
 import { shanghaiDate } from '../../browser/policy.ts';
 import type { Judgment } from '../../ai/structured.ts';
 import { loadConfig } from '../../lib/config.ts';
-import { ageInDays, detailCheckpoints, sinceStartDate, withinRecentWindow } from '../../core/collection.ts';
+import {
+  ageInDays,
+  detailCheckpoints,
+  sinceStartDate,
+  withinRecentWindow,
+  normalizeChartDate,
+} from '../../core/collection.ts';
 import {
   postKey,
   metricFor,
@@ -104,6 +110,7 @@ export async function collectXiaohongshu(
     if (kind === 'account') {
       result.posts = [];
       if (!result.account.metrics.length) throw new Error('小红书单日提示未识别到指标');
+      result.account.dataDate = normalizeChartDate(result.account.dataDate, date, workspace.parameters.recentWindow);
       try {
         requireDailyDataDate(result.account.dataDate, yesterday);
       } catch (error) {
@@ -237,23 +244,17 @@ export async function collectXiaohongshu(
     await recognize(
       session,
       'account',
-      `只取趋势图最右端悬停提示中的${label}及实际显示日期，不要顶部总数或近7天合计。即使日期早于${yesterday}，也按截图实际日期和数字返回ok，由程序判定平台更新进度；无法看清才失败。其他数组为空。`,
+      `只取趋势图最右端悬停提示中的${label}及实际显示日期，日期仅有月日也原样返回，不补年份（程序处理），不要顶部总数或近7天合计。即使日期早于${yesterday}，也按截图实际日期和数字返回ok，由程序判定平台更新进度；无法看清才失败。其他数组为空。`,
       undefined,
       true,
     );
   }
   addDailyNet(readings, cfg.accountAliases);
-  const extras = await captureAccountExtras(database, session, judgment, folder, paths, now);
-  readings.push(...extras.readings);
-  dataPending ??= extras.dataPending;
-  const monthly = await captureMonthly(database, cfg.platformId, session, judgment, folder, paths, now);
-  readings.push(...monthly);
   requireCoreMetrics(
     workspace,
     cfg.platformId,
     incoming,
-    // Auxiliary charts can have a different cutoff; the three fan metrics form the core daily set.
-    readings.filter((r) => !extras.readings.includes(r)),
+    readings,
     cfg.aliases,
     cfg.accountAliases,
     (post) => !!completed[post.key],
@@ -284,6 +285,20 @@ export async function collectXiaohongshu(
     aliases: cfg.aliases,
     accountAliases: cfg.accountAliases,
     completed,
+    now,
+  });
+  // Preserve the validated main batch even if a later independent auxiliary chart fails.
+  const extras = await captureAccountExtras(database, session, judgment, folder, paths, now);
+  readings.push(...extras.readings);
+  dataPending ??= extras.dataPending;
+  const monthly = await captureMonthly(database, cfg.platformId, session, judgment, folder, paths, now);
+  readings.push(...monthly);
+  persistCollection(database, cfg.platformId, [], [...extras.readings, ...monthly], new Map(), workspace, {
+    completed: {},
+    history: false,
+    historyRange: cfg.historyRange,
+    aliases: cfg.aliases,
+    accountAliases: cfg.accountAliases,
     now,
   });
   if (extras.monthly) writeState(database, `${cfg.platformId}:watching-month`, { month: date.slice(0, 7) });

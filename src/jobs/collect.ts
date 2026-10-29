@@ -285,6 +285,8 @@ export async function runCollection(
         if (login.reason.startsWith('需要处理：')) throw new AttentionRequired(login.reason, 'risk');
         if (login.state !== 'logged_in') throw new Error(login.reason);
         executionEvent('登录检查', 'success');
+        // Fresh usable backend evidence supersedes earlier login/browser blockers, not the crawl result.
+        resolveAttention(database, id);
         executionEvent('平台指标读取', 'started');
         const collector = collectors.get(id);
         if (!collector) throw new Error('该平台采集器尚未接入，未伪造成功');

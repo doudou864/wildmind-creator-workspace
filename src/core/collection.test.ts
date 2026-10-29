@@ -104,3 +104,13 @@ test('仅有发布日期的CSV按北京时间日历计龄，凌晨不误判为�
   expect(sinceStartDate('2026-09-16', '2026-09-17', now)).toBe(false);
   expect(withinRecentWindow('2026-09-16', now, 30)).toBe(false);
 });
+
+test('近期图表原始月日由程序补年，跨年与无效日期不能由AI猜', async () => {
+  const { normalizeChartDate } = await import('./collection');
+  expect(normalizeChartDate('10.28', '2026-10-29', 30)).toBe('2026-10-28');
+  expect(normalizeChartDate('12.31', '2027-01-02', 30)).toBe('2026-12-31');
+  expect(normalizeChartDate('2026-10-27', '2026-10-29', 30)).toBe('2026-10-27');
+  expect(() => normalizeChartDate('02.30', '2026-03-01', 30)).toThrow();
+  expect(() => normalizeChartDate('11.30', '2026-10-29', 30)).toThrow('近期范围');
+  expect(() => normalizeChartDate(null, '2026-10-29', 30)).toThrow();
+});
