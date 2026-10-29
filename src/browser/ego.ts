@@ -17,7 +17,11 @@ export function egoFailure(output: string) {
   )
     return '控制权已交给用户；请在处理后恢复';
   if (/task space not found/i.test(output)) return '原浏览器工作区已关闭；请使用任务中的恢复入口';
-  if (/ElementResolutionError|Invalid locator|Unsupported key|Unknown key|page.fill did not accept/i.test(output))
+  if (
+    /ElementResolutionError|Invalid locator|Unsupported key|Unknown key|page.fill did not accept|视频号控件无法唯一识别|视频号控件不存在|视频号控件尚未可用/i.test(
+      output,
+    )
+  )
     return (
       '页面控件操作失败：' +
       redactDiagnostic(

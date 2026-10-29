@@ -111,7 +111,7 @@ export async function fillPublishingCovers(page: UploadPage, cfg: UploadPlatform
       ['3:4', '4:3']
         .map(
           (ratio, index) =>
-            `await channelsClick('.edit-btn',null,${index});let s${index}=await p.snapshot({scope:'full_page'});if(s${index}.includes('text "直接编辑"'))await channelsClick('button','直接编辑');await channelsWaitDialog(${JSON.stringify(index ? '编辑分享卡片' : '编辑个人主页卡片')},true);await p.setInputFiles('input[accept="image/jpeg,image/jpg,image/png"]',[${file(ratio)}]);await channelsClick('button','确认');await channelsWaitDialog(${JSON.stringify(index ? '编辑分享卡片' : '编辑个人主页卡片')},false);`,
+            `await channelsClick('.edit-btn',null,${index});let s${index}=await p.snapshot({scope:'full_page'});if(s${index}.includes('text "直接编辑"'))await p.click('text="直接编辑"');await channelsWaitDialog(${JSON.stringify(index ? '编辑分享卡片' : '编辑个人主页卡片')},true);await p.setInputFiles('input[accept="image/jpeg,image/jpg,image/png"]',[${file(ratio)}]);await channelsClick('button','确认');await channelsWaitDialog(${JSON.stringify(index ? '编辑分享卡片' : '编辑个人主页卡片')},false);`,
         )
         .join(''),
     douyin: `const previous=await p.evaluate(()=>Array.from(document.querySelectorAll('.background-OpVteV img')).map(e=>e.src));await p.click('text="选择封面" >> nth=0');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('4:3')}]);await p.click('text="设置竖封面"');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('3:4')}]);await p.click('text="完成"');await p.waitForFunction(previous=>{const images=Array.from(document.querySelectorAll('.background-OpVteV img'));return images.length===2&&images.every((e,i)=>e.complete&&e.naturalWidth>0&&e.src!==previous[i]);},previous,{timeout:60000});`,

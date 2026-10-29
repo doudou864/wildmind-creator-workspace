@@ -201,7 +201,13 @@ export async function adaptUploadCopy(run: UploadRun, platformId: string) {
     p.copy.description = [p.copy.description, p.copy.tags.map((t) => '#' + t.replace(/^#+/, '')).join(' ')]
       .filter(Boolean)
       .join('\n');
-  if (platformId === 'channels' && !p.copy.description.trim()) p.copy.description = p.copy.title;
+  if (platformId === 'channels') {
+    if (!p.copy.description.trim()) p.copy.description = p.copy.title;
+    p.copy.title = p.copy.title
+      .replace(/[，,！!。]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+  }
   if (cfg.descriptionMax !== null && Array.from(p.copy.description).length > cfg.descriptionMax)
     throw Error('正文超出平台限制，请修改后上传');
 }
