@@ -74,41 +74,49 @@ export function PublishingTasks({
                   onClick={() => onSelect(batch)}
                 >
                   <strong>{batch.draft.commonCopy.title || '未填写主题'}</strong>
-                  <span className="small">{progress.headline} →</span>
+                  <span className="small" title={task?.reason || task?.checkpoint}>
+                    {progress.headline} →
+                  </span>
                 </button>
                 <p className="publishing-task-summary" role="status">
                   {progress.summary}
                 </p>
                 <div className="publishing-platform-results">
                   {progress.rows.map(({ platformId, receipt, label, next }) => (
-                    <section key={platformId} className="publishing-platform-result">
-                      <strong>{platformNames[platformId] ?? platformId}</strong>
-                      <strong
-                        className={
-                          ['unknown', 'failed', 'expired'].includes(receipt?.status ?? '')
-                            ? 'publishing-result-attention'
-                            : ''
-                        }
-                      >
-                        {label}
-                      </strong>
-                      <div>
+                    <details
+                      key={platformId}
+                      className="publishing-platform-result"
+                      onMouseEnter={(event) => {
+                        event.currentTarget.open = true;
+                      }}
+                      onMouseLeave={(event) => {
+                        event.currentTarget.open = false;
+                      }}
+                    >
+                      <summary>
+                        <strong>{platformNames[platformId] ?? platformId}</strong>
+                        <strong
+                          className={
+                            ['unknown', 'failed', 'expired'].includes(receipt?.status ?? '')
+                              ? 'publishing-result-attention'
+                              : ''
+                          }
+                        >
+                          {label}
+                        </strong>
+                      </summary>
+                      <div className="publishing-platform-detail">
                         <p>{next}</p>
                         {receipt?.reason && <p className="small">{receipt.reason}</p>}
+                        {receipt?.url && /^https?:\/\//.test(receipt.url) && (
+                          <a href={receipt.url} target="_blank" rel="noreferrer">
+                            查看作品 →
+                          </a>
+                        )}
                       </div>
-                      {receipt?.url && /^https?:\/\//.test(receipt.url) && (
-                        <a href={receipt.url} target="_blank" rel="noreferrer">
-                          查看作品 →
-                        </a>
-                      )}
-                    </section>
+                    </details>
                   ))}
                 </div>
-                {task && (
-                  <p className="small" title={task.reason || task.checkpoint}>
-                    {task.reason || task.checkpoint}
-                  </p>
-                )}
                 <div className="video-cover-actions">
                   {task?.status === 'running' && (
                     <Button disabled={disabled} onClick={() => void control(batch, 'pause')}>
