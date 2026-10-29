@@ -1,4 +1,4 @@
-import { test, expect } from 'vitest';
+import { test, expect, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -12,7 +12,10 @@ import {
   controlPublishingTask,
   readPublishingTask,
   publishingCheckpoint,
+  writePublishingTask,
 } from './publishing-tasks';
+import { readUploadRun, writeUploadRun } from './publishing-upload-state';
+import { writeState } from '../collectors/state';
 
 async function fixture() {
   const directory = await mkdtemp(path.join(tmpdir(), 'publishing-tasks-fixture-'));
@@ -35,6 +38,253 @@ async function fixture() {
     },
   };
 }
+
+async function interruptedFixture() {
+  const f = await fixture(),
+    batch = f.batches[0];
+  const task = registerPublishingTask(f.db, batch.id, {
+    process: null,
+    browser: { spaceId: 34, name: 'fixture-closed-space' },
+  });
+  writePublishingTask(f.db, {
+    ...task,
+    status: 'interrupted',
+    operation: 'upload',
+    browserName: 'fixture-closed-space',
+  });
+  writeUploadRun(f.db, batch.id, {
+    requestId: 'fixture-request',
+    video: '/fixture/video.mp4',
+    sha256: 'fixture-sha',
+    covers: { '16:9': '/fixture/cover.png' },
+    platforms: [
+      {
+        id: 'xiaohongshu',
+        page: 'p3',
+        stage: 'copy',
+        attempted: false,
+        accountVerified: true,
+        copyPrepared: true,
+        copy: { title: 'fixture', description: '', tags: [] },
+        reason: 'old failure',
+      },
+    ],
+  });
+  f.db.db
+    .insert(publishReceipts)
+    .values({
+      id: 'fixture-receipt',
+      batchId: batch.id,
+      platformId: 'xiaohongshu',
+      status: 'unknown',
+      title: 'fixture',
+      safeToRetry: false,
+      uploadedAt: new Date().toISOString(),
+      materials: 'old-materials',
+      updatedAt: new Date().toISOString(),
+    })
+    .run();
+  return { ...f, batch, task };
+}
+
+test('丢失浏览器后重建原上传任务，保留材料，旧审核失效且迟到进程不能写回', async () => {
+  const f = await interruptedFixture(),
+    launch = vi.fn(async () => {});
+  try {
+    const before = readUploadRun(f.db, f.batch.id)!;
+    await controlPublishingTask(
+      f.db,
+      f.batch.id,
+      { action: 'rebuild-upload', expectedRevision: 0 },
+      {
+        stop: async () => {},
+        close: async () => {},
+        inspectBrowser: async () => null,
+        resume: launch,
+      },
+    );
+    const current = readPublishingTask(f.db, f.batch.id)!;
+    expect(current).toMatchObject({ status: 'running', browser: null, process: null });
+    expect(current.browserName).toBeUndefined();
+    expect(current.token).not.toBe(f.task.token);
+    expect(readUploadRun(f.db, f.batch.id)).toMatchObject({
+      video: before.video,
+      sha256: before.sha256,
+      covers: before.covers,
+      platforms: [{ page: null, stage: 'account', attempted: false, accountVerified: false, reason: null }],
+    });
+    expect(readUploadRun(f.db, f.batch.id)?.publishAuthorization).toBeUndefined();
+    expect(f.db.db.select().from(publishReceipts).get()).toMatchObject({
+      status: 'uploading',
+      uploadedAt: null,
+      materials: null,
+      revision: 1,
+    });
+    expect(launch).toHaveBeenCalledTimes(1);
+    expect(publishingCheckpoint(f.db, f.batch.id, f.task.token, 'late')).toBe(false);
+    await expect(
+      controlPublishingTask(
+        f.db,
+        f.batch.id,
+        { action: 'rebuild-upload', expectedRevision: 0 },
+        {
+          stop: async () => {},
+          close: async () => {},
+          resume: launch,
+        },
+      ),
+    ).rejects.toThrow('任务已更新');
+    expect(launch).toHaveBeenCalledTimes(1);
+  } finally {
+    await f.close();
+  }
+});
+
+test.each(['user', 'agent'])('原浏览器仍存在（%s）不得重建或丢弃已有上传', async (ownership) => {
+  const f = await interruptedFixture(),
+    launch = vi.fn(async () => {});
+  try {
+    const before = readUploadRun(f.db, f.batch.id);
+    await expect(
+      controlPublishingTask(
+        f.db,
+        f.batch.id,
+        { action: 'rebuild-upload', expectedRevision: 0 },
+        {
+          stop: async () => {},
+          close: async () => {},
+          resume: launch,
+          inspectBrowser: async () => ({ ownership }),
+        },
+      ),
+    ).rejects.toThrow('原浏览器仍在');
+    expect(readUploadRun(f.db, f.batch.id)).toEqual(before);
+    expect(launch).not.toHaveBeenCalled();
+  } finally {
+    await f.close();
+  }
+});
+
+test.each(['submitting', 'pending_review', 'published', 'approval', 'publish-failure'])(
+  '存在提交证据 %s 时不能用重建绕过重复发布保护',
+  async (evidence) => {
+    const f = await interruptedFixture(),
+      launch = vi.fn(async () => {});
+    try {
+      if (evidence === 'approval') writeState(f.db, 'publishing-approval:' + f.batch.id, { requestId: 'fixture' });
+      else
+        f.db.db
+          .update(publishReceipts)
+          .set(
+            evidence === 'publish-failure'
+              ? { failureStage: 'publish' }
+              : {
+                  status: evidence as 'submitting' | 'pending_review' | 'published',
+                },
+          )
+          .run();
+      const before = readUploadRun(f.db, f.batch.id);
+      await expect(
+        controlPublishingTask(
+          f.db,
+          f.batch.id,
+          { action: 'rebuild-upload', expectedRevision: 0 },
+          {
+            stop: async () => {},
+            close: async () => {},
+            resume: launch,
+            inspectBrowser: async () => null,
+          },
+        ),
+      ).rejects.toThrow(/提交/);
+      expect(readUploadRun(f.db, f.batch.id)).toEqual(before);
+      expect(launch).not.toHaveBeenCalled();
+    } finally {
+      await f.close();
+    }
+  },
+);
+
+test('手动继续先接回原浏览器，再启动进程；页面和上传检查点保持', async () => {
+  const f = await interruptedFixture(),
+    calls: string[] = [];
+  try {
+    const before = readUploadRun(f.db, f.batch.id);
+    await controlPublishingTask(
+      f.db,
+      f.batch.id,
+      { action: 'resume', expectedRevision: 0 },
+      {
+        stop: async () => {},
+        close: async () => {},
+        continueBrowser: async (b) => {
+          expect(b.spaceId).toBe(34);
+          calls.push('browser');
+        },
+        resume: async () => {
+          calls.push('worker');
+        },
+      },
+    );
+    expect(calls).toEqual(['browser', 'worker']);
+    expect(readUploadRun(f.db, f.batch.id)).toEqual(before);
+    expect(readPublishingTask(f.db, f.batch.id)?.browser?.pausedByTask).toBe(false);
+  } finally {
+    await f.close();
+  }
+});
+
+test('继续时发现原浏览器丢失，保留可恢复状态并显示重建出口，不启动无效进程', async () => {
+  const f = await interruptedFixture(),
+    launch = vi.fn(async () => {});
+  try {
+    await expect(
+      controlPublishingTask(
+        f.db,
+        f.batch.id,
+        { action: 'resume', expectedRevision: 0 },
+        {
+          stop: async () => {},
+          close: async () => {},
+          resume: launch,
+          continueBrowser: async () => {
+            throw Error('原浏览器已关闭，请点击重建浏览器并继续上传');
+          },
+        },
+      ),
+    ).rejects.toThrow('重建浏览器');
+    expect(launch).not.toHaveBeenCalled();
+    expect(readPublishingTask(f.db, f.batch.id)).toMatchObject({
+      status: 'interrupted',
+      reason: expect.stringContaining('重建浏览器'),
+    });
+    expect(readUploadRun(f.db, f.batch.id)?.platforms[0].stage).toBe('copy');
+  } finally {
+    await f.close();
+  }
+});
+
+test('重建保留本人原来的直接发布授权，不把普通上传升级成发布', async () => {
+  const f = await interruptedFixture();
+  try {
+    const authorization = { approvedAt: new Date().toISOString(), materials: 'fixture-materials' };
+    writeUploadRun(f.db, f.batch.id, { ...readUploadRun(f.db, f.batch.id)!, publishAuthorization: authorization });
+    await controlPublishingTask(
+      f.db,
+      f.batch.id,
+      { action: 'rebuild-upload', expectedRevision: 0 },
+      {
+        stop: async () => {},
+        close: async () => {},
+        inspectBrowser: async () => null,
+        resume: async () => {},
+      },
+    );
+    expect(readUploadRun(f.db, f.batch.id)?.publishAuthorization).toEqual(authorization);
+  } finally {
+    await f.close();
+  }
+});
 
 test('四条上传各自运行，暂停一条只停自己的进程，保留浏览器与检查点', async () => {
   const f = await fixture();

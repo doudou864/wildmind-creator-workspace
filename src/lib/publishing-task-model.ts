@@ -27,7 +27,7 @@ export const publishingTaskSchema = z.object({
 export type PublishingTask = z.infer<typeof publishingTaskSchema>;
 export const publishingTaskActionSchema = z
   .object({
-    action: z.enum(['pause', 'resume', 'delete']),
+    action: z.enum(['pause', 'resume', 'rebuild-upload', 'delete']),
     expectedRevision: z.number().int().nonnegative(),
   })
   .strict();

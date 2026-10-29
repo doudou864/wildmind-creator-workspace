@@ -5,7 +5,14 @@ import { eq } from 'drizzle-orm';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import { publishRecords, publishReceipts } from '../db/schema.ts';
 import { readState, writeState } from '../collectors/state.ts';
-import { closePublishingBrowser, pausePublishingBrowser, findPublishingBrowser } from '../browser/publishing-task.ts';
+import {
+  closePublishingBrowser,
+  pausePublishingBrowser,
+  findPublishingBrowser,
+  inspectPublishingBrowser,
+  continuePublishingBrowser,
+} from '../browser/publishing-task.ts';
+import { readUploadRun, writeUploadRun } from './publishing-upload-state.ts';
 import { publishingTaskSchema, type PublishingTask, type PublishingTaskAction } from '../lib/publishing-task-model.ts';
 const key = (id: string) => `publishing-task:${id}`;
 export function readPublishingTask(db: WorkspaceDatabase, id: string): PublishingTask | null {
@@ -100,6 +107,8 @@ type Controls = {
   close: (browser: NonNullable<PublishingTask['browser']>) => Promise<void>;
   pauseBrowser?: typeof pausePublishingBrowser;
   resume?: (task: PublishingTask) => Promise<void>;
+  inspectBrowser?: typeof inspectPublishingBrowser;
+  continueBrowser?: typeof continuePublishingBrowser;
 };
 export async function controlPublishingTask(
   db: WorkspaceDatabase,
@@ -109,42 +118,128 @@ export async function controlPublishingTask(
     stop: stopPublishingProcess,
     close: closePublishingBrowser,
     pauseBrowser: pausePublishingBrowser,
+    inspectBrowser: inspectPublishingBrowser,
+    continueBrowser: continuePublishingBrowser,
   },
 ) {
-  if (input.action === 'resume') {
-    const old = readPublishingTask(db, id);
+  const restarting = input.action === 'resume' || input.action === 'rebuild-upload';
+  const rebuilding = input.action === 'rebuild-upload';
+  const initial = readPublishingTask(db, id);
+  if (restarting) {
+    const batch = db.db.select().from(publishRecords).where(eq(publishRecords.id, id)).get();
+    const old = initial;
+    if (!batch || batch.abandonedAt || batch.revision !== input.expectedRevision)
+      throw Error('任务已更新，请刷新后操作');
+    if (!old || !['paused', 'interrupted', 'attention'].includes(old.status))
+      throw Error('只有暂停或中断的任务可以恢复');
     if (old?.process) await controls.stop(old);
+    if (rebuilding) {
+      if (old.operation === 'publish' || readState(db, 'publishing-approval:' + id))
+        throw Error('任务已进入发布提交，请先核对平台结果，不能重新上传');
+      const browser = old.browser ?? (old.browserName ? await findPublishingBrowser(old.browserName) : null);
+      if (browser && (await (controls.inspectBrowser ?? inspectPublishingBrowser)(browser)))
+        throw Error('原浏览器仍在，请点击“继续处理”恢复原页面，无需重建');
+    } else if (old.browser && controls.continueBrowser) {
+      try {
+        await controls.continueBrowser(old.browser);
+      } catch (error) {
+        const current = readPublishingTask(db, id);
+        if (current?.token === old.token && current.status === old.status)
+          writePublishingTask(db, { ...current, reason: error instanceof Error ? error.message : '浏览器恢复失败' });
+        throw error;
+      }
+    }
   }
   const task = db.db.transaction(() => {
     const batch = db.db.select().from(publishRecords).where(eq(publishRecords.id, id)).get();
-    if (!batch || batch.revision !== input.expectedRevision) throw Error('任务已更新，请刷新后操作');
+    if (!batch || batch.abandonedAt || batch.revision !== input.expectedRevision)
+      throw Error('任务已更新，请刷新后操作');
     const old = readPublishingTask(db, id);
+    if (restarting && (old?.token !== initial?.token || old?.status !== initial?.status))
+      throw Error('任务状态已变化，请刷新后操作');
     if (input.action === 'pause' && old?.status !== 'running') throw Error('这条任务当前没有正在运行的上传');
-    if (input.action === 'resume' && (!old || !['paused', 'interrupted', 'attention'].includes(old.status)))
+    if (restarting && (!old || !['paused', 'interrupted', 'attention'].includes(old.status)))
       throw Error('只有已暂停的任务可以继续');
-    if (input.action === 'resume' && !controls.resume)
+    if (restarting && !controls.resume)
       controls.resume = async (task) => {
         const { launchPublishingUpload } = await import('./publishing-upload.ts');
         await launchPublishingUpload(db, task);
       };
     if (input.action === 'delete' && old?.status === 'deleted') return old;
     if (old && ['pausing', 'deleting'].includes(old.status)) throw Error('任务正在停止或清理，请等待结果');
+    if (rebuilding) {
+      const run = readUploadRun(db, id);
+      const receipts = db.db.select().from(publishReceipts).where(eq(publishReceipts.batchId, id)).all();
+      if (!run) throw Error('上传资料不存在，未重建');
+      if (
+        old?.operation === 'publish' ||
+        readState(db, 'publishing-approval:' + id) ||
+        receipts.some(
+          (r) =>
+            ['submitting', 'published', 'pending_review'].includes(r.status) ||
+            r.failureStage === 'publish' ||
+            r.platformPostId ||
+            r.publishedAt ||
+            r.url,
+        )
+      )
+        throw Error('已有发布提交或结果待核对，不能重建上传；原回执已保留');
+      writeUploadRun(db, id, {
+        ...run,
+        platforms: run.platforms.map((p) => ({
+          ...p,
+          page: null,
+          stage: 'account',
+          attempted: false,
+          accountVerified: false,
+          reviewObservation: undefined,
+          reason: null,
+        })),
+      });
+      for (const receipt of receipts)
+        db.db
+          .update(publishReceipts)
+          .set({
+            status: 'uploading',
+            screenshotAssetId: null,
+            uploadedAt: null,
+            materials: null,
+            failureStage: null,
+            safeToRetry: false,
+            revision: receipt.revision + 1,
+            reason: '原页面已关闭，按本人操作重新准备上传',
+            updatedAt: new Date().toISOString(),
+          })
+          .where(eq(publishReceipts.id, receipt.id))
+          .run();
+    }
     const next: PublishingTask = {
       batchId: id,
       operation: old?.operation,
-      browserName: old?.browserName,
-      token: input.action === 'resume' ? randomUUID() : (old?.token ?? randomUUID()),
-      process: input.action === 'resume' ? null : (old?.process ?? null),
-      browser: old?.browser ?? null,
-      checkpoint: old?.checkpoint ?? '本地草稿，尚未上传',
+      browserName: rebuilding ? undefined : old?.browserName,
+      token: restarting ? randomUUID() : (old?.token ?? randomUUID()),
+      process: restarting ? null : (old?.process ?? null),
+      browser: rebuilding
+        ? null
+        : old?.browser
+          ? {
+              ...old.browser,
+              pausedByTask: input.action === 'resume' && controls.continueBrowser ? false : old.browser.pausedByTask,
+            }
+          : null,
+      checkpoint: rebuilding ? '重建浏览器，重新准备上传' : (old?.checkpoint ?? '本地草稿，尚未上传'),
       reason: null,
       updatedAt: new Date().toISOString(),
-      status: input.action === 'pause' ? 'pausing' : input.action === 'resume' ? 'running' : 'deleting',
+      status: input.action === 'pause' ? 'pausing' : restarting ? 'running' : 'deleting',
     };
     writePublishingTask(db, next);
     db.db
       .update(publishRecords)
-      .set({ revision: batch.revision + 1, updatedAt: next.updatedAt })
+      .set({
+        revision: batch.revision + 1,
+        updatedAt: next.updatedAt,
+        ...(rebuilding ? { state: 'running' as const } : {}),
+      })
       .where(eq(publishRecords.id, id))
       .run();
     return next;
@@ -165,7 +260,7 @@ export async function controlPublishingTask(
     }
     return readPublishingTask(db, id);
   }
-  if (input.action === 'resume') {
+  if (restarting) {
     try {
       await controls.resume!(task);
       return readPublishingTask(db, id);
@@ -178,7 +273,6 @@ export async function controlPublishingTask(
   try {
     await controls.stop(task);
     const browser = task.browser ?? (task.browserName ? await findPublishingBrowser(task.browserName) : null);
-    if (task.browserName && !browser) throw Error('浏览器创建中断，暂不能确认资源清理，请稍后重试');
     if (browser) await controls.close(browser);
     db.db.transaction(() => {
       const current = readPublishingTask(db, id);

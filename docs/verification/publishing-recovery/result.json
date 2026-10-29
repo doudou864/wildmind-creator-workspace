@@ -1,0 +1,16 @@
+{
+  "calls": [
+    {
+      "url": "/api/publishing/drafts/fixture-recovery/task",
+      "action": "resume",
+      "expectedRevision": 0
+    },
+    {
+      "url": "/api/publishing/drafts/fixture-recovery/task",
+      "action": "rebuild-upload",
+      "expectedRevision": 0
+    }
+  ],
+  "status": "running",
+  "overflow": false
+}

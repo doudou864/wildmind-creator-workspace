@@ -12,6 +12,7 @@ export class ScreenshotTimeout extends Error {}
 export function egoFailure(output: string) {
   if (/EGO_.*(?:CONTROL|INACTIVE|UNASSIGNED)|control.*(?:lost|user)|控制权/i.test(output))
     return '控制权已交给用户；请在处理后恢复';
+  if (/task space not found/i.test(output)) return '原浏览器工作区已关闭；请使用任务中的恢复入口';
   if (/net::ERR_(?:INTERNET_DISCONNECTED|NAME_NOT_RESOLVED|CONNECTION_[A-Z_]+|NETWORK_CHANGED|TIMED_OUT)/.test(output))
     return '网络连接失败，等待配置的重试时段';
   if (/TimeoutError|timed out|timeout exceeded/i.test(output))

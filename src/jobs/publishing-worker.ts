@@ -287,7 +287,7 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
           .where(and(eq(publishReceipts.batchId, id), eq(publishReceipts.platformId, item.id)))
           .run();
         // Browser control loss stops the entire run; ordinary account mismatch only stops that platform.
-        if (/控制权|ego|浏览器操作超时/.test(item.reason)) throw e;
+        if (/控制权|ego|浏览器操作超时|原浏览器工作区已关闭/.test(item.reason)) throw e;
       }
     }
     if (await prepareDirectPublishingSubmit(db, id, token)) {

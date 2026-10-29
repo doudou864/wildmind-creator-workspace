@@ -22,6 +22,7 @@ export function PublishingTasks({
 }) {
   const [pending, setPending] = useState<string[]>([]);
   const [error, setError] = useState('');
+  const [rebuildId, setRebuildId] = useState<string | null>(null);
   async function control(batch: PublishBatch, action: PublishingTaskAction['action']) {
     setPending((ids) => [...ids, batch.id]);
     setError('');
@@ -32,6 +33,7 @@ export function PublishingTasks({
         body: JSON.stringify({ action, expectedRevision: batch.revision }),
       });
       if (action === 'delete') onDeleted(batch.id);
+      setRebuildId(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : '任务操作未完成');
     } finally {
@@ -81,14 +83,40 @@ export function PublishingTasks({
                     </Button>
                   )}
                   {task && ['paused', 'interrupted', 'attention'].includes(task.status) && (
-                    <Button disabled={disabled} onClick={() => void control(batch, 'resume')}>
-                      {task.operation === 'publish' ? '核对发布结果' : '继续处理'}
-                    </Button>
+                    <>
+                      <Button disabled={disabled} onClick={() => void control(batch, 'resume')}>
+                        {pending.includes(batch.id)
+                          ? '正在恢复…'
+                          : task.operation === 'publish'
+                            ? '核对发布结果'
+                            : '继续处理'}
+                      </Button>
+                      {task.operation !== 'publish' && (
+                        <Button disabled={disabled} onClick={() => setRebuildId(batch.id)}>
+                          重建浏览器并继续上传
+                        </Button>
+                      )}
+                    </>
                   )}
                   <Button disabled={disabled} onClick={() => void control(batch, 'delete')}>
                     {task?.status === 'cleanup_failed' ? '重试清理' : '删除任务'}
                   </Button>
                 </div>
+                {rebuildId === batch.id && (
+                  <div role="group" aria-label="重建上传确认">
+                    <p className="small">
+                      仅在原浏览器已关闭时重建，保留主题、标签、封面和视频，重新准备上传页面。平台可能留有旧草稿，不会自动删除。按你原先的上传或发布选择继续；已提交的任务不能重建。
+                    </p>
+                    <div className="video-cover-actions">
+                      <Button disabled={disabled} onClick={() => void control(batch, 'rebuild-upload')}>
+                        确认重建并继续
+                      </Button>
+                      <Button disabled={disabled} onClick={() => setRebuildId(null)}>
+                        取消
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             );
           })}
