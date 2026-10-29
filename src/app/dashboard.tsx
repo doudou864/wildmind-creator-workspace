@@ -99,7 +99,9 @@ export default function Dashboard({
     {
       label: '平台异常待处理',
       count: anomalyIds.length,
-      detail: anomalyIds.map((id) => platforms.find((p) => p.id === id)?.name ?? id).join('、'),
+      detail: [...new Set(anomalyIds.map((id) => platforms.find((p) => p.id === id)?.name ?? '外部取材任务'))].join(
+        '、',
+      ),
       href: '#data-health',
     },
   ].filter((a) => a.count > 0);

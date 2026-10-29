@@ -118,7 +118,7 @@ export function CollectionStrip({
             starting === 'all' || starting === p.id || (data.running && data.activePlatforms?.includes(p.id));
           return (
             <div className="collection-platform" key={p.id}>
-              <div>
+              <div className="collection-platform-heading">
                 <strong>{p.name}</strong>
                 <span className={running ? '' : ok ? 'collection-success' : 'collection-failed'}>
                   ●{' '}
@@ -137,7 +137,9 @@ export function CollectionStrip({
                             : '今天未更新'}
                 </span>
               </div>
-              <small>{p.lastSuccess ? freshness(p.lastSuccess, currentDate) : '尚无成功记录'}</small>
+              <small className="collection-platform-date">
+                {p.lastSuccess ? freshness(p.lastSuccess, currentDate) : '尚无成功记录'}
+              </small>
               {blocked && !running && (
                 <p>
                   {blocked.reason}（{dataDate(blocked.at)}）
@@ -155,15 +157,17 @@ export function CollectionStrip({
                 </details>
               )}
               <div className="collection-platform-actions">
-                <Button
-                  disabled={!!data.legacyRunning || starting === 'all' || starting === p.id || !!running}
-                  disabledReason={
-                    data.legacyRunning ? '旧版整批任务结束后即可并行启动' : '该平台正在采集，其他平台可单独启动'
-                  }
-                  onClick={() => void start(p.id, !!blocked)}
-                >
-                  {blocked && !running ? '已处理，恢复采集' : '重新采集'}
-                </Button>
+                {!running && (
+                  <Button
+                    disabled={!!data.legacyRunning || starting === 'all' || starting === p.id}
+                    disabledReason={
+                      data.legacyRunning ? '旧版整批任务结束后即可并行启动' : '该平台正在采集，其他平台可单独启动'
+                    }
+                    onClick={() => void start(p.id, !!blocked)}
+                  >
+                    {blocked ? '已处理，恢复采集' : '重新采集'}
+                  </Button>
+                )}
                 {running && (
                   <Button
                     disabled={stopping.includes(p.id)}
@@ -181,13 +185,11 @@ export function CollectionStrip({
       {(notice || error || data.issue?.reason || data.running) && (
         <p role="status">
           {error ||
-            data.issue?.reason ||
-            notice ||
             (data.legacyRunning
               ? '旧版整批采集仍在运行，完成后可按平台并行；选题取材已可独立使用'
               : data.running
                 ? '正在分别采集，结果会自动更新'
-                : notice)}
+                : data.issue?.reason || notice)}
         </p>
       )}
     </section>

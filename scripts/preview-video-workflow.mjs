@@ -1,6 +1,7 @@
 // Real client components with fixture-only browser persistence. No real DB or platform access.
 // Run: node scripts/preview-video-workflow.mjs [--serve] [--port=4319]
 import { build } from 'esbuild';
+import { compile } from '@tailwindcss/node';
 import { createServer } from 'node:http';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -214,12 +215,15 @@ const result = await build({
   ],
 });
 writeFileSync(path.join(out, 'app.js'), result.outputFiles[0].text);
+// Include the same Tailwind preflight and accessibility utility as the real Next build.
+const framework = await compile('@import "tailwindcss";', { base: root, onDependency() {} });
+const frameworkCss = framework.build(['sr-only']);
 const css = ['tokens', 'workspace', 'topics', 'images', 'layouts', 'publishing', 'inbox', 'deals', 'data-center']
   .map((n) => readFileSync(`src/ui/${n}.css`, 'utf8'))
   .join('\n');
 writeFileSync(
   path.join(out, 'style.css'),
-  css + '\n' + readFileSync('src/app/globals.css', 'utf8').replace(/^@import[^;]*;/gm, ''),
+  frameworkCss + '\n' + css + '\n' + readFileSync('src/app/globals.css', 'utf8').replace(/^@import[^;]*;/gm, ''),
 );
 writeFileSync(
   path.join(out, 'index.html'),

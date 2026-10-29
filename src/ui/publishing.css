@@ -582,7 +582,9 @@
   margin-bottom: 16px;
 }
 .publish-cover-handoff > h2,
-.publish-cover-handoff > [role='alert'] {
+.publish-cover-handoff > [role='alert'],
+.publish-cover-handoff > [role='status'],
+.publish-handoff-recovery {
   grid-column: 1 / -1;
 }
 .publish-handoff-image {

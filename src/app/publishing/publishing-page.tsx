@@ -8,6 +8,13 @@ import { AutosaveStatus } from '@/ui/autosave-status';
 import type { SaveContext } from '@/ui/autosave-queue';
 import { shouldSyncPublishingEditor } from '@/lib/publishing-editor-sync';
 import {
+  beginCoverRecovery,
+  clearCoverRecovery,
+  coverRecoveryKey,
+  readCoverRecovery,
+  type CoverRecovery,
+} from '@/lib/publishing-cover-recovery';
+import {
   editableCoverBatch,
   handoffAsset,
   handoffTopic,
@@ -147,6 +154,8 @@ export default function PublishingPage({
   const [handoffError, setHandoffError] = useState('');
   const [handoffSaving, setHandoffSaving] = useState(false);
   const [handoffUncertain, setHandoffUncertain] = useState(false);
+  const [handoffChecking, setHandoffChecking] = useState(!!initialAsset);
+  const [coverRecovery, setCoverRecovery] = useState<CoverRecovery>({ status: 'clear' });
   const handoffPending = useRef(false);
   const mounted = useRef(true);
   useEffect(() => {
@@ -155,6 +164,26 @@ export default function PublishingPage({
       mounted.current = false;
     };
   }, []);
+  useEffect(() => {
+    if (!incomingAsset) return;
+    function restore() {
+      let recovery: CoverRecovery;
+      try {
+        recovery = readCoverRecovery(window.localStorage, incomingAsset!);
+      } catch {
+        recovery = { status: 'unreadable', reason: '无法读取本机交接记录，请先核对发布任务。' };
+      }
+      setCoverRecovery(recovery);
+      setHandoffUncertain(recovery.status !== 'clear');
+      setHandoffChecking(false);
+    }
+    restore();
+    const changed = (event: StorageEvent) => {
+      if (event.key === null || event.key === coverRecoveryKey(incomingAsset)) restore();
+    };
+    window.addEventListener('storage', changed);
+    return () => window.removeEventListener('storage', changed);
+  }, [incomingAsset]);
   const [local, setLocal] = useState<LocalMedia[]>([]),
     [mediaLoading, setMediaLoading] = useState(false);
   const urls = useRef<string[]>([]),
@@ -213,9 +242,10 @@ export default function PublishingPage({
     taskActionLocked ||
     !!liveBatch?.abandonedAt ||
     (!!meta && ['uploading', 'queued', 'running', 'finished'].includes(meta.state));
-  const mediaLocked = taskLocked || locked || stage !== 'editable';
+  const mediaLocked = taskLocked || locked || stage !== 'editable' || !!incomingAsset;
   const liveRetry = data.receipts.find((receipt) => receipt.id === retry?.id);
   const retryAllowed =
+    !incomingAsset &&
     !liveBatch?.abandonedAt &&
     !dirty &&
     !stale &&
@@ -277,11 +307,19 @@ export default function PublishingPage({
   const materialChanged = !!review && (review.materials !== materials || review.receiptKey !== receiptKey);
   const uploadTargets = uploadPlatformIds(meta?.id ?? null, draft, data, config, now, expiryHours);
   const canUpload =
-    saved && !locked && !stale && !busy && data.uploadReady && !issues.length && uploadTargets.length > 0;
+    !incomingAsset &&
+    saved &&
+    !locked &&
+    !stale &&
+    !busy &&
+    data.uploadReady &&
+    !issues.length &&
+    uploadTargets.length > 0;
   useEffect(() => {
     setChecked(false);
   }, [materials, receiptKey]);
   const canPublish =
+    !incomingAsset &&
     !materialChanged &&
     saved &&
     !locked &&
@@ -368,7 +406,7 @@ export default function PublishingPage({
       window.history.replaceState(null, '', kind === 'video' ? '/publishing' : `/publishing?kind=${kind}`);
   }
   function change(patch: Partial<PublishDraft>) {
-    if (locked || busy) return;
+    if (locked || busy || incomingAsset) return;
     setDraft((d) => ({ ...d, ...patch }));
     setDirty(true);
     setNotice('');
@@ -547,7 +585,7 @@ export default function PublishingPage({
     snapshotId?: string,
     onlyPlatform?: string,
   ) {
-    if (!meta || busy || dirty || locked || stale) return;
+    if (!meta || busy || dirty || locked || stale || incomingAsset) return;
     const time = Date.now();
     const ready = readyPublishReceipts(meta.id, draft, data, config, platforms, time, expiryHours);
     const approvalKey = JSON.stringify([meta.id, materials, receiptKey]);
@@ -678,7 +716,7 @@ export default function PublishingPage({
     if (!incomingAsset) window.history.replaceState(null, '', `/publishing?batch=${encodeURIComponent(batch.id)}`);
   }
   async function receiveCover() {
-    if (!incomingAsset || !handoffTarget || handoffPending.current || handoffUncertain) return;
+    if (!incomingAsset || !handoffTarget || handoffPending.current || handoffUncertain || handoffChecking) return;
     handoffPending.current = true;
     setHandoffError('');
     try {
@@ -700,6 +738,15 @@ export default function PublishingPage({
           });
           if (prepared.batch && prepared.batch.revision !== receivingBatch?.revision)
             throw Error('目标草稿已更新，请查看最新封面后重新确认。');
+          beginCoverRecovery(window.localStorage, {
+            version: 1,
+            assetId: incomingAsset,
+            targetBatchId: prepared.batch?.id ?? null,
+            title: prepared.draft.commonCopy.title,
+            ratio: receivingRatio,
+            topicId: incomingTopic,
+            startedAt: new Date().toISOString(),
+          });
           submitted = true;
           const result = await request<PublishBatch>(
             prepared.batch
@@ -715,6 +762,7 @@ export default function PublishingPage({
             },
           );
           if (!mounted.current || session !== editSession.current) return;
+          clearCoverRecovery(window.localStorage, incomingAsset);
           loadBatch(result);
           setIncomingAsset(null);
           window.history.replaceState(null, '', `/publishing?batch=${encodeURIComponent(result.id)}`);
@@ -723,7 +771,13 @@ export default function PublishingPage({
         } catch (e) {
           if (!mounted.current || session !== editSession.current) return;
           setHandoffError(e instanceof Error ? e.message : '封面未能保存');
-          if (submitted) setHandoffUncertain(true);
+          try {
+            const recovery = readCoverRecovery(window.localStorage, incomingAsset);
+            setCoverRecovery(recovery);
+            setHandoffUncertain(submitted || recovery.status !== 'clear');
+          } catch {
+            setHandoffUncertain(true);
+          }
           setReplacement('');
           await refresh();
         } finally {
@@ -736,6 +790,24 @@ export default function PublishingPage({
     } finally {
       handoffPending.current = false;
     }
+  }
+  async function resolveCoverRecovery(retry: boolean) {
+    if (!incomingAsset || handoffPending.current) return;
+    await protect(() => {
+      try {
+        clearCoverRecovery(window.localStorage, incomingAsset);
+        setCoverRecovery({ status: 'clear' });
+        setHandoffUncertain(false);
+        setHandoffError('');
+        if (!retry) {
+          setIncomingAsset(null);
+          window.history.replaceState(null, '', `/publishing?batch=${encodeURIComponent(meta!.id)}`);
+          setNotice('已使用选中的保存记录结束本次封面交接，未再次修改或发送。');
+        }
+      } catch (e) {
+        setHandoffError(e instanceof Error ? e.message : '无法清除待核对记录');
+      }
+    });
   }
   if (
     !incomingAsset &&
@@ -842,7 +914,7 @@ export default function PublishingPage({
                 width={incoming.asset!.width}
                 height={incoming.asset!.height}
               />
-              <fieldset className="image-form" disabled={busy || handoffSaving || handoffUncertain}>
+              <fieldset className="image-form" disabled={busy || handoffSaving || handoffUncertain || handoffChecking}>
                 <label>
                   保存到
                   <select
@@ -939,8 +1011,32 @@ export default function PublishingPage({
             </>
           )}
           {handoffError && <p role="alert">{handoffError}</p>}
+          {handoffChecking && <p role="status">正在检查上次封面交接记录…</p>}
           {handoffUncertain && (
-            <p role="alert">这次保存未能确认。请核对下方任务记录，避免重复新建；确认记录后可从任务列表继续。</p>
+            <div className="publish-handoff-recovery">
+              <p role="alert">
+                {coverRecovery.status === 'unreadable'
+                  ? coverRecovery.reason
+                  : '上次保存尚未核对。请先检查下方任务记录，本页不会再次发送。'}
+              </p>
+              {coverRecovery.status === 'pending' && (
+                <p>
+                  {coverRecovery.pending.targetBatchId ? '保存到已有草稿' : '新建发布草稿'}：
+                  {coverRecovery.pending.title} · {coverRecovery.pending.ratio}
+                </p>
+              )}
+              {meta && Object.values(meta.draft.videoInput?.covers ?? {}).includes(incomingAsset!) && (
+                <>
+                  <p>已选记录：{meta.draft.commonCopy.title}</p>
+                  <Button disabled={busy || handoffSaving} onClick={() => void resolveCoverRecovery(false)}>
+                    使用已选记录，结束本次交接
+                  </Button>
+                </>
+              )}
+              <Button disabled={busy || handoffSaving} onClick={() => void resolveCoverRecovery(true)}>
+                已核对，没有保存，重新带入
+              </Button>
+            </div>
           )}
           <Button
             disabled={handoffSaving}
@@ -1286,6 +1382,7 @@ export default function PublishingPage({
                   const p = platforms.find((p) => p.id === template.platformId)!;
                   const matches = snapshots.filter((s) => s.platform === p.id);
                   const disabled =
+                    !!incomingAsset ||
                     busy ||
                     taskLocked ||
                     locked ||

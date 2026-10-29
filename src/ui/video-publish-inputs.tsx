@@ -165,7 +165,7 @@ export function VideoPublishInputs({
           <div className="video-publish-cover-heading">
             <span>封面</span>
             <Link href="/images" target="_blank">
-              去生图 →
+              制作封面 →
             </Link>
           </div>
           <div className="publish-covers">

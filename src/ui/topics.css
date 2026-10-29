@@ -627,24 +627,28 @@
 .topic-task-card {
   grid-column: 1 / -1;
   min-width: 0;
+  padding: 12px 18px;
+}
+.topic-task-card .card-header {
+  margin-bottom: 6px;
 }
 .topic-task-summary {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 12px;
+  margin-top: 4px;
 }
 .topic-task-detail,
 .topic-task-card p {
   font-size: 12px;
   color: var(--ink-2);
-  margin: 8px 0;
+  margin: 4px 0;
 }
 .topic-task-card .topic-task-error {
   color: var(--accent);
 }
 .topic-task-card details {
-  margin-top: 12px;
+  margin-top: 6px;
   font-size: 12px;
 }
 .topic-task-card summary {

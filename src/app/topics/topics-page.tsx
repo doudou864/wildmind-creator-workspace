@@ -152,7 +152,7 @@ export default function TopicsPage({
           void refresh();
           void refreshTask();
         }}
-        action={candidateCount > 3 ? generateButton : null}
+        action={generateButton}
       />
       {(notice || error || taskError) && <p role="status">{error || taskError || notice}</p>}
       <div className="topics-channel-layout">
@@ -162,12 +162,6 @@ export default function TopicsPage({
         <div className={`topics-v2-grid ${!focused ? 'topics-no-detail' : ''}`}>
           <TopicGenerationStatus task={taskData.task} starting={starting} />
           <Card title="候选方向" className="topic-list-card">
-            {candidateCount <= 3 && (
-              <div className="candidate-low">
-                <strong>{candidateCount === 0 ? '候选用完了' : '候选快用完了'}</strong>
-                {generateButton}
-              </div>
-            )}
             {exhausted && selectedTopic && (
               <Link href={`/images?topic=${encodeURIComponent(selectedTopic.id)}`}>
                 继续已选方向：{selectedTopic.title} →

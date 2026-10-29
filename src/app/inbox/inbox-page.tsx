@@ -181,6 +181,42 @@ export default function InboxPage({
           </Button>
         }
       />
+      <div className="inbox-toolbar" aria-label="常用消息筛选">
+        <Segmented
+          label="消息范围"
+          value={priority ? 'valuable' : 'all'}
+          options={[
+            { value: 'valuable', label: '有价值消息' },
+            { value: 'all', label: '全部消息' },
+          ]}
+          onChange={(value) => {
+            setPriority(value === 'valuable');
+            setLinkedMessageId(null);
+            setSelected(null);
+          }}
+        />
+        <Segmented
+          label="常用回复状态"
+          value={filters.reply}
+          options={[
+            { value: 'waiting', label: '待回复' },
+            { value: 'archived', label: '已归档' },
+          ]}
+          onChange={(reply) => filter({ reply })}
+        />
+        {['all', 'unknown'].includes(filters.reply) && (
+          <span className="small">{filters.reply === 'all' ? '全部未归档' : '待核对'}</span>
+        )}
+        <Button
+          className="inbox-filter-reset"
+          onClick={() => {
+            setPriority(true);
+            filter({ ...blankFilters, channel: workScope ? 'comment' : 'all', reply: 'waiting' });
+          }}
+        >
+          恢复默认筛选
+        </Button>
+      </div>
       <details className="card inbox-sources">
         <summary>
           {data.sources.length} 个来源 · {data.sources.filter((s) => s.status === 'ready').length} 个已读取
@@ -224,40 +260,21 @@ export default function InboxPage({
           <Button onClick={clearWorkScope}>清除作品范围</Button>
         </div>
       )}
-      <details
-        className="inbox-filter-disclosure"
-        open={
-          filters.platform !== 'all' ||
-          filters.channel !== 'all' ||
-          !!filters.query ||
-          filters.classification !== 'all' ||
-          filters.reply === 'archived' ||
-          filters.reply === 'unknown'
-        }
-      >
+      <details className="inbox-filter-disclosure">
         <summary>
-          筛选{filters.platform !== 'all' ? ` · ${platformName(filters.platform)}` : ''}
+          更多筛选{filters.platform !== 'all' ? ` · ${platformName(filters.platform)}` : ''}
           {filters.channel !== 'all' ? ` · ${channelName(filters.channel)}` : ''}
-          {!priority && filters.reply !== 'all' ? ` · ${replyLabels[filters.reply as keyof typeof replyLabels]}` : ''}
+          {filters.category !== 'all'
+            ? ` · ${filters.category === 'idea' ? '问题与观点' : (config.categories.find((c) => c.id === filters.category)?.name ?? filters.category)}`
+            : ''}
+          {filters.reply === 'all' ? ' · 全部未归档' : filters.reply === 'unknown' ? ' · 待核对' : ''}
+          {filters.themeId
+            ? ` · ${data.themes.find((theme) => theme.id === filters.themeId)?.title ?? '已选主题'}`
+            : ''}
           {filters.classification !== 'all' ? ' · 已选识别状态' : ''}
           {filters.query ? ` · ${filters.query}` : ''}
         </summary>
         <div className="inbox-filters">
-          <label>
-            消息范围
-            <select
-              aria-label="消息范围"
-              value={priority ? 'valuable' : 'all'}
-              onChange={(e) => {
-                setPriority(e.target.value === 'valuable');
-                setLinkedMessageId(null);
-                setSelected(null);
-              }}
-            >
-              <option value="valuable">有价值消息</option>
-              <option value="all">全部消息</option>
-            </select>
-          </label>
           {data.themes.length > 0 && (
             <label>
               需求主题
@@ -315,11 +332,16 @@ export default function InboxPage({
             onChange={(channel) => filter({ channel })}
           />
           <label>
-            回复状态
-            <select aria-label="筛选回复状态" value={filters.reply} onChange={(e) => filter({ reply: e.target.value })}>
-              <option value="all">全部回复状态</option>
-              <option value="waiting">待回复</option>
-              <option value="archived">已归档</option>
+            其他回复状态
+            <select
+              aria-label="筛选回复状态"
+              value={['waiting', 'archived'].includes(filters.reply) ? '' : filters.reply}
+              onChange={(e) => filter({ reply: e.target.value })}
+            >
+              <option value="" disabled>
+                {replyLabels[filters.reply as keyof typeof replyLabels] ?? '选择回复状态'}
+              </option>
+              <option value="all">全部未归档</option>
               <option value="unknown">待核对</option>
             </select>
           </label>
@@ -346,7 +368,6 @@ export default function InboxPage({
               placeholder="发送者、消息原文、关联作品"
             />
           </label>
-          <Button onClick={() => filter(blankFilters)}>重置筛选</Button>
         </div>
       </details>
 

@@ -1861,7 +1861,7 @@ dialog.asset-drawer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 .collection-platforms {
   display: grid;
@@ -1870,17 +1870,28 @@ dialog.asset-drawer {
 }
 .collection-platform {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: start;
+  align-items: center;
+  gap: 4px 8px;
+}
+.collection-platform > * {
+  grid-column: 1 / -1;
+}
+.collection-platform .collection-platform-heading {
+  grid-row: 1;
+}
+.collection-platform .collection-platform-date {
+  grid-column: 1;
+  grid-row: 2;
 }
 .collection-platform-actions {
-  margin-top: auto;
+  grid-column: 2;
+  grid-row: 2;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding-top: 6px;
+  gap: 4px;
 }
 .collection-platform > div {
   display: flex;
@@ -1904,6 +1915,14 @@ dialog.asset-drawer {
 .collection-platform details {
   font-size: 12px;
   overflow-wrap: anywhere;
+}
+.collection-platform > p {
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.collection-strip > [role='status'] {
+  margin-top: 8px;
+  font-size: 12px;
 }
 @media (max-width: 900px) {
   .collection-platforms {

@@ -26,7 +26,10 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
   const done = task?.sources.filter((s) => s.status === 'completed' || s.status === 'failed').length ?? 0;
   const problems = task?.sources.filter((s) => s.reason) ?? [];
   return (
-    <Card title="本轮采集" className="topic-task-card">
+    <Card
+      title="本轮采集"
+      className={`topic-task-card ${active || starting ? 'topic-task-active' : 'topic-task-complete'}`}
+    >
       <div role="status" aria-live="polite" className="topic-task-summary">
         <strong>
           {starting && !active
@@ -58,7 +61,7 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
       {task?.reason && <p className="topic-task-error">{task.reason}</p>}
       {task?.warning && <p className="topic-task-error">{task.warning}</p>}
       {problems.length > 0 && (
-        <details open>
+        <details key={`${task?.id}:${task?.status}`} open={active || task?.status === 'failed'}>
           <summary>{problems.length} 个网站有情况</summary>
           <ul>
             {problems.map((s) => (
