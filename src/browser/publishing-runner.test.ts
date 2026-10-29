@@ -2,6 +2,53 @@ import { test, expect, vi } from 'vitest';
 import { runEgo } from './ego';
 import { fillPublishingCopy, publishingBrowserConfig } from './publishing-runner';
 vi.mock('./ego', () => ({ runEgo: vi.fn() }));
+test('小红书拒绝fill的富文本编辑器通过键盘替换正文，重复执行不累加话题', async () => {
+  const cfg = (await publishingBrowserConfig()).platforms.find((p) => p.id === 'xiaohongshu')!;
+  let editor = '旧正文 #旧话题',
+    focused = false,
+    selected = false;
+  vi.mocked(runEgo).mockImplementation(async (script) => {
+    await new Function('taskSpace', 'console', `return (async()=>{${script}})()`)(
+      async () => ({
+        page: () => ({
+          fill: async (selector: string) => {
+            if (selector === cfg.descriptionInput) throw Error('page.fill did not accept');
+          },
+          click: async () => {
+            focused = true;
+          },
+          focus: async () => {
+            focused = true;
+          },
+          waitForTimeout: async () => {},
+          keyboard: {
+            press: async (key: string) => {
+              expect(focused).toBe(true);
+              if (key === 'ControlOrMeta+A') selected = true;
+              if (key === 'Backspace' && selected) {
+                editor = '';
+                selected = false;
+              }
+            },
+            insertText: async (text: string) => {
+              editor += text;
+            },
+            type: async (text: string) => {
+              editor += text;
+            },
+          },
+        }),
+      }),
+      { log: () => {} },
+    );
+    return true;
+  });
+  const copy = { title: '隔离测试', description: '说明', tags: ['测试话题'] };
+  for (let i = 0; i < 2; i++) {
+    await fillPublishingCopy({ spaceId: 999, label: 'p3' }, cfg, copy);
+    expect(editor).toBe('说明\n#测试话题');
+  }
+});
 test('B站根据实际多行快照找到标签框，以回车创建独立标签', async () => {
   const cfg = (await publishingBrowserConfig()).platforms.find((p) => p.id === 'bilibili')!;
   const fill = vi.fn(),

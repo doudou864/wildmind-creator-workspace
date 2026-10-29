@@ -209,7 +209,7 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
               notPublished: z.boolean(),
               reason: z.string(),
             }),
-            `核对待发布页面。图1为当前页面，其余为指定封面。主题=${JSON.stringify(item.copy.title)} 标签=${JSON.stringify(item.copy.tags)}。上传可审核状态已由代码按本平台实测界面确认；只核对标题一致、话题实际成链接/独立标签、指定封面完整且保存、必要声明与必填项完整、尚未公开发布。缺少证据返回false，不能凭操作历史推断。页面快照：${JSON.stringify(view)}。私享观看页话题证据：${JSON.stringify(watchEvidence)}`,
+            `核对待发布页面。图1为当前页面，其余为指定封面。主题=${JSON.stringify(item.copy.title)} 标签=${JSON.stringify(item.copy.tags)}。上传可审核状态已由代码按本平台实测界面确认；只核对标题一致、话题实际成该平台的链接/独立标签/高亮话题对象（不强求所有平台均为链接）、指定封面完整且保存、必要声明与必填项完整、尚未公开发布。可选字段未填写不等于必填项缺失，不能仅因可选自主声明显示请选择就判设置失败；发文助手因人数过多未完成检测不等于上传失败。缺少证据返回false，不能凭操作历史推断。页面快照：${JSON.stringify(view)}。私享观看页话题证据：${JSON.stringify(watchEvidence)}`,
             [file, ...cfg.coverRatios.map((r) => run.covers[r])],
           );
           if (

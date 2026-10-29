@@ -1,4 +1,4 @@
-import { traceExecution, executionEvent } from '../jobs/execution-log.ts';
+import { traceExecution, executionEvent, redactDiagnostic } from '../jobs/execution-log.ts';
 import { collectionSignal, throwIfCollectionCancelled, CollectionCancelled } from '../jobs/cancellation.ts';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
@@ -10,9 +10,21 @@ import type { LoginResult, WorkspaceBrowser } from './interface.ts';
 export class ScreenshotTimeout extends Error {}
 
 export function egoFailure(output: string) {
-  if (/EGO_.*(?:CONTROL|INACTIVE|UNASSIGNED)|control.*(?:lost|user)|控制权/i.test(output))
+  if (
+    /EGO_.*(?:CONTROL|INACTIVE|UNASSIGNED)|control.*(?:lost|user)|no longer assigned|task has ended|控制权/i.test(
+      output,
+    )
+  )
     return '控制权已交给用户；请在处理后恢复';
   if (/task space not found/i.test(output)) return '原浏览器工作区已关闭；请使用任务中的恢复入口';
+  if (/ElementResolutionError|Invalid locator|Unsupported key|Unknown key|page.fill did not accept/i.test(output))
+    return (
+      '页面控件操作失败：' +
+      redactDiagnostic(
+        output.split('\n').find((line) => /Error:|Invalid locator|Unsupported key|Unknown key/.test(line)) ??
+          '控件未匹配',
+      )
+    );
   if (/net::ERR_(?:INTERNET_DISCONNECTED|NAME_NOT_RESOLVED|CONNECTION_[A-Z_]+|NETWORK_CHANGED|TIMED_OUT)/.test(output))
     return '网络连接失败，等待配置的重试时段';
   if (/TimeoutError|timed out|timeout exceeded/i.test(output))
@@ -61,6 +73,8 @@ export function runEgo(script: string): Promise<unknown> {
         child.on('close', (code) => {
           clearTimeout(timeout);
           if (code !== 0) {
+            // Publishing workers do not have a collection log context; retain the actual cause in worker.log too.
+            console.error('[browser-error]', redactDiagnostic(output));
             executionEvent(
               '浏览器底层错误',
               'failed',

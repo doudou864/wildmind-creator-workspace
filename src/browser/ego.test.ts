@@ -87,6 +87,9 @@ test('断网按调度重试，用户接管优先于任何网络错误', async ()
   expect(egoFailure('控制权 net::ERR_INTERNET_DISCONNECTED')).toContain('控制权');
   expect(egoFailure('TimeoutError: popup timed out')).toContain('页面等待超时');
   expect(egoFailure('unknown')).toContain('不自动重试');
+  expect(egoFailure('ElementResolutionError: Invalid locator')).toContain('页面控件操作失败');
+  expect(egoFailure('This task space is no longer assigned to the agent: its task has ended')).toContain('控制权');
+  expect(egoFailure('控制权 ElementResolutionError')).toContain('控制权');
 });
 
 test('重试检查使用分配的标签页，不能导航仍在等待微信确认的 p1', async () => {

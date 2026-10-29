@@ -77,7 +77,10 @@ export async function fillPublishingCopy(
 ) {
   let code = `await p.fill(${JSON.stringify(cfg.titleInput)},${JSON.stringify(copy.title)});`;
   if (cfg.descriptionInput)
-    code += `await p.fill(${JSON.stringify(cfg.descriptionInput)},${JSON.stringify(copy.description)});`;
+    code +=
+      cfg.id === 'xiaohongshu'
+        ? `await p.click(${JSON.stringify(cfg.descriptionInput)});await p.keyboard.press('ControlOrMeta+A');await p.keyboard.press('Backspace');${copy.description ? `await p.keyboard.insertText(${JSON.stringify(copy.description)});` : ''}`
+        : `await p.fill(${JSON.stringify(cfg.descriptionInput)},${JSON.stringify(copy.description)});`;
   // Tags use native field entry. YouTube hashtags are part of the saved description.
   if (cfg.id === 'channels') {
     code = channelsActionsScript + code;
@@ -107,7 +110,7 @@ export async function fillPublishingCovers(page: UploadPage, cfg: UploadPlatform
             `await channelsClick('.edit-btn',null,${index});let s${index}=await p.snapshot({scope:'full_page'});if(s${index}.includes('text "直接编辑"'))await channelsClick('button','直接编辑');await channelsWaitDialog(${JSON.stringify(index ? '编辑分享卡片' : '编辑个人主页卡片')},true);await p.setInputFiles('input[accept="image/jpeg,image/jpg,image/png"]',[${file(ratio)}]);await channelsClick('button','确认');await channelsWaitDialog(${JSON.stringify(index ? '编辑分享卡片' : '编辑个人主页卡片')},false);`,
         )
         .join(''),
-    douyin: `await p.click('text="选择封面" >> nth=0');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('4:3')}]);await p.click('text="设置竖封面"');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('3:4')}]);await p.click('text="完成"');`,
+    douyin: `const previous=await p.evaluate(()=>Array.from(document.querySelectorAll('.background-OpVteV img')).map(e=>e.src));await p.click('text="选择封面" >> nth=0');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('4:3')}]);await p.click('text="设置竖封面"');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('3:4')}]);await p.click('text="完成"');await p.waitForFunction(previous=>{const images=Array.from(document.querySelectorAll('.background-OpVteV img'));return images.length===2&&images.every((e,i)=>e.complete&&e.naturalWidth>0&&e.src!==previous[i]);},previous,{timeout:60000});`,
     xiaohongshu: `await p.hover('.default.row');await p.click('text="编辑封面"');await p.waitForSelector('text="裁剪"',{timeout:30000});await p.setInputFiles('input[aria-label="上传封面图片"]',[${file('3:4')}]);await p.click('text="裁剪"');await p.click('text="3:4"');await p.click('text="完成"');await p.waitForSelector('text="裁剪"',{state:'hidden',timeout:40000});`,
     bilibili: `await p.click('text="添加封面"');await p.setInputFiles('input[accept="image/png, image/jpeg"]',[${file('4:3')}]);await p.click('text="个人空间封面（16:9）"');await p.setInputFiles('input[accept="image/png, image/jpeg"]',[${file('16:9')}]);await p.click('text="完成"');`,
     youtube: `const chooser=p.waitForFileChooser({timeout:15000});await p.click('loc=role:button[name="上传文件"]');await (await chooser).setFiles(${file('16:9')});`,
