@@ -346,3 +346,47 @@ test.each(['upload', 'upload-and-publish'] as const)(
     }
   },
 );
+
+test.each([941, 980])('上传读取实际封面尺寸1672×%s，与页面共用比例容差，明显不符仍拒绝', async (height) => {
+  const f = await fixture();
+  let id: string | null = null;
+  try {
+    f.db.db
+      .update(assets)
+      .set({ width: 1672, height: 941, path: `/fixture/cover-1672x${height}.png` })
+      .where(eq(assets.id, 'fixture-16:9'))
+      .run();
+    const batch = await savePublishing(f.db, {
+      ...f.batch.draft,
+      contentId: null,
+      settings: [{ ...makePublishSetting('youtube', '隔离封面验收', f.config), scheduleAt: null }],
+    });
+    id = batch.id;
+    const launch = vi.fn(async () => {});
+    const result = enqueuePublishingUpload(
+      f.db,
+      id,
+      {
+        action: 'upload',
+        requestId: '9337310d-e3f2-4469-9ad2-c257c1918db6',
+        expectedRevision: batch.revision,
+        platformIds: ['youtube'],
+        materials: publishMaterialKey(batch.draft, publishingData(f.db), f.config),
+      },
+      launch,
+    );
+    if (height === 941) {
+      await result;
+      expect(launch).toHaveBeenCalledTimes(1);
+      expect(readPublishingTask(f.db, id)?.status).toBe('running');
+      expect(readUploadRun(f.db, id)?.publishAuthorization).toBeUndefined();
+    } else {
+      await expect(result).rejects.toThrow('16:9 封面尺寸不匹配（实际 1672×980）');
+      expect(launch).not.toHaveBeenCalled();
+      expect(readPublishingTask(f.db, id)).toBeNull();
+    }
+  } finally {
+    if (id) await rm(path.resolve('data/jobs/publishing', id), { recursive: true, force: true });
+    await f.close();
+  }
+});

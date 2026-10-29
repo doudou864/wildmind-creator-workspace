@@ -543,6 +543,11 @@ export default function PublishingPage({
     if (!uploadRequest.current || uploadRequest.current.key !== key)
       uploadRequest.current = { key, id: crypto.randomUUID() };
     setBusy(true);
+    setNotice(
+      kind === 'upload' || kind === 'upload-and-publish'
+        ? '正在检查视频和封面，检查通过后开始上传，请稍候。'
+        : '正在受理发布，请稍候。',
+    );
     try {
       const payload = {
         action: kind,
@@ -683,10 +688,14 @@ export default function PublishingPage({
             <>
               <Button
                 disabled={!canUpload || taskLocked}
-                disabledReason={issues.join('；') || '请等待保存完成；已有任务请从任务列表继续。'}
+                disabledReason={
+                  busy
+                    ? '正在处理当前请求，请稍候。'
+                    : issues.join('；') || (taskLocked ? '已有任务，请从下方任务列表继续。' : '请等待保存完成。')
+                }
                 onClick={() => void action('upload')}
               >
-                上传
+                {busy ? '处理中…' : '上传'}
               </Button>
               <Button
                 variant="primary"

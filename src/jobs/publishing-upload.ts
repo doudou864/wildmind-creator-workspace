@@ -16,7 +16,12 @@ import { CodexJudgment } from '../ai/structured.ts';
 import { publishingData } from '../lib/publishing-store.ts';
 import { loadConfig } from '../lib/config.ts';
 import { loadPublishingConfig } from '../lib/publishing-config.ts';
-import { publishActionSchema, publishMaterialKey, videoUploadIssues } from '../lib/publishing-model.ts';
+import {
+  publishActionSchema,
+  publishMaterialKey,
+  videoUploadIssues,
+  matchesCoverRatio,
+} from '../lib/publishing-model.ts';
 
 export async function launchPublishingUpload(db: WorkspaceDatabase, task: PublishingTask) {
   const directory = path.resolve('data/jobs/publishing', task.batchId);
@@ -105,9 +110,9 @@ export async function enqueuePublishingUpload(
     const asset = assetId ? db.db.select().from(assets).where(eq(assets.id, assetId)).get() : null;
     if (!asset) throw Error(`缺少 ${ratio} 封面`);
     const file = await assetFile(asset.path),
-      info = await imageInfo(file),
-      [w, h] = ratio.split(':').map(Number);
-    if (info.width * h !== info.height * w) throw Error(`${ratio} 封面尺寸不匹配`);
+      info = await imageInfo(file);
+    if (!matchesCoverRatio(info.width, info.height, ratio, templates))
+      throw Error(`${ratio} 封面尺寸不匹配（实际 ${info.width}×${info.height}）`);
     const target = path.join(
       directory,
       `cover-${ratio.replace(':', 'x')}${info.mime === 'image/png' ? '.png' : '.jpg'}`,
