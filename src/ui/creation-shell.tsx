@@ -26,18 +26,6 @@ export function CreationShell({
   syncWindow: string;
 }) {
   const router = useRouter();
-  const steps = [
-    { id: 'topic', label: '选题' },
-    { id: 'materials', label: '素材' },
-    ...(content?.form === '视频' ? [] : [{ id: 'layout', label: '排版' }]),
-    { id: 'publish', label: '发布检查' },
-  ];
-  function href(next: string) {
-    const p = new URLSearchParams(query);
-    p.set('step', next);
-    if (content) p.set('content', content.id);
-    return '/create?' + p.toString();
-  }
   if (step === 'materials') return <>{children}</>;
   return (
     <div
@@ -62,14 +50,40 @@ export function CreationShell({
         <span>{content?.form ?? '选好方向后，在素材步骤建立作品'}</span>
         {content && <Link href={`/works?content=${content.id}`}>查看作品 →</Link>}
       </div>
-      <nav className="creation-stage-tabs" aria-label="创作步骤">
-        {steps.map((s) => (
-          <Link key={s.id} href={href(s.id)} aria-current={step === s.id ? 'step' : undefined}>
-            {s.label}
-          </Link>
-        ))}
-      </nav>
+      <CreationStageNav step={step} query={query} content={content} />
       <div className="creation-stage">{children}</div>
     </div>
+  );
+}
+
+export function CreationStageNav({
+  step,
+  query,
+  content,
+}: {
+  step: string;
+  query: string;
+  content: { id: string; form: string } | null;
+}) {
+  const steps = [
+    { id: 'topic', label: '选题' },
+    { id: 'materials', label: '素材' },
+    ...(content?.form === '视频' ? [] : [{ id: 'layout', label: '排版' }]),
+    { id: 'publish', label: '发布检查' },
+  ];
+  function href(next: string) {
+    const p = new URLSearchParams(query);
+    p.set('step', next);
+    if (content) p.set('content', content.id);
+    return '/create?' + p.toString();
+  }
+  return (
+    <nav className="creation-stage-tabs" aria-label="创作步骤">
+      {steps.map((s) => (
+        <Link key={s.id} href={href(s.id)} aria-current={step === s.id ? 'step' : undefined}>
+          {s.label}
+        </Link>
+      ))}
+    </nav>
   );
 }

@@ -52,7 +52,7 @@ const result = await build({
             a.path === 'next/link'
               ? `import React from'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`
               : a.path === 'next/navigation'
-                ? `export const usePathname=()=>'/create';export const useRouter=()=>({push(){},replace(){},refresh(){}});`
+                ? `export const useSearchParams=()=>new URLSearchParams('step=materials');export const usePathname=()=>'/create';export const useRouter=()=>({push(){},replace(){},refresh(){}});`
                 : readFileSync('src/ui/use-resource.ts', 'utf8')
                     .replace(
                       "import { visibleRecords } from './visible-records.ts';",
