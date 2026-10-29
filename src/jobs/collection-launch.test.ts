@@ -1,6 +1,13 @@
 import { EventEmitter } from 'node:events';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-const mocks = vi.hoisted(() => ({ spawn: vi.fn(), readFile: vi.fn(), writeFile: vi.fn(), release: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  spawn: vi.fn(),
+  readFile: vi.fn(),
+  writeFile: vi.fn(),
+  release: vi.fn(),
+  readState: vi.fn(),
+}));
+vi.mock('../collectors/state.ts', () => ({ readState: mocks.readState }));
 vi.mock('node:child_process', () => ({ spawn: mocks.spawn }));
 vi.mock('node:fs/promises', () => ({
   mkdir: vi.fn(),
@@ -12,7 +19,7 @@ vi.mock('node:fs/promises', () => ({
 vi.mock('./lock.ts', () => ({ acquireJobLock: async () => mocks.release }));
 vi.mock('./schedule.ts', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./schedule.ts')>()),
-  loadSchedule: async () => ({ platforms: ['douyin', 'bilibili'], manualOnly: [] }),
+  loadSchedule: async () => ({ platforms: ['douyin', 'bilibili'], manualOnly: [], retries: [] }),
 }));
 vi.mock('../db/database.ts', () => ({ openDatabase: () => ({ sqlite: { close: vi.fn() } }) }));
 vi.mock('./attention.ts', () => ({ pendingAttention: () => [] }));
@@ -75,5 +82,12 @@ test('停止后当天定时器不重启它，手动重启仍可用，其他平�
     throw Error('not found');
   });
   expect((await startCollection(undefined, 'scheduled')).startedPlatforms).toEqual(['bilibili']);
+  expect((await startCollection('douyin')).startedPlatforms).toEqual(['douyin']);
+});
+
+test('成功平台的定时检查不产生空采集进程，手动采集仍然可用', async () => {
+  mocks.readState.mockReturnValue({ chosen: 0, attempted: ['main'], succeeded: true });
+  expect((await startCollection(undefined, 'scheduled')).startedPlatforms).toEqual([]);
+  expect(mocks.spawn).not.toHaveBeenCalled();
   expect((await startCollection('douyin')).startedPlatforms).toEqual(['douyin']);
 });

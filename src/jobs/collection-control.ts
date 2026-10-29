@@ -1,3 +1,5 @@
+import { readState } from '../collectors/state.ts';
+import { dueSlot } from './schedule.ts';
 import { openDatabase } from '../db/database.ts';
 import { pendingAttention } from './attention.ts';
 import { scheduledPlatforms } from './schedule.ts';
@@ -32,6 +34,21 @@ export async function runningPlatforms() {
   );
   return platforms.filter((_, index) => running[index]);
 }
+export function activeCollection(latest: { status: string; startedAt: string } | undefined, launchedAt?: string) {
+  return (
+    latest?.status === 'running' ||
+    (!!launchedAt && Date.parse(launchedAt) > Date.parse(latest?.startedAt ?? '1970-01-01'))
+  );
+}
+export async function collectionLaunchedAt(platform: string) {
+  const { platforms } = await loadSchedule();
+  if (!platforms.includes(platform)) throw Error('平台不在采集配置中');
+  try {
+    return JSON.parse(await readFile(`data/jobs/collection-${platform}.json`, 'utf8')).startedAt as string;
+  } catch {
+    return undefined;
+  }
+}
 export async function collectionRunning() {
   return (await runningPlatforms()).length > 0;
 }
@@ -45,19 +62,28 @@ export function collectionArgs(platform: string | undefined, allowed: string[], 
   ];
 }
 export async function startCollection(platform?: string, mode: CollectionMode = 'manual') {
-  const { platforms, manualOnly } = await loadSchedule();
+  const schedule = await loadSchedule();
+  const { platforms, manualOnly } = schedule;
   collectionArgs(platform, platforms, mode);
   let targets = platform ? [platform] : platforms;
   if (mode === 'scheduled') {
     const db = openDatabase();
     try {
-      targets = scheduledPlatforms(
-        targets,
-        manualOnly,
-        pendingAttention(db)
-          .filter((item) => item.kind === 'confirmation')
-          .map((item) => item.platformId),
-      );
+      const confirmations = pendingAttention(db)
+        .filter((item) => item.kind === 'confirmation')
+        .map((item) => item.platformId);
+      targets = scheduledPlatforms(targets, manualOnly, confirmations).filter((id) => {
+        if (confirmations.includes(id)) return true;
+        const state = readState(db, `schedule:${shanghaiDate()}:${id}`);
+        if (!state) return true;
+        return !!dueSlot(
+          new Date(),
+          Number(state.chosen),
+          schedule.retries,
+          Array.isArray(state.attempted) ? (state.attempted as string[]) : [],
+          !!state.succeeded,
+        );
+      });
     } finally {
       db.sqlite.close();
     }

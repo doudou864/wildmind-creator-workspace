@@ -1,3 +1,4 @@
+import { PlatformDataPending } from '../availability.ts';
 import { PageCoverage } from '../pagination.ts';
 import { loadCapacity, checkCapacity } from '../capacity.ts';
 import { readFile, mkdir, writeFile } from 'node:fs/promises';
@@ -103,6 +104,7 @@ export async function collectYoutube(
   checkCapacity(database, cfg.platformId, incoming.length, capacity);
   if (!metadata.length) throw new Error('YouTube内容列表为空，需核验页面');
   const readings: CapturedReading[] = [];
+  let dataPending: PlatformDataPending | undefined;
   const allowed = workspace.metrics
     .filter(
       (m) =>
@@ -116,10 +118,19 @@ export async function collectYoutube(
     const file = `${folder}/report-${i}.png`;
     await session.capture(file);
     paths.push(file);
-    requireReportDates(reportDateRange(state.text), incoming);
+    const range = reportDateRange(state.text);
+    if (range.end < shanghaiDate(new Date(now.getTime() - 86400000)))
+      dataPending = new PlatformDataPending(range.end, `YouTube报表更新至${range.end}，已读取可用数据`);
+    try {
+      requireReportDates(range, incoming);
+    } catch (error) {
+      if (!(error instanceof PlatformDataPending)) throw error;
+      dataPending = error;
+      for (let n = incoming.length - 1; n >= 0; n--) if (incoming[n].publishedAt > range.end) incoming.splice(n, 1);
+    }
     const reading = await judgment.read(
       screenshotReading,
-      `只看可见表格完整行，提取这几条作品的指标，不取合计、不取比例小字。允许指标${JSON.stringify(allowed)}；元数据${JSON.stringify(incoming)}。日期沿用元数据。平均观看时长保留原始分:秒，不心算。破折号留null；当前截图没有目标行则posts为空,status为ok。account/records/signals为空。`,
+      `只看可见表格完整行，提取这几条作品的指标，不取合计、不取比例小字。允许指标${JSON.stringify(allowed)}；平台原标签映射${JSON.stringify(cfg.aliases)}，订阅人数列（包括0）必须读取；元数据${JSON.stringify(incoming)}。日期沿用元数据。平均观看时长保留原始分:秒，不心算。破折号留null；当前截图没有目标行则posts为空,status为ok。account/records/signals为空。`,
       [file],
     );
     if (reading.status !== 'ok') throw new Error(reading.reason ?? 'YouTube截图识别失败');
@@ -203,5 +214,6 @@ export async function collectYoutube(
     now,
   });
   if (monthly.length) writeState(database, `${cfg.platformId}:audience-month`, { month: today.slice(0, 7) });
+  if (dataPending) throw dataPending;
   return { posts: incoming.length, screenshots: readings.length };
 }

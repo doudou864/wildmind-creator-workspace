@@ -1,3 +1,4 @@
+import { visualLogin } from '../browser/visual-login.ts';
 import { recheckLoginAttention } from './recheck-attention.ts';
 import { executionEvent, traceExecution } from './execution-log.ts';
 import { throwIfCollectionCancelled, CollectionCancelled, collectionSignal } from './cancellation.ts';
@@ -119,16 +120,15 @@ export async function runCollection(
                 collector(database, new CollectionSession(spaceId, page), new CodexJudgment(), paths),
               );
               executionEvent('平台指标读取', 'success', outcome.dataPending?.note);
-              if (!outcome.dataPending)
-                await traceExecution('评论与私信采集', () =>
-                  collectPlatformInbox(
-                    database,
-                    platformId,
-                    new CollectionSession(spaceId, page),
-                    new CodexJudgment(),
-                    paths,
-                  ),
-                );
+              await traceExecution('评论与私信采集', () =>
+                collectPlatformInbox(
+                  database,
+                  platformId,
+                  new CollectionSession(spaceId, page),
+                  new CodexJudgment(),
+                  paths,
+                ),
+              );
               await finishCrawl(database, id, {
                 status: 'success',
                 archivePaths: paths,
@@ -243,7 +243,25 @@ export async function runCollection(
       const paths: string[] = [];
       try {
         executionEvent('登录检查', 'started');
-        const [login] = await browser.checkLogins([id]);
+        let [login] = await browser.checkLogins([id]);
+        login = await visualLogin(
+          id,
+          new CollectionSession(activeSpace, activePage),
+          new CodexJudgment(),
+          `data/captures/login/${crawlId}.png`,
+          paths,
+          login,
+        );
+        database.db
+          .update(accounts)
+          .set({
+            loginState: login.state,
+            reason: login.state === 'logged_in' ? null : login.reason,
+            checkedAt: login.checkedAt,
+            updatedAt: login.checkedAt,
+          })
+          .where(eq(accounts.platformId, id))
+          .run();
         if (login.state === 'awaiting_confirmation') {
           const config = (await loadBrowserConfig()).find((p) => p.id === id)!;
           const existing = pendingAttention(database).find(
@@ -274,10 +292,9 @@ export async function runCollection(
         const session = new CollectionSession(activeSpace, activePage);
         const outcome = await collectWithAvailability(() => collector(database, session, new CodexJudgment(), paths));
         executionEvent('平台指标读取', 'success', outcome.dataPending?.note);
-        if (!outcome.dataPending)
-          await traceExecution('评论与私信采集', () =>
-            collectPlatformInbox(database, id, session, new CodexJudgment(), paths),
-          );
+        await traceExecution('评论与私信采集', () =>
+          collectPlatformInbox(database, id, session, new CodexJudgment(), paths),
+        );
         throwIfCollectionCancelled();
         refreshReviews(database, await loadConfig());
         await finishCrawl(database, crawlId, {

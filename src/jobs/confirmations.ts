@@ -1,3 +1,4 @@
+import { observeVisualLogin } from '../browser/visual-login.ts';
 import { eq } from 'drizzle-orm';
 import { attentionItems } from '../db/schema.ts';
 import { EgoBrowser } from '../browser/ego.ts';
@@ -8,14 +9,10 @@ import { startCrawl, finishCrawl } from './crawl-log.ts';
 export async function checkConfirmations(
   database: WorkspaceDatabase,
   onReady: (platformId: string, spaceId: number, page: string) => Promise<void>,
-  browser = new EgoBrowser(),
+  browser: Pick<EgoBrowser, 'observeLogin'> = { observeLogin: observeVisualLogin },
   now = new Date().toISOString(),
   platformId?: string,
 ) {
-  for (const item of expireConfirmations(database, now, platformId)) {
-    const id = startCrawl(database, item.platformId, now);
-    await finishCrawl(database, id, { status: 'failed', reason: '未确认登录' }, now);
-  }
   for (const item of pendingAttention(database).filter(
     (x) => x.kind === 'confirmation' && (!platformId || x.platformId === platformId),
   )) {
@@ -47,5 +44,9 @@ export async function checkConfirmations(
         .run();
       await onReady(item.platformId, item.spaceId, item.page);
     }
+  }
+  for (const item of expireConfirmations(database, now, platformId)) {
+    const id = startCrawl(database, item.platformId, now);
+    await finishCrawl(database, id, { status: 'failed', reason: '未确认登录' }, now);
   }
 }

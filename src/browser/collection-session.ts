@@ -1,8 +1,10 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { runEgo } from './ego.ts';
+import { runEgo, ScreenshotTimeout } from './ego.ts';
+import { existingCollectionSpace } from './collection-space.ts';
+import { executionEvent } from '../jobs/execution-log.ts';
 import { loadBrowserConfig } from './config.ts';
-import { loadBrowserPolicy, consumePage, randomBetween } from './policy.ts';
+import { loadBrowserPolicy, consumePage, randomBetween, pause } from './policy.ts';
 export class AttentionRequired extends Error {
   kind: 'login' | 'risk';
   constructor(reason: string, kind: 'login' | 'risk') {
@@ -40,9 +42,12 @@ export class CollectionSession {
   }
   async settle(ready?: string) {
     const policy = await loadBrowserPolicy();
-    await this.run(
-      `await page.waitForTimeout(${randomBetween(policy.dwellMs)});${ready ? `try{await page.waitForSelector(${JSON.stringify(ready)},{timeout:15000});}catch{}` : ''}console.log('WORKSPACE_RESULT:true');`,
-    );
+    // Dwell is a local cancellable delay, not a browser RPC that can stall after a completed click.
+    await pause(randomBetween(policy.dwellMs));
+    if (ready)
+      await this.run(
+        `try{await page.waitForSelector(${JSON.stringify(ready)},{timeout:15000});}catch{}console.log('WORKSPACE_RESULT:true');`,
+      );
   }
   async inspect(
     platformId: string,
@@ -66,10 +71,27 @@ export class CollectionSession {
     if (new URL(result.url).origin !== expected.origin) throw new AttentionRequired('后台跳转到异常登录地址', 'login');
     return result;
   }
+  private async screenshot<T>(filename: string, action: () => Promise<T>): Promise<T> {
+    const limit = (await loadBrowserPolicy()).screenshotRetryCount;
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const result = await action();
+        if (attempt) executionEvent('截图恢复', 'success', '当前页面截图已取得');
+        return result;
+      } catch (error) {
+        if (!(error instanceof ScreenshotTimeout) || attempt >= limit) throw error;
+        if (!(await existingCollectionSpace(this.spaceId, this.execute))) throw Error('截图页面已关闭');
+        await this.archiveSnapshot(filename.replace(/\.png$/, '.retry.txt'));
+        executionEvent('截图恢复', 'started', '原工作区仍由采集任务控制，当前页面已重新读取；只重试截图，不重复点击');
+      }
+    }
+  }
   async capture(filename: string) {
     await mkdir(path.dirname(path.resolve(filename)), { recursive: true, mode: 0o700 });
-    const result = await this.run<string>(
-      `await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).dwellMs)});console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.screenshot({path:${JSON.stringify(path.resolve(filename))}})));`,
+    const result = await this.screenshot(filename, async () =>
+      this.run<string>(
+        `await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).dwellMs)});console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.screenshot({path:${JSON.stringify(path.resolve(filename))}})));`,
+      ),
     );
     return result;
   }
@@ -132,8 +154,10 @@ export class CollectionSession {
   }
   async captureChartTip(selector: string, inset: number, filename: string) {
     await mkdir(path.dirname(path.resolve(filename)), { recursive: true, mode: 0o700 });
-    await this.run(
-      `await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).dwellMs)});const r=await page.evaluate(selector=>{const r=document.querySelector(selector)?.getBoundingClientRect();if(!r)throw new Error('趋势图不存在');return {x:r.right-${inset},y:r.top+r.height/2};},${JSON.stringify(selector)});await page.mouse.move(r.x,r.y);await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).dwellMs)});await page.screenshot({path:${JSON.stringify(path.resolve(filename))}});console.log('WORKSPACE_RESULT:true');`,
+    await this.screenshot(filename, async () =>
+      this.run(
+        `await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).dwellMs)});const r=await page.evaluate(selector=>{const r=document.querySelector(selector)?.getBoundingClientRect();if(!r)throw new Error('趋势图不存在');return {x:r.right-${inset},y:r.top+r.height/2};},${JSON.stringify(selector)});await page.mouse.move(r.x,r.y);await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).dwellMs)});await page.screenshot({path:${JSON.stringify(path.resolve(filename))}});console.log('WORKSPACE_RESULT:true');`,
+      ),
     );
   }
   async download(selector: string, filename: string) {

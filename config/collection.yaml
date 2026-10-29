@@ -7,6 +7,7 @@ browser:
   dailyPageLimit: 200
   riskMarkers: [验证码, 拖动滑块, 安全验证, 访问频繁, 异常登录, 账号存在风险]
   confirmationPollSeconds: 30
+  screenshotRetryCount: 1
 schedule:
   timezone: Asia/Shanghai
   platforms: [douyin, bilibili, youtube, xiaohongshu, channels]

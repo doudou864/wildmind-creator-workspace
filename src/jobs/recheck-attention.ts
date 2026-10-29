@@ -1,3 +1,4 @@
+import { observeVisualLogin } from '../browser/visual-login.ts';
 import { eq } from 'drizzle-orm';
 import { attentionItems } from '../db/schema.ts';
 import type { WorkspaceDatabase } from '../db/database.ts';
@@ -8,7 +9,7 @@ import { pendingAttention } from './attention.ts';
 export async function recheckLoginAttention(
   database: WorkspaceDatabase,
   platformId: string,
-  browser: Pick<EgoBrowser, 'observeLogin'> = new EgoBrowser(),
+  browser: Pick<EgoBrowser, 'observeLogin'> = { observeLogin: observeVisualLogin },
 ) {
   const recovered: { spaceId: number; page: string }[] = [];
   for (const item of pendingAttention(database).filter(

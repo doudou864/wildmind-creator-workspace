@@ -19,4 +19,6 @@ dm:
   time: '[class*="_Msg__Time_"]'
   self: '[class*="_MsgTextIsMe_"]'
   maxConversations: 30
+  contactScroll: '[class*="_InfiniteScroll_"]:has([data-id^="contact_"])'
+  maxScrolls: 15
   systemNames: [创作助手, 哔哩哔哩智能机, 服务通知, 哔哩哔哩大会员, 哔哩哔哩课堂]

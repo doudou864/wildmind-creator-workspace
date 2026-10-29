@@ -7,6 +7,8 @@ import { loadConfig } from '../lib/config.ts';
 import { detectLogin, loadBrowserConfig, type BrowserPlatform } from './config.ts';
 import type { LoginResult, WorkspaceBrowser } from './interface.ts';
 
+export class ScreenshotTimeout extends Error {}
+
 export function egoFailure(output: string) {
   if (/EGO_.*(?:CONTROL|INACTIVE|UNASSIGNED)|control.*(?:lost|user)|控制权/i.test(output))
     return '控制权已交给用户；请在处理后恢复';
@@ -66,7 +68,11 @@ export function runEgo(script: string): Promise<unknown> {
                 .filter((line) => /Error|EGO_|net::|Timeout|at /.test(line))
                 .join('\n') || '未返回错误详情',
             );
-            reject(new Error(egoFailure(output)));
+            reject(
+              /CDP request timed out: Page\.captureScreenshot/.test(output)
+                ? new ScreenshotTimeout('浏览器截图超时，未读到截图')
+                : new Error(egoFailure(output)),
+            );
             return;
           }
           const line = output.split('\n').findLast((line) => line.startsWith('WORKSPACE_RESULT:'));

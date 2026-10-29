@@ -1,15 +1,22 @@
 import { shanghaiDate } from '@/jobs/schedule';
 import { pendingAttention } from '@/jobs/attention';
 import { crawlLogs } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 import { isLocalOrigin } from '@/lib/local-origin';
-import { startCollection, runningPlatforms, legacyCollectionRunning, stopCollection } from '@/jobs/collection-control';
+import {
+  startCollection,
+  runningPlatforms,
+  legacyCollectionRunning,
+  stopCollection,
+  activeCollection,
+  collectionLaunchedAt,
+} from '@/jobs/collection-control';
 import { usingDatabase } from '@/lib/media-store';
 import { loadSchedule } from '@/jobs/schedule';
 import { readState } from '@/collectors/state';
 export async function GET() {
   const legacyRunning = await legacyCollectionRunning();
-  const activePlatforms = legacyRunning
+  const workerPlatforms = legacyRunning
     ? await usingDatabase(async (db) =>
         db.db
           .select({ id: crawlLogs.platformId })
@@ -19,9 +26,25 @@ export async function GET() {
           .map((r) => r.id),
       )
     : await runningPlatforms();
+  const activePlatforms = await usingDatabase(async (db) => {
+    const active = await Promise.all(
+      workerPlatforms.map(async (id) => {
+        const latest = db.db
+          .select()
+          .from(crawlLogs)
+          .where(eq(crawlLogs.platformId, id))
+          .orderBy(desc(crawlLogs.startedAt))
+          .limit(1)
+          .get();
+        return activeCollection(latest, await collectionLaunchedAt(id));
+      }),
+    );
+    return workerPlatforms.filter((_, index) => active[index]);
+  });
   const issues = await usingDatabase(async (db) => {
     const { platforms } = await loadSchedule();
     return platforms.flatMap((platform) => {
+      if (activePlatforms.includes(platform)) return [];
       const value = readState(db, `collection:last-error:${platform}`);
       return value?.reason ? [{ platform, ...value }] : [];
     });

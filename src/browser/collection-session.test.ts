@@ -46,3 +46,42 @@ test('打开详情按唯一标题定位，列表滚动或置顶作品改变顺�
   await expect(session.openDetail('没有的标题', '.title')).rejects.toThrow('不存在或标题不唯一');
   expect(clicked).toHaveLength(1);
 });
+
+test('截图超时先观察原工作区和当前页面，只重读截图一次；用户接管时停止', async () => {
+  const { ScreenshotTimeout } = await import('./ego');
+  const { mkdtemp, rm } = await import('node:fs/promises');
+  const { tmpdir } = await import('node:os');
+  const folder = await mkdtemp(`${tmpdir()}/fixture-shot-`);
+  try {
+    for (const ownership of ['agent', 'user']) {
+      let captures = 0;
+      const operations: string[] = [];
+      const session = new CollectionSession(14, 'p1', async (script) => {
+        if (script.includes('listTaskSpaces')) {
+          operations.push('ownership');
+          return [{ id: 14, ownership }];
+        }
+        if (script.includes('page.snapshot')) {
+          operations.push('snapshot');
+          return '当前后台';
+        }
+        if (script.includes('page.screenshot')) {
+          captures++;
+          operations.push('capture');
+          if (captures === 1) throw new ScreenshotTimeout('截图超时');
+          return 'saved';
+        }
+        throw Error('不允许点击或导航');
+      });
+      if (ownership === 'agent') {
+        expect(await session.capture(`${folder}/current.png`)).toBe('saved');
+        expect(operations).toEqual(['capture', 'ownership', 'snapshot', 'capture']);
+      } else {
+        await expect(session.capture(`${folder}/current.png`)).rejects.toThrow('交给你');
+        expect(captures).toBe(1);
+      }
+    }
+  } finally {
+    await rm(folder, { recursive: true, force: true });
+  }
+});

@@ -8,7 +8,7 @@ listScroll: '.d-table__content'
 detailScroll: '.note-detail-contain'
 mainScroll: '.microapp-container:not([style*="display: none"])' 
 chart: '.chart-container canvas'
-chartRightInset: 52
+chartRightInset: 64
 fansMetrics: [总粉丝数, 新增粉丝数, 流失粉丝数]
 viewport: {width: 1920, height: 1080}
 maxScreens: 30

@@ -2,10 +2,20 @@ import { expect, test, vi } from 'vitest';
 import { createElement, type ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { CollectionStrip } from './collection-strip';
-const live = vi.hoisted(() => ({ today: undefined as string | undefined }));
+const live = vi.hoisted(() => ({
+  today: undefined as string | undefined,
+  running: false,
+  initial: false,
+  activePlatforms: [] as string[],
+  attention: [] as { platform: string; reason: string; at: string }[],
+}));
 vi.mock('./use-resource', () => ({
   request: vi.fn(),
-  useResource: () => ({ data: { running: false, today: live.today }, refresh: vi.fn(), error: '' }),
+  useResource: (_url: string, initial: unknown) => ({
+    data: live.initial ? initial : live,
+    refresh: vi.fn(),
+    error: '',
+  }),
 }));
 vi.mock('./components', () => ({
   Button: ({ children }: { children: ReactNode }) => createElement('button', null, children),
@@ -47,4 +57,40 @@ test('网页跨日保持打开时，用轮询日期纠正成功状态', () => {
   expect(html).toContain('采集成功');
   expect(html).not.toContain('今天未更新');
   live.today = undefined;
+});
+
+test('正在采集优先于旧失败和旧待处理，结束后才展示错误', () => {
+  live.running = true;
+  live.activePlatforms = ['channels'];
+  live.attention = [{ platform: 'channels', reason: '旧登录错误', at: '2026-10-25' }];
+  const html = renderToStaticMarkup(
+    createElement(CollectionStrip, {
+      platforms: [{ id: 'channels', name: '视频号', status: 'failed', reason: '旧登录错误' }],
+      today: '2026-10-29',
+      onUpdate: () => {},
+    }),
+  );
+  expect(html).toContain('采集中');
+  expect(html).not.toContain('旧登录错误');
+  expect(html).not.toContain('失败原因');
+  live.running = false;
+  live.activePlatforms = [];
+  live.attention = [];
+});
+
+test('首次打开页面尚未取得轮询结果时，已有运行记录保持采集中', () => {
+  live.initial = true;
+  try {
+    const html = renderToStaticMarkup(
+      createElement(CollectionStrip, {
+        platforms: [{ id: 'xiaohongshu', name: '小红书', status: 'running' }],
+        today: '2026-10-29',
+        onUpdate: () => {},
+      }),
+    );
+    expect(html).toContain('采集中');
+    expect(html).not.toContain('今天未更新');
+  } finally {
+    live.initial = false;
+  }
 });

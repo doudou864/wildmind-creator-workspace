@@ -9,7 +9,7 @@ test('并行浏览器共享每日额度，不丢计数也不因短暂锁竞争�
     await mkdir(path.join(root, 'config'));
     await writeFile(
       path.join(root, 'config/collection.yaml'),
-      'browser:\n  actionDelayMs: [1, 1]\n  platformDelayMs: [1, 1]\n  dwellMs: [1, 1]\n  scrollPixels: [1, 1]\n  dailyPageLimit: 5\n  riskMarkers: [验证码]\n  confirmationPollSeconds: 30\n',
+      'browser:\n  actionDelayMs: [1, 1]\n  platformDelayMs: [1, 1]\n  dwellMs: [1, 1]\n  scrollPixels: [1, 1]\n  dailyPageLimit: 5\n  riskMarkers: [验证码]\n  confirmationPollSeconds: 30\n  screenshotRetryCount: 1\n',
     );
     await Promise.all(Array.from({ length: 5 }, () => consumePage(root)));
     expect(JSON.parse(await readFile(path.join(root, 'data/browser/usage.json'), 'utf8')).count).toBe(5);

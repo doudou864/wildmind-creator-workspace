@@ -21,6 +21,7 @@ export function CollectionStrip({
   today: string;
   onUpdate: () => void;
 }) {
+  const initialActive = platforms.filter((p) => p.status === 'running').map((p) => p.id);
   const { data, error, refresh } = useResource<{
     today?: string;
     manualOnly?: string[];
@@ -29,7 +30,7 @@ export function CollectionStrip({
     legacyRunning?: boolean;
     activePlatforms?: string[];
     issue: { reason?: string; at?: string } | null;
-  }>('/api/collection', { running: false, issue: null }, true);
+  }>('/api/collection', { running: initialActive.length > 0, activePlatforms: initialActive, issue: null }, true);
   const currentDate = data.today ?? today;
   const [starting, setStarting] = useState<string | null>(null),
     [notice, setNotice] = useState(''),
@@ -113,7 +114,8 @@ export function CollectionStrip({
           const blocked = data.attention
             ?.filter((item) => item.platform === p.id)
             .sort((a, b) => b.at.localeCompare(a.at))[0];
-          const running = data.running && data.activePlatforms?.includes(p.id);
+          const running =
+            starting === 'all' || starting === p.id || (data.running && data.activePlatforms?.includes(p.id));
           return (
             <div className="collection-platform" key={p.id}>
               <div>
@@ -136,7 +138,7 @@ export function CollectionStrip({
                 </span>
               </div>
               <small>{p.lastSuccess ? freshness(p.lastSuccess, currentDate) : '尚无成功记录'}</small>
-              {blocked && (
+              {blocked && !running && (
                 <p>
                   {blocked.reason}（{dataDate(blocked.at)}）
                 </p>
@@ -153,7 +155,7 @@ export function CollectionStrip({
                 }
                 onClick={() => void start(p.id, !!blocked)}
               >
-                {blocked ? '已处理，恢复采集' : '重新采集'}
+                {blocked && !running ? '已处理，恢复采集' : '重新采集'}
               </Button>
               {running && (
                 <Button
@@ -164,7 +166,7 @@ export function CollectionStrip({
                   {data.legacyRunning ? '停止本轮采集' : '停止采集'}
                 </Button>
               )}
-              {p.reason && p.status === 'failed' && p.reason !== '已停止本次采集' && (
+              {!running && p.reason && p.status === 'failed' && p.reason !== '已停止本次采集' && (
                 <details>
                   <summary>失败原因</summary>
                   <p>{p.reason}</p>

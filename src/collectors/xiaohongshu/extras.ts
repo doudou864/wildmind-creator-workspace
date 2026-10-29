@@ -8,6 +8,7 @@ import { shanghaiDate } from '../../browser/policy.ts';
 import { screenshotReading } from '../recognition.ts';
 import type { CapturedReading } from '../storage.ts';
 import { readState } from '../state.ts';
+import { PlatformDataPending, requireDailyDataDate } from '../availability.ts';
 export async function captureAccountExtras(
   db: WorkspaceDatabase,
   session: CollectionSession,
@@ -33,6 +34,7 @@ export async function captureAccountExtras(
       }),
     })
     .parse(parse(await readFile('config/xiaohongshu.yaml', 'utf8')));
+  let dataPending: PlatformDataPending | undefined;
   const e = cfg.accountExtras,
     readings: CapturedReading[] = [],
     yesterday = shanghaiDate(new Date(now.getTime() - 86400000));
@@ -73,9 +75,15 @@ export async function captureAccountExtras(
     await session.captureChartTip(e.chart, e.rightInset, file);
     const r = await save(
       file,
-      `只取曲线悬停提示中的${label}，提示日期必须与${yesterday}月日一致，account.dataDate用该完整日期。不可读取上方近7日合计。若没有目标日提示则status=failed，不得用曲线未绘完推测缺数或用7日合计补填。只返回这一个账号指标，原数字单位保留。其他数组为空。`,
+      `只取曲线悬停提示中的${label}，account.dataDate用悬停提示实际显示的完整日期，当前北京时间${shanghaiDate(now)}。日期早于昨天也正常返回；不可读取上方近7日合计。若没有提示或无法看清日期则status=failed，不得推测缺数或用7日合计补填。只返回这一个账号指标，原数字单位保留。其他数组为空。`,
     );
-    if (r.account.dataDate !== yesterday || r.account.metrics.length !== 1 || r.account.metrics[0].label !== label)
+    try {
+      requireDailyDataDate(r.account.dataDate, yesterday);
+    } catch (error) {
+      if (!(error instanceof PlatformDataPending)) throw error;
+      dataPending = error;
+    }
+    if (r.account.metrics.length !== 1 || r.account.metrics[0].label !== label)
       throw new Error('主页单日指标或日期不符');
     r.records = [];
   }
@@ -95,5 +103,5 @@ export async function captureAccountExtras(
   }
   for (const capture of readings) await writeFile(capture.sourcePath.replace('.png', '.json'), JSON.stringify(capture));
   session.viewport = undefined;
-  return { readings, monthly };
+  return { readings, monthly, dataPending };
 }

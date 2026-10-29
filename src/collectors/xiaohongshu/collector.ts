@@ -24,7 +24,7 @@ import {
 } from '../storage.ts';
 import { screenshotReading } from '../recognition.ts';
 import { readState, writeState } from '../state.ts';
-import { requireDailyDataDate } from '../availability.ts';
+import { PlatformDataPending, requireDailyDataDate } from '../availability.ts';
 export async function collectXiaohongshu(
   database: WorkspaceDatabase,
   session: CollectionSession,
@@ -69,6 +69,7 @@ export async function collectXiaohongshu(
   const incoming: CollectedPost[] = [];
   const completed: Record<string, number[]> = {};
   let sequence = 0;
+  let dataPending: PlatformDataPending | undefined;
   session.viewport = cfg.viewport;
   const allowed = workspace.metrics
     .filter((m) =>
@@ -103,7 +104,12 @@ export async function collectXiaohongshu(
     if (kind === 'account') {
       result.posts = [];
       if (!result.account.metrics.length) throw new Error('小红书单日提示未识别到指标');
-      requireDailyDataDate(result.account.dataDate, yesterday);
+      try {
+        requireDailyDataDate(result.account.dataDate, yesterday);
+      } catch (error) {
+        if (!(error instanceof PlatformDataPending)) throw error;
+        dataPending = error;
+      }
     } else {
       result.account = { dataDate: null, metrics: [] };
       if (post)
@@ -239,13 +245,15 @@ export async function collectXiaohongshu(
   addDailyNet(readings, cfg.accountAliases);
   const extras = await captureAccountExtras(database, session, judgment, folder, paths, now);
   readings.push(...extras.readings);
+  dataPending ??= extras.dataPending;
   const monthly = await captureMonthly(database, cfg.platformId, session, judgment, folder, paths, now);
   readings.push(...monthly);
   requireCoreMetrics(
     workspace,
     cfg.platformId,
     incoming,
-    readings,
+    // Auxiliary charts can have a different cutoff; the three fan metrics form the core daily set.
+    readings.filter((r) => !extras.readings.includes(r)),
     cfg.aliases,
     cfg.accountAliases,
     (post) => !!completed[post.key],
@@ -280,5 +288,6 @@ export async function collectXiaohongshu(
   });
   if (extras.monthly) writeState(database, `${cfg.platformId}:watching-month`, { month: date.slice(0, 7) });
   if (monthly.length) writeState(database, `${cfg.platformId}:audience-month`, { month: date.slice(0, 7) });
+  if (dataPending) throw dataPending;
   return { posts: incoming.length, screenshots: readings.length };
 }

@@ -17,6 +17,7 @@ export async function loadBrowserPolicy(root = process.cwd()) {
         dailyPageLimit: z.number().int().positive(),
         riskMarkers: z.array(z.string()).min(1),
         confirmationPollSeconds: z.number().positive(),
+        screenshotRetryCount: z.number().int().min(0).max(2),
       }),
     })
     .parse(parse(await readFile(path.join(root, 'config/collection.yaml'), 'utf8'))).browser;

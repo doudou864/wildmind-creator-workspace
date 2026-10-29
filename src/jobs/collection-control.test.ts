@@ -27,3 +27,11 @@ test('升级不重放当天旧调度已消耗的重试，成功状态按平台�
     successfulPlatforms: [],
   });
 });
+
+test('新任务启动核验期间覆盖旧失败，任务结束后不延长采集中', async () => {
+  const { activeCollection } = await import('./collection-control');
+  const old = { status: 'failed', startedAt: '2026-10-29T06:00:00Z' };
+  expect(activeCollection(old, '2026-10-29T06:30:00Z')).toBe(true);
+  expect(activeCollection({ ...old, status: 'running' }, '2026-10-29T05:59:00Z')).toBe(true);
+  expect(activeCollection(old, '2026-10-29T05:59:00Z')).toBe(false);
+});

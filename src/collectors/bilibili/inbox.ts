@@ -1,3 +1,4 @@
+import { revealContact } from './contacts.ts';
 import { readCommentEngagement } from '../inbox-engagement.ts';
 import { readFile } from 'node:fs/promises';
 import { parse } from 'yaml';
@@ -108,6 +109,8 @@ export async function collectBilibiliDM(
         time: z.string(),
         self: z.string(),
         maxConversations: z.number().int().positive(),
+        contactScroll: z.string(),
+        maxScrolls: z.number().int().positive(),
         systemNames: z.array(z.string()),
       }),
     })
@@ -120,7 +123,9 @@ export async function collectBilibiliDM(
   const targets = contacts.filter((c) => !cfg.systemNames.includes(c.name)).slice(0, cfg.maxConversations);
   const messages: z.infer<typeof incomingMessageSchema>[] = [];
   for (const [index, contact] of targets.entries()) {
-    await session.click(`[data-id=${JSON.stringify(contact.id)}]`);
+    const selector = `[data-id=${JSON.stringify(contact.id)}]`;
+    await revealContact(session, selector, cfg.contactScroll, cfg.maxScrolls);
+    await session.click(selector);
     await session.inspect('bilibili', 'html', '', cfg.url);
     const rows = await session.run<{ key: string; body: string; time: string; self: boolean }[]>(
       `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(cfg=>Array.from(document.querySelectorAll(cfg.message)).map(e=>({key:e.getAttribute('data-msg-key'),body:e.querySelector(cfg.text)?.textContent.trim()??'[非文字消息]',time:e.parentElement.parentElement.parentElement.querySelector(cfg.time)?.textContent.trim()??'',self:!!e.querySelector(cfg.self)})),${JSON.stringify(cfg)})));`,
