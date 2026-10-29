@@ -52,7 +52,8 @@
         "摆烂的逗逗"
       ],
       "uploadUrl": "https://member.bilibili.com/platform/upload/video/frame/",
-      "videoInput": ".bcc-upload-wrapper input[type=file]",
+      "videoInput": null,
+      "uploadTrigger": ".upload-area",
       "titleInput": "input[placeholder=\"请输入稿件标题\"]",
       "descriptionInput": null,
       "titleMax": 80,

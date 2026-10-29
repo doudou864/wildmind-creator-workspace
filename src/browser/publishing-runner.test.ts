@@ -1,7 +1,28 @@
 import { test, expect, vi } from 'vitest';
 import { runEgo } from './ego';
-import { fillPublishingCopy, publishingBrowserConfig } from './publishing-runner';
+import { beginVideoUpload, fillPublishingCopy, publishingBrowserConfig } from './publishing-runner';
 vi.mock('./ego', () => ({ runEgo: vi.fn() }));
+test('B站必须点击上传区初始化任务后使用文件选择器，不能只设置隐藏文件框', async () => {
+  const cfg = (await publishingBrowserConfig()).platforms.find((p) => p.id === 'bilibili')!;
+  const events: string[] = [];
+  vi.mocked(runEgo).mockImplementation(async (script) => {
+    await new Function('taskSpace', 'console', `return (async()=>{${script}})()`)(
+      async () => ({
+        page: () => ({
+          waitForFileChooser: async () => ({ setFiles: async (file: string) => events.push(file) }),
+          click: async (selector: string) => events.push(selector),
+          setInputFiles: async () => {
+            throw Error('未初始化的隐藏文件框');
+          },
+        }),
+      }),
+      { log: () => {} },
+    );
+    return true;
+  });
+  await beginVideoUpload({ spaceId: 999, label: 'p4' }, cfg, '/fixture/video.mp4');
+  expect(events).toEqual(['.upload-area', '/fixture/video.mp4']);
+});
 test('小红书拒绝fill的富文本编辑器通过键盘替换正文，重复执行不累加话题', async () => {
   const cfg = (await publishingBrowserConfig()).platforms.find((p) => p.id === 'xiaohongshu')!;
   let editor = '旧正文 #旧话题',

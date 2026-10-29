@@ -13,6 +13,7 @@ const platformSchema = z.object({
   accountNames: z.array(z.string()),
   uploadUrl: z.url().nullable(),
   videoInput: z.string().nullable(),
+  uploadTrigger: z.string().optional(),
   titleInput: z.string(),
   descriptionInput: z.string().nullable(),
   titleMax: z.number(),
@@ -65,9 +66,11 @@ export async function navigatePublishing(page: UploadPage, url: string) {
   await publishingPageCall(page, `await p.goto(${JSON.stringify(url)});console.log('WORKSPACE_RESULT:true');`);
 }
 export async function beginVideoUpload(page: UploadPage, cfg: UploadPlatform, file: string) {
-  const code = cfg.videoInput
-    ? `await p.setInputFiles(${JSON.stringify(cfg.videoInput)},[${JSON.stringify(file)}]);`
-    : `await p.click('loc=role:button[name="上传视频"]');await p.waitForSelector('text="选择文件"',{timeout:15000});const chooser=p.waitForFileChooser({timeout:15000});await p.click('text="选择文件"');await (await chooser).setFiles(${JSON.stringify(file)});`;
+  const code = cfg.uploadTrigger
+    ? `const chooser=p.waitForFileChooser({timeout:15000});await p.click(${JSON.stringify(cfg.uploadTrigger)});await(await chooser).setFiles(${JSON.stringify(file)});`
+    : cfg.videoInput
+      ? `await p.setInputFiles(${JSON.stringify(cfg.videoInput)},[${JSON.stringify(file)}]);`
+      : `await p.click('loc=role:button[name="上传视频"]');await p.waitForSelector('text="选择文件"',{timeout:15000});const chooser=p.waitForFileChooser({timeout:15000});await p.click('text="选择文件"');await (await chooser).setFiles(${JSON.stringify(file)});`;
   await publishingPageCall(page, code + `console.log('WORKSPACE_RESULT:true');`);
 }
 export async function fillPublishingCopy(

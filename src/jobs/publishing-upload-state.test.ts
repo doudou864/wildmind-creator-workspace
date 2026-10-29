@@ -11,6 +11,7 @@ test('审核时的声明和选项证据随任务保留，发布复核无需从�
   };
   const parsed = uploadRunSchema.parse({
     requestId: 'fixture',
+    declarations: { aiGenerated: true, paidPromotion: false },
     video: '/fixture/video.mp4',
     sha256: 'fixture',
     covers: {},
@@ -28,4 +29,5 @@ test('审核时的声明和选项证据随任务保留，发布复核无需从�
     ],
   });
   expect(JSON.parse(JSON.stringify(parsed)).platforms[0].reviewObservation).toEqual(reviewObservation);
+  expect(JSON.parse(JSON.stringify(parsed)).declarations).toEqual({ aiGenerated: true, paidPromotion: false });
 });
