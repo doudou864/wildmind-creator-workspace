@@ -1,7 +1,27 @@
 import { test, expect, vi } from 'vitest';
 import { runEgo } from './ego';
-import { beginVideoUpload, fillPublishingCopy, publishingBrowserConfig } from './publishing-runner';
+import {
+  beginVideoUpload,
+  fillPublishingCopy,
+  fillPublishingSettings,
+  publishingBrowserConfig,
+} from './publishing-runner';
 vi.mock('./ego', () => ({ runEgo: vi.fn() }));
+test('YouTube保留明确的无赞助回答，并分别设置付费宣传与AI声明', async () => {
+  const cfg = (await publishingBrowserConfig()).platforms.find((p) => p.id === 'youtube')!;
+  const click = vi.fn();
+  vi.mocked(runEgo).mockImplementation(async (script) => {
+    await new Function('taskSpace', 'console', `return (async()=>{${script}})()`)(
+      async () => ({ page: () => ({ click, snapshot: async () => '' }) }),
+      { log: () => {} },
+    );
+    return true;
+  });
+  await fillPublishingSettings({ spaceId: 999, label: 'p6' }, cfg, true, null, false);
+  expect(click).toHaveBeenCalledWith('[role=radio][name="VIDEO_PAID_PRODUCT_PLACEMENT_NO"]');
+  expect(click).toHaveBeenCalledWith('[role=radio][name="VIDEO_HAS_ALTERED_CONTENT_YES"]');
+  expect(click).not.toHaveBeenCalledWith('[role=radio][name="VIDEO_PAID_PRODUCT_PLACEMENT_NOTIFY"]');
+});
 test('B站必须点击上传区初始化任务后使用文件选择器，不能只设置隐藏文件框', async () => {
   const cfg = (await publishingBrowserConfig()).platforms.find((p) => p.id === 'bilibili')!;
   const events: string[] = [];
@@ -81,6 +101,7 @@ test('B站根据实际多行快照找到标签框，以回车创建独立标签'
         page: () => ({
           fill,
           press,
+          waitForFunction: async () => {},
           evaluate: async () => 0,
           snapshot: async () =>
             'root\n  textbox [ref=10, loc=css:input[placeholder="请输入稿件标题"]]\n  textbox [ref=51]\n',

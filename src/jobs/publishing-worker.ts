@@ -165,7 +165,13 @@ export async function runPublishingUpload(db: WorkspaceDatabase, id: string, tok
             z.object({ category: z.string().nullable() }),
             `从以下候选分类中选一个匹配主题的分类，没有候选返回null：${JSON.stringify(cfg.categories)}。主题：${JSON.stringify(item.copy)}`,
           );
-          await fillPublishingSettings(page, cfg, run.declarations?.aiGenerated ?? null, facts.category);
+          await fillPublishingSettings(
+            page,
+            cfg,
+            run.declarations?.aiGenerated ?? null,
+            facts.category,
+            run.declarations?.paidPromotion ?? null,
+          );
           item.stage = 'review';
           update();
         }

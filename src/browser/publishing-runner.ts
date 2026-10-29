@@ -69,8 +69,8 @@ export async function beginVideoUpload(page: UploadPage, cfg: UploadPlatform, fi
   const code = cfg.uploadTrigger
     ? `const chooser=p.waitForFileChooser({timeout:15000});await p.click(${JSON.stringify(cfg.uploadTrigger)});await(await chooser).setFiles(${JSON.stringify(file)});`
     : cfg.videoInput
-      ? `await p.setInputFiles(${JSON.stringify(cfg.videoInput)},[${JSON.stringify(file)}]);`
-      : `await p.click('loc=role:button[name="上传视频"]');await p.waitForSelector('text="选择文件"',{timeout:15000});const chooser=p.waitForFileChooser({timeout:15000});await p.click('text="选择文件"');await (await chooser).setFiles(${JSON.stringify(file)});`;
+      ? `await p.waitForSelector(${JSON.stringify(cfg.videoInput)},{state:"attached",timeout:30000});await p.setInputFiles(${JSON.stringify(cfg.videoInput)},[${JSON.stringify(file)}]);`
+      : `await p.click('loc=role:button[name="上传视频"]');await p.waitForSelector('text="选择文件"',{timeout:30000});const chooser=p.waitForFileChooser({timeout:15000});await p.click('text="选择文件"');await (await chooser).setFiles(${JSON.stringify(file)});`;
   await publishingPageCall(page, code + `console.log('WORKSPACE_RESULT:true');`);
 }
 export async function fillPublishingCopy(
@@ -94,7 +94,8 @@ export async function fillPublishingCopy(
   } else if (cfg.id === 'bilibili') {
     code += `const count=await p.evaluate(()=>document.querySelectorAll('.label-item-v2-container svg.close').length);for(let i=0;i<count;i++)await p.click('.label-item-v2-container svg.close >> nth=0');`;
     code += `const s=await p.snapshot({scope:'full_page'});const line=s.split('\\n').find(l=>l.includes('textbox')&&l.includes('[ref=')&&!l.includes('loc='));if(!line)throw Error('标签输入框未识别');const ref='@'+line.match(/ref=([0-9]+)/)[1];`;
-    for (const tag of copy.tags) code += `await p.fill(ref,${JSON.stringify(tag)});await p.press(ref,'Enter');`;
+    for (const tag of copy.tags)
+      code += `await p.fill(ref,${JSON.stringify(tag)});await p.press(ref,'Enter');await p.waitForFunction(tag=>[...document.querySelectorAll('.label-item-v2-container')].some(e=>e.textContent.trim()===tag),${JSON.stringify(tag)},{timeout:10000});`;
   } else if (cfg.id !== 'youtube' && cfg.descriptionInput) {
     code += `await p.focus(${JSON.stringify(cfg.descriptionInput)});await p.keyboard.press('ControlOrMeta+End');`;
     for (const tag of copy.tags)
@@ -115,7 +116,7 @@ export async function fillPublishingCovers(page: UploadPage, cfg: UploadPlatform
         .join(''),
     douyin: `const previous=await p.evaluate(()=>Array.from(document.querySelectorAll('.background-OpVteV img')).map(e=>e.src));await p.click('text="选择封面" >> nth=0');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('4:3')}]);await p.click('text="设置竖封面"');await p.setInputFiles('.upload-BvM5FF input.semi-upload-hidden-input',[${file('3:4')}]);await p.click('text="完成"');await p.waitForFunction(previous=>{const images=Array.from(document.querySelectorAll('.background-OpVteV img'));return images.length===2&&images.every((e,i)=>e.complete&&e.naturalWidth>0&&e.src!==previous[i]);},previous,{timeout:60000});`,
     xiaohongshu: `await p.hover('.default.row');await p.click('text="编辑封面"');await p.waitForSelector('text="裁剪"',{timeout:30000});await p.setInputFiles('input[aria-label="上传封面图片"]',[${file('3:4')}]);await p.click('text="裁剪"');await p.click('text="3:4"');await p.click('text="完成"');await p.waitForSelector('text="裁剪"',{state:'hidden',timeout:40000});`,
-    bilibili: `await p.click('text="添加封面"');await p.setInputFiles('input[accept="image/png, image/jpeg"]',[${file('4:3')}]);await p.click('text="个人空间封面（16:9）"');await p.setInputFiles('input[accept="image/png, image/jpeg"]',[${file('16:9')}]);await p.click('text="完成"');`,
+    bilibili: `await p.click('text="添加封面"');await p.waitForSelector('.cover-upload',{timeout:15000});await p.setInputFiles('.cover-upload input[type=file]',[${file('4:3')}]);await p.click('text="个人空间封面（16:9）"');await p.setInputFiles('.cover-upload input[type=file]',[${file('16:9')}]);await p.evaluate(()=>document.querySelector('.cover-editor-button .submit').scrollIntoView({block:'center'}));await p.click('.cover-editor-button .submit');await p.waitForSelector('.cover-upload',{state:'hidden',timeout:15000});`,
     youtube: `const chooser=p.waitForFileChooser({timeout:15000});await p.click('loc=role:button[name="上传文件"]');await (await chooser).setFiles(${file('16:9')});`,
   };
   if (!scripts[cfg.id]) throw Error('平台封面操作未核验');
@@ -133,6 +134,7 @@ export async function fillPublishingSettings(
   cfg: UploadPlatform,
   aiGenerated: boolean | null,
   category: string | null,
+  paidPromotion: boolean | null = null,
 ) {
   const yes = aiGenerated === true;
   const scripts: Record<string, string> = {
@@ -154,7 +156,10 @@ export async function fillPublishingSettings(
       ? `const val=await p.evaluate(()=>document.querySelector('input[placeholder="请选择符合您视频内容的创作声明"]').value);if(val!=='含AI生成内容'){await p.click('input[placeholder="请选择符合您视频内容的创作声明"]');await p.click('text="含AI生成内容"');}`
       : '',
     youtube:
-      `await p.click('text="不，内容不是面向儿童的"');` +
+      `await p.click('text="不，内容不是面向儿童的"');const advanced=await p.snapshot({scope:'full_page'});if(advanced.includes('button "显示高级设置"'))await p.click('loc=role:button[name="显示高级设置"]');` +
+      (paidPromotion !== null
+        ? `await p.click('[role=radio][name="${paidPromotion ? 'VIDEO_PAID_PRODUCT_PLACEMENT_NOTIFY' : 'VIDEO_PAID_PRODUCT_PLACEMENT_NO'}"]');`
+        : '') +
       (yes
         ? `const s=await p.snapshot({scope:'full_page'});if(s.includes('button "显示高级设置"'))await p.click('loc=role:button[name="显示高级设置"]');await p.click('[role=radio][name="VIDEO_HAS_ALTERED_CONTENT_YES"]');`
         : ''),
