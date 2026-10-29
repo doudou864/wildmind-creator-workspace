@@ -8,6 +8,7 @@ import { assets, contents, publishRecords } from '../db/schema';
 import { savePublishing, publishingData } from './publishing-store';
 import {
   newPublishDraft,
+  matchesCoverRatio,
   parsePublishTags,
   videoDraftCovers,
   platformMaterialKey,
@@ -163,6 +164,57 @@ test('已实测视频平台不因未公布的正文上限阻止审核发布，�
     expect(publishSettingIssues(draft(), setting, data, unverified, platforms, Date.now())).toContain(
       '视频号发布模板待核验',
     );
+  } finally {
+    await f.close();
+  }
+});
+
+test('生成横图的像素取整误差不应导致列表隐藏或保存失败；明显错误比例仍拒绝', async () => {
+  const f = await setup();
+  try {
+    expect(matchesCoverRatio(1672, 941, '16:9', f.config)).toBe(true);
+    expect(matchesCoverRatio(1664, 936, '16:9', f.config)).toBe(true);
+    expect(matchesCoverRatio(1672, 941, '16:9', { ...f.config, coverRatioTolerancePixels: 0 })).toBe(false);
+    for (const [w, h] of [
+      [1448, 1086],
+      [941, 1672],
+      [1672, 944],
+      [0, 0],
+      [NaN, 941],
+    ])
+      expect(matchesCoverRatio(w, h, '16:9', f.config)).toBe(false);
+    const stamp = new Date().toISOString();
+    f.db.db
+      .insert(assets)
+      .values({
+        id: 'rounded-cover',
+        fixture: true,
+        familyId: 'rounded-cover',
+        title: 'fixture',
+        purposeId: 'video_cover',
+        ratio: '1672:941',
+        path: '/fixture/rounded.png',
+        width: 1672,
+        height: 941,
+        mime: 'image/png',
+        source: 'ai',
+        prompt: '',
+        version: 1,
+        selected: false,
+        createdAt: stamp,
+        updatedAt: stamp,
+      })
+      .run();
+    const batch = await savePublishing(f.db, {
+      ...draft(),
+      videoInput: { ...draft().videoInput, covers: { '16:9': 'rounded-cover' } },
+    });
+    const data = publishingData(f.db);
+    expect(videoDraftCovers(data.batches[0].draft, data, f.config).find((c) => c.ratio === '16:9')?.asset?.id).toBe(
+      'rounded-cover',
+    );
+    expect(batch.draft.videoInput?.covers['16:9']).toBe('rounded-cover');
+    expect(data.assets[0]).toMatchObject({ width: 1672, height: 941, ratio: '1672:941', contentId: null });
   } finally {
     await f.close();
   }

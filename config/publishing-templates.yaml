@@ -2,6 +2,8 @@
 videoMaxMB: 4096
 videoTypes: [video/mp4, video/quicktime]
 imageMaxMB: 20
+# 允许生图尺寸取整产生的像素误差，不裁剪或拉伸原图。
+coverRatioTolerancePixels: 1
 imageTypes: [image/png, image/jpeg]
 xhsMaxImages: 9
 requiredVideoRatios: ['3:4', '4:3', '16:9']

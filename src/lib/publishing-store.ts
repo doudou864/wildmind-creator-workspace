@@ -18,6 +18,7 @@ import {
 } from '../db/schema.ts';
 import {
   publishDraftSchema,
+  matchesCoverRatio,
   commonCopySchema,
   updateCommonCopy,
   type PublishingData,
@@ -137,14 +138,11 @@ export async function savePublishing(db: WorkspaceDatabase, raw: unknown, id?: s
     if (input.imageIds.length > config.xhsMaxImages) throw new Error('图文图片数量超过配置上限。');
     if (input.videoInput) {
       for (const [ratio, assetId] of Object.entries(input.videoInput.covers)) {
-        const [w, h] = ratio.split(':').map(Number);
         const asset = allAssets.find((a) => a.id === assetId);
         if (
           !config.requiredVideoRatios.includes(ratio) ||
           !asset ||
-          asset.width <= 0 ||
-          asset.height <= 0 ||
-          Math.abs(asset.width * h - asset.height * w) > 0.01
+          !matchesCoverRatio(asset.width, asset.height, ratio, config)
         )
           throw Error('封面不存在或比例不符，请重新选择');
       }
@@ -255,12 +253,11 @@ export async function adoptCover(db: WorkspaceDatabase, id: string, raw: unknown
     if (!content || content.form !== '视频') throw new Error('请选择视频作品。');
     if (input.assetId) {
       const asset = tx.select().from(assets).where(eq(assets.id, input.assetId)).get();
-      const [w, h] = input.ratio.split(':').map(Number);
       if (
         !asset ||
         asset.contentId !== id ||
         asset.purposeId !== 'video_cover' ||
-        Math.abs(asset.width * h - asset.height * w) > 0.01
+        !matchesCoverRatio(asset.width, asset.height, input.ratio, config)
       )
         throw new Error('封面用途、作品或比例不符。');
     }

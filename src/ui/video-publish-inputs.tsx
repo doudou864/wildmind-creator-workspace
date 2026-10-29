@@ -7,6 +7,7 @@ import { request } from './use-resource';
 import type { Asset } from '@/lib/image-model';
 import {
   parsePublishTags,
+  matchesCoverRatio,
   videoDraftCovers,
   type PublishDraft,
   type PublishingConfig,
@@ -84,8 +85,7 @@ export function VideoPublishInputs({
       const img = new Image();
       img.src = url;
       await img.decode();
-      const [w, h] = ratio.split(':').map(Number);
-      if (Math.abs(img.naturalWidth * h - img.naturalHeight * w) > 0.01)
+      if (!matchesCoverRatio(img.naturalWidth, img.naturalHeight, ratio, config))
         throw Error(`这张图片是 ${img.naturalWidth} × ${img.naturalHeight}，请选择 ${ratio} 的封面`);
       const form = new FormData();
       form.set(
@@ -113,8 +113,7 @@ export function VideoPublishInputs({
   const covers = videoDraftCovers({ ...draft, videoInput: input }, data, config);
   const matches = data.assets.filter((asset) => {
     if (!picker || !asset.title.toLowerCase().includes(search.toLowerCase())) return false;
-    const [w, h] = picker.split(':').map(Number);
-    return asset.width > 0 && asset.height > 0 && Math.abs(asset.width * h - asset.height * w) < 0.01;
+    return matchesCoverRatio(asset.width, asset.height, picker, config);
   });
   return (
     <Card title="发布内容">

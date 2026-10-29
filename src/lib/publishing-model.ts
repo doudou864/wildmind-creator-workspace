@@ -15,6 +15,7 @@ export const publishingConfigSchema = z.object({
   videoMaxMB: z.number().positive(),
   videoTypes: z.array(z.string()).min(1),
   imageMaxMB: z.number().positive(),
+  coverRatioTolerancePixels: z.number().nonnegative(),
   imageTypes: z.array(z.string()).min(1),
   xhsMaxImages: z.number().int().positive(),
   requiredVideoRatios: z.array(ratioSchema).min(1),
@@ -242,6 +243,14 @@ export function makePublishSetting(platformId: string, title: string, config: Pu
     scheduleAt: null,
   };
 }
+// Compare pixel dimensions, allowing only configured integer-rounding error.
+export function matchesCoverRatio(width: number, height: number, ratio: string, config: PublishingConfig) {
+  const [w, h] = ratio.split(':').map(Number);
+  return (
+    [width, height, w, h].every((n) => Number.isFinite(n) && n > 0) &&
+    Math.abs(width * h - height * w) / Math.max(w, h) <= config.coverRatioTolerancePixels
+  );
+}
 export function autoVideoCovers(
   contentId: string | null,
   assets: Asset[],
@@ -249,7 +258,6 @@ export function autoVideoCovers(
   choices: Record<string, string> = {},
 ) {
   return config.requiredVideoRatios.map((ratio) => {
-    const [w, h] = ratio.split(':').map(Number);
     const id = choices[ratio];
     const asset = id
       ? assets.find(
@@ -257,9 +265,7 @@ export function autoVideoCovers(
             a.id === id &&
             a.contentId === contentId &&
             a.purposeId === 'video_cover' &&
-            a.width > 0 &&
-            a.height > 0 &&
-            Math.abs(a.width * h - a.height * w) < 0.01,
+            matchesCoverRatio(a.width, a.height, ratio, config),
         )
       : null;
     return {
@@ -279,11 +285,8 @@ export function videoDraftCovers(draft: PublishDraft, data: PublishingData, conf
       data.contents.find((c) => c.id === draft.contentId)?.videoCovers,
     );
   return config.requiredVideoRatios.map((ratio) => {
-    const [w, h] = ratio.split(':').map(Number);
     const id = draft.videoInput!.covers[ratio];
-    const asset = data.assets.find(
-      (a) => a.id === id && a.width > 0 && a.height > 0 && Math.abs(a.width * h - a.height * w) < 0.01,
-    );
+    const asset = data.assets.find((a) => a.id === id && matchesCoverRatio(a.width, a.height, ratio, config));
     return { ratio, asset: asset ?? null, reason: asset ? '' : id ? '封面已失效或比例不符' : '请选择封面' };
   });
 }
