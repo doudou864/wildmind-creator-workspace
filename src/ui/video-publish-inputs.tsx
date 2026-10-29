@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import Link from 'next/link';
 import { Button, Card, Dialog, Empty } from './components';
 import { AssetImage } from './asset-image';
@@ -33,6 +33,7 @@ export function VideoPublishInputs({
     path: '',
     covers: data.contents.find((c) => c.id === draft.contentId)?.videoCovers ?? {},
   };
+  const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const [picker, setPicker] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [notice, setNotice] = useState('');
@@ -63,8 +64,11 @@ export function VideoPublishInputs({
       })),
     });
   }
-  function cover(ratio: string, assetId: string) {
-    onChange({ videoInput: { ...input, covers: { ...input.covers, [ratio]: assetId } } });
+  function cover(ratio: string, assetId: string | null) {
+    const covers = { ...input.covers };
+    if (assetId) covers[ratio] = assetId;
+    else delete covers[ratio];
+    onChange({ videoInput: { ...input, covers } });
     setPicker(null);
   }
   async function uploadCover(event: ChangeEvent<HTMLInputElement>, ratio: string) {
@@ -187,15 +191,22 @@ export function VideoPublishInputs({
                   >
                     选已有图片
                   </Button>
-                  <label className="button">
-                    上传图片
-                    <input
-                      type="file"
-                      accept={config.imageTypes.join(',')}
-                      aria-label={`上传 ${ratio} 封面`}
-                      onChange={(e) => void uploadCover(e, ratio)}
-                    />
-                  </label>
+                  <Button onClick={() => fileInputs.current[ratio]?.click()}>{asset ? '替换图片' : '上传图片'}</Button>
+                  <input
+                    ref={(element) => {
+                      fileInputs.current[ratio] = element;
+                    }}
+                    hidden
+                    type="file"
+                    accept={config.imageTypes.join(',')}
+                    aria-label={`上传 ${ratio} 封面`}
+                    onChange={(e) => void uploadCover(e, ratio)}
+                  />
+                  {input.covers[ratio] && (
+                    <Button onClick={() => cover(ratio, null)} aria-label={`移除 ${ratio} 封面`}>
+                      移除封面
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

@@ -521,21 +521,6 @@
   gap: 6px;
   flex-wrap: wrap;
 }
-.video-cover-actions label {
-  position: relative;
-  overflow: hidden;
-  cursor: pointer;
-}
-.video-cover-actions input[type='file'] {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  cursor: pointer;
-  width: 100%;
-}
-.video-cover-actions label:focus-within {
-  outline: 2px solid var(--ink);
-}
 .publishing-task-list {
   display: grid;
   gap: 16px;
