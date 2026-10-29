@@ -563,7 +563,6 @@
   left: auto;
   right: 0;
 }
-.publishing-platform-result:hover > .publishing-platform-detail,
 .publishing-platform-result[open] > .publishing-platform-detail {
   display: block;
 }

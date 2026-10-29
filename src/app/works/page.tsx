@@ -1,4 +1,5 @@
 import { withArchives } from '@/lib/record-archives';
+import type { Metadata } from 'next';
 import { ArchiveButton } from '@/ui/archive-controls';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
@@ -17,6 +18,7 @@ import { shanghaiDate } from '@/browser/policy';
 import { WorksPlaybackCard } from '@/ui/works-playback-card';
 import DataCenterPage from '../data-center/data-center-page';
 export const dynamic = 'force-dynamic';
+export const metadata: Metadata = { title: '作品数据 · WILDMIND 野生脑洞工作台' };
 export default async function Page({
   searchParams,
 }: {
@@ -105,8 +107,8 @@ export default async function Page({
               {!published.length ? (
                 <section className="card">
                   <h2>{workTitle(selected.title)}</h2>
-                  <Link className="button" href={`/create?content=${selected.id}&step=materials`}>
-                    继续创作 →
+                  <Link className="button" href={`/images?content=${selected.id}`}>
+                    制作封面 →
                   </Link>
                 </section>
               ) : detail ? (

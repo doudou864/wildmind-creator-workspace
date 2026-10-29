@@ -6,7 +6,7 @@ import { loadLayoutConfig } from '@/lib/layout-config';
 import { readPublishing } from '@/lib/workspace-service';
 import PublishingPage from './publishing-page';
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: '发布中心 · WILDMIND 野生脑洞工作台' };
+export const metadata: Metadata = { title: '一键发布 · WILDMIND 野生脑洞工作台' };
 export default async function Page({ searchParams }: { searchParams: Promise<{ content?: string; kind?: string }> }) {
   const query = await searchParams;
   const workspace = await loadConfig();

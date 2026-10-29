@@ -4,7 +4,7 @@ import { loadImageConfig } from '@/lib/image-config';
 import { readImages } from '@/lib/workspace-service';
 import ImagesPage from './images-page';
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: '生图中心 · WILDMIND 野生脑洞工作台' };
+export const metadata: Metadata = { title: '封面生成 · WILDMIND 野生脑洞工作台' };
 export default async function Page({ searchParams }: { searchParams: Promise<{ topic?: string; content?: string }> }) {
   const [config, imageConfig, data, query] = await Promise.all([
     loadConfig(),

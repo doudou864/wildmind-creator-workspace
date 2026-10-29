@@ -5,7 +5,7 @@ import { loadInboxConfig } from '@/lib/inbox-config';
 import { readInbox } from '@/lib/workspace-service';
 import InboxPage from './inbox-page';
 export const dynamic = 'force-dynamic';
-export const metadata: Metadata = { title: '互动收件箱 · WILDMIND 野生脑洞工作台' };
+export const metadata: Metadata = { title: '消息 · WILDMIND 野生脑洞工作台' };
 export default async function Page({
   searchParams,
 }: {

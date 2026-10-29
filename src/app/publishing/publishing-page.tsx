@@ -65,11 +65,6 @@ const batchNames = {
   running: '执行中',
   finished: '已结束',
 };
-const modes = [
-  { value: 'video' as const, label: '视频发布' },
-  { value: 'layout' as const, label: '排版确认稿' },
-  { value: 'xhs' as const, label: '小红书图文' },
-];
 export default function PublishingPage({
   config,
   layoutConfig,
@@ -655,7 +650,7 @@ export default function PublishingPage({
       <AutosaveStatus statuses={[autosave, mediaAutosave]} />
       <WorkspaceHeader current="/publishing" date={today} syncWindow={syncWindow} />
       <PageHeader
-        title="发布中心"
+        title="一键发布"
         summary={
           stage === 'uploaded'
             ? '上传完成，请检查下方平台截图，确认后点击发布'
@@ -741,21 +736,14 @@ export default function PublishingPage({
           <a href="#publish-check">检查并上传 →</a>
         </nav>
       )}
-      <div className="subnav" role="group" aria-label="发布来源">
-        {modes.map((mode) => (
-          <Button
-            key={mode.value}
-            aria-pressed={draft.kind === mode.value}
-            disabled={busy}
-            disabledReason="正在处理，请稍候。"
-            onClick={() => {
-              if (mode.value !== draft.kind) protect(() => fresh(mode.value));
-            }}
-          >
-            {mode.label}
+      {draft.kind !== 'video' && (
+        <div className="subnav" role="group" aria-label="历史发布来源">
+          <span>{draft.kind === 'layout' ? '排版确认稿' : '小红书图文'}</span>
+          <Button disabled={busy} onClick={() => void protect(() => fresh('video'))}>
+            新建视频发布
           </Button>
-        ))}
-      </div>
+        </div>
+      )}
       {stale && liveBatch && (
         <p className="topic-feedback" role="alert">
           发布状态已更新，请载入最新状态后继续上传或发布。

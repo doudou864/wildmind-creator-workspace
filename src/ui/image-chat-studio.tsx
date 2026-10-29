@@ -1,7 +1,5 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
-import { CreationStageNav } from './creation-shell';
 import type { ImageConfig, ImageData } from '@/lib/image-model';
 import type { ImageConversation } from '@/lib/image-conversations';
 import { AssetImage } from './asset-image';
@@ -37,7 +35,6 @@ export function ImageChatStudio({
   today: string;
   syncWindow: string;
 }) {
-  const query = useSearchParams();
   const { data, refresh, error: resourceError } = useResource('/api/images', initialData);
   const [sessions, setSessions] = useState<ImageConversation[]>([]);
   const [active, setActive] = useState('');
@@ -303,14 +300,9 @@ export function ImageChatStudio({
   return (
     <main className="workspace image-conversation-workspace">
       <WorkspaceHeader current="/images" date={today} syncWindow={syncWindow} />
-      <CreationStageNav
-        step="materials"
-        query={query.toString()}
-        content={data.contents.find((c) => c.id === query.get('content')) ?? null}
-      />
       <div className="image-conversation-shell">
         <aside className="image-conversation-sidebar" aria-label="生图对话列表">
-          <div className="image-conversation-brand">生图中心</div>
+          <h1 className="image-conversation-brand">封面生成</h1>
           <Button
             className="image-new-conversation"
             disabled={mutating}

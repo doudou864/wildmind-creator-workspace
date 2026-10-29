@@ -142,7 +142,7 @@ export default function InboxPage({
       <MessageNavigation current="inbox" />
       <ReplyToast />
       <PageHeader
-        title="互动收件箱"
+        title="消息"
         summary="按平台选作品，集中处理值得回复的评论"
         onRefresh={() => void reload()}
         refreshing={refreshing}

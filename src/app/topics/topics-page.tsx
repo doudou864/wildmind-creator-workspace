@@ -140,7 +140,7 @@ export default function TopicsPage({
     <main className="workspace topics-workspace topics-v2">
       <WorkspaceHeader current="/topics" date={today} syncWindow={parameters.syncWindow} />
       <PageHeader
-        title="选题中心"
+        title="选题"
         summary={
           candidateCount
             ? '挑出你愿意点开看的题'

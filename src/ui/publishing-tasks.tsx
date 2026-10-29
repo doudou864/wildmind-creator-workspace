@@ -46,7 +46,12 @@ export function PublishingTasks({
       setPending((ids) => ids.filter((id) => id !== batch.id));
     }
   }
-  const batches = data.batches.filter((b) => !b.abandonedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const batches = data.batches
+    .filter((b) => b.draft.kind === 'video' && !b.abandonedAt)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const legacyBatches = data.batches
+    .filter((b) => b.draft.kind !== 'video')
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   return (
     <Card title="发布任务" meta={<Button onClick={onNew}>新的一条</Button>}>
       {error && <p role="alert">{error}</p>}
@@ -83,16 +88,7 @@ export function PublishingTasks({
                 </p>
                 <div className="publishing-platform-results">
                   {progress.rows.map(({ platformId, receipt, label, next }) => (
-                    <details
-                      key={platformId}
-                      className="publishing-platform-result"
-                      onMouseEnter={(event) => {
-                        event.currentTarget.open = true;
-                      }}
-                      onMouseLeave={(event) => {
-                        event.currentTarget.open = false;
-                      }}
-                    >
+                    <details key={platformId} className="publishing-platform-result">
                       <summary>
                         <strong>{platformNames[platformId] ?? platformId}</strong>
                         <strong
@@ -164,6 +160,22 @@ export function PublishingTasks({
         </div>
       ) : (
         <Empty>填写新作品后自动保存为一条任务</Empty>
+      )}
+      {legacyBatches.length > 0 && (
+        <details className="publish-legacy-history">
+          <summary>历史图文发布记录 · {legacyBatches.length} 条</summary>
+          <div className="publishing-task-list">
+            {legacyBatches.map((batch) => (
+              <button key={batch.id} className="publishing-task-select" onClick={() => onSelect(batch)}>
+                <strong>{batch.draft.commonCopy.title || '未填写主题'}</strong>
+                <span className="small">
+                  {batch.draft.kind === 'layout' ? '排版确认稿' : '小红书图文'}
+                  {batch.abandonedAt ? ' · 已放弃（回执保留）' : ''} →
+                </span>
+              </button>
+            ))}
+          </div>
+        </details>
       )}
     </Card>
   );

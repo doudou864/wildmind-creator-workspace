@@ -78,7 +78,7 @@ small {
 .topbar {
   display: flex;
   align-items: center;
-  gap: 28px;
+  gap: 20px;
   min-height: 40px;
 }
 .brand {
@@ -98,6 +98,7 @@ small {
 .topbar nav {
   display: flex;
   gap: 7px;
+  flex-shrink: 0;
 }
 .button {
   display: inline-flex;
