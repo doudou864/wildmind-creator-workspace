@@ -92,7 +92,7 @@ export function TopicChannelEditor({
     }
   }
   return (
-    <Card title="选题渠道" meta={`${rows.length} 条`} className="topic-channel-editor compact-channels">
+    <Card title="选题渠道" meta={data ? `${rows.length} 条` : '--'} className="topic-channel-editor compact-channels">
       <Button
         disabled={busy || !data}
         disabledReason={busy ? '正在保存' : '正在读取渠道'}
@@ -200,7 +200,8 @@ export function TopicChannelEditor({
         )}
       </div>
       {notice && <p role="status">{notice}</p>}
-      {!data && (
+      {!data && !notice && <p className="muted">正在读取渠道…</p>}
+      {!data && notice && (
         <Button variant="text" onClick={() => void load()}>
           重新读取渠道
         </Button>
