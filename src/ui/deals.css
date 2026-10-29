@@ -122,6 +122,12 @@
   background: none;
   padding: 18px 10px;
 }
+.workspace .deal-row.button {
+  white-space: normal;
+}
+.deal-row > div {
+  min-width: 0;
+}
 .deal-row:hover,
 .deal-row.active {
   background: var(--hover);

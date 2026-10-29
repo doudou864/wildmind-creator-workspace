@@ -884,9 +884,10 @@
 }
 .image-conversation-welcome {
   color: var(--ink-2);
-  font-size: 22px;
-  padding-top: min(15vh, 150px);
-  text-align: center;
+  font-size: 13px;
+  font-weight: 400;
+  padding-top: 8px;
+  text-align: left;
 }
 .image-conversation-turn {
   margin-bottom: 34px;

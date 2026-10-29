@@ -401,17 +401,6 @@
   min-height: 60px;
   max-height: none;
 }
-.layouts-workspace .disabled-control::after {
-  content: attr(data-disabled-reason);
-  display: block;
-  font-size: 12px;
-  color: var(--ink-2);
-  padding-top: 4px;
-  max-width: 350px;
-}
-.layouts-workspace .page-actions {
-  align-items: flex-start;
-}
 .layout-platform-tabs .button {
   text-align: left;
 }
@@ -428,8 +417,22 @@
 }
 .free-document-toolbar label {
   display: flex;
+  flex-direction: row;
   gap: 6px;
   align-items: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.free-document-toolbar select {
+  min-height: 28px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--card);
+  font-size: 12px;
+  color: var(--ink);
 }
 .free-document-toolbar input[type='file'] {
   max-width: 200px;

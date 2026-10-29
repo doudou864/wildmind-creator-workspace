@@ -272,7 +272,7 @@ export default function Dashboard({
               <Card title={`${platform.name}趋势`} className="trend-compact">
                 <div className="trend-reading">
                   <strong className="mono">
-                    {latest?.precision?.[metric.id] === 'display' ? '约 ' : ''}
+                    {latest?.precision?.[metric.id] === 'display' ? <span className="approx">约</span> : ''}
                     {number(value)}
                   </strong>
                   <span>
@@ -315,7 +315,7 @@ export default function Dashboard({
                   <span>
                     总数
                     <strong>
-                      {latest?.precision?.followers === 'display' ? '约 ' : ''}
+                      {latest?.precision?.followers === 'display' ? <span className="approx">约</span> : ''}
                       {number(latest?.values.followers)}
                     </strong>
                   </span>
@@ -332,8 +332,20 @@ export default function Dashboard({
                 </div>
                 {dates.filter((d) => d.values.followers != null).length >= 7 && (
                   <div className="fan-charts">
-                    <Chart days={dates.slice(-30)} metric="followers" label="粉丝总数" kind="line" />
-                    <Chart days={dates.slice(-30)} metric="net_followers" label="每日净增" kind="needles" />
+                    <div className="fan-chart">
+                      <p className="fan-chart-label">粉丝总数</p>
+                      <Chart days={dates.slice(-30)} metric="followers" label="粉丝总数" kind="line" />
+                    </div>
+                    <div className="fan-chart">
+                      <p className="fan-chart-label">每日净增</p>
+                      <Chart
+                        days={dates.slice(-30)}
+                        metric="net_followers"
+                        label="每日净增"
+                        kind="needles"
+                        referenceDate={today}
+                      />
+                    </div>
                   </div>
                 )}
               </Card>
@@ -409,7 +421,7 @@ export default function Dashboard({
                           </td>
                         ))}
                         <td>
-                          {r?.precision === 'display' ? '约 ' : ''}
+                          {r?.precision === 'display' ? <span className="approx">约</span> : ''}
                           {number(r?.value)} {r?.name ?? '累计值'} · 第 {age ?? '—'} 天
                         </td>
                         <td>→</td>

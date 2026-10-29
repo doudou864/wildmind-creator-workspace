@@ -44,7 +44,12 @@ export function Chart({ days, metric, label, kind, rows = 12, referenceDate }: P
           color: theme.muted,
           fontFamily: theme.font,
           fontSize: 11,
-          interval: (index: number) => [0, Math.floor((days.length - 1) / 2), days.length - 1].includes(index),
+          alignMinLabel: 'left',
+          alignMaxLabel: 'right',
+          interval: (index: number) =>
+            kind === 'line'
+              ? index === 0 || index === days.length - 1
+              : [0, Math.floor((days.length - 1) / 2), days.length - 1].includes(index),
         },
       };
       const display = (index: number, key = metric) =>
