@@ -26,7 +26,7 @@ export function historicalKind(age: number, range: [number, number]) {
 // Preserve the displayed precision; a rounded 万 value is explicitly marked in evidence.
 export function parseDisplayedNumber(raw: string | null): number | null {
   if (raw === null || ['', '—', '--', '-', '暂无数据', '数据不足'].includes(raw.trim())) return null;
-  const text = raw.replace(/[,，\s]/g, '');
+  const text = raw.replace(/[,，\s]/g, '').replace(/^[−﹣－]/, '-');
   const match = text.match(/^([+-]?\d+(?:\.\d+)?)(万|亿)?(?:%|秒|s|人|次播放|次|张|星)?$/);
   if (!match) throw new Error(`不能解析数值：${raw}`);
   const value = Number(match[1]) * (match[2] === '万' ? 10000 : match[2] === '亿' ? 100000000 : 1);

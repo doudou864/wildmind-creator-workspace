@@ -114,3 +114,11 @@ test('近期图表原始月日由程序补年，跨年与无效日期不能由AI
   expect(() => normalizeChartDate('11.30', '2026-10-29', 30)).toThrow('近期范围');
   expect(() => normalizeChartDate(null, '2026-10-29', 30)).toThrow();
 });
+
+test('平台数学负号表示负数，不得让负增长阻断整轮或转成零', () => {
+  expect(parseDisplayedNumber('−1')).toBe(-1);
+  expect(parseDisplayedNumber('−1.5%')).toBe(-1.5);
+  expect(parseDisplayedNumber('－2')).toBe(-2);
+  expect(parseDisplayedNumber('—')).toBeNull();
+  expect(() => parseDisplayedNumber('1−2')).toThrow();
+});
