@@ -1,11 +1,12 @@
 import { test, expect, vi } from 'vitest';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import { initializeDatabase, openDatabase } from '../db/database';
 import { startTopicGeneration } from './topic-generation';
 import { latestTopicTask, saveTaskProgress } from './topic-task-state';
 import { topicGenerationTasks } from '../db/schema';
+import { readTopicSkill, topicSkillSnapshotPath } from '../lib/topic-skill';
 
 test('并发点击只启动一次，重新打开数据库仍能看到任务；失活不自动重花token', async () => {
   const folder = await mkdtemp(path.join(tmpdir(), 'topic-job-fixture-'));
@@ -52,9 +53,28 @@ test('进程无法启动时明确记失败，下一次允许手动重试', async
   }
 });
 
+test('启动前校验编辑器版本，后台读取绑定的完整 Skill 快照', async () => {
+  const folder = await mkdtemp(path.join(tmpdir(), 'topic-snapshot-fixture-'));
+  const db = await initializeDatabase(path.join(folder, 'workspace.db'));
+  try {
+    const launch = vi.fn(async () => process.pid);
+    await expect(startTopicGeneration(db, launch, 'stale-fixture')).rejects.toThrow('Skill 已更新');
+    expect(launch).not.toHaveBeenCalled();
+    expect(db.db.select().from(topicGenerationTasks).all()).toHaveLength(0);
+    const skill = await readTopicSkill();
+    const result = await startTopicGeneration(db, launch, skill.revision);
+    const snapshot = JSON.parse(await readFile(topicSkillSnapshotPath(db.filename, result.task!.id), 'utf8'));
+    expect(snapshot).toEqual(skill);
+    expect(result.task?.skillRevision).toBe(skill.revision);
+  } finally {
+    db.sqlite.close();
+    await rm(folder, { recursive: true, force: true });
+  }
+});
+
 import { spawn } from 'node:child_process';
 import { mkdir, copyFile, writeFile } from 'node:fs/promises';
-test('真实后台入口在请求连接关闭后继续运行，隔离无材料任务明确结束且不调用AI', async () => {
+test('真实后台入口在请求连接关闭后继续运行，隔离缺失Skill快照的任务明确结束且不调用AI', async () => {
   const folder = await mkdtemp(path.join(tmpdir(), 'topic-worker-fixture-'));
   const filename = path.join(folder, 'workspace.db');
   const db = await initializeDatabase(filename);
@@ -83,7 +103,7 @@ test('真实后台入口在请求连接关闭后继续运行，隔离无材料�
     try {
       expect(latestTopicTask(reopened)).toMatchObject({
         status: 'failed',
-        reason: expect.stringContaining('没有获得可用线索'),
+        reason: expect.stringContaining('Skill 快照不存在'),
         sourceCount: 0,
       });
     } finally {

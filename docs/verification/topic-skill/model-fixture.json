@@ -1,0 +1,62 @@
+{
+  "directory": "/var/folders/lz/0sgpd4f14bx9pqzmpmhq84ph0000gn/T/topic-skill-real-ai-fixture-nD7ObJ",
+  "result": {
+    "taskId": "fixture-real-ai",
+    "count": 1
+  },
+  "calls": [
+    {
+      "action": "browse",
+      "activity": "按本轮 Skill 的隔离测试要求，只读取指定测试页面，从省时间的用途寻找角度。",
+      "requests": [
+        {
+          "kind": "page",
+          "value": "https://example.org/fixture-tool"
+        }
+      ],
+      "items": [],
+      "note": "当前尚无页面正文，读取后仅交付有材料支持的1条测试候选。"
+    },
+    {
+      "action": "finish",
+      "activity": "完成隔离测试材料的选题判断",
+      "requests": [],
+      "items": [
+        {
+          "entity": "【虚构测试材料】「收件整理器」在2026年10月30日演示了一个原型：用户选中邮件附件后，它按文件内容命名并归入对应项目文件夹。演示中的30个附件在一次确认后完成整理；尚无商业用户数据。",
+          "angle": "【隔离测试】邮件附件还在逐个打开、改名、挪文件夹？这个原型演示了30个附件一次确认就整理好。",
+          "evidence": [
+            {
+              "sourceId": "page-1",
+              "quote": "用户选中一组邮件附件后，工具按文件内容命名并归入对应项目文件夹。演示中原本要逐份打开、重命名、移动的30个附件，在一次确认后完成整理。"
+            }
+          ]
+        }
+      ],
+      "note": "仅依据宿主提供的虚构测试材料交付1条，未验证真实产品或实际节省时长；未扩展浏览。"
+    }
+  ],
+  "records": [
+    {
+      "id": "d69ce6cb-3ea6-41b8-8e73-ae680ba08a67",
+      "fixture": false,
+      "title": "【隔离测试】邮件附件还在逐个打开、改名、挪文件夹？这个原型演示了30个附件一次确认就整理好。",
+      "direction": "【虚构测试材料】「收件整理器」在2026年10月30日演示了一个原型：用户选中邮件附件后，它按文件内容命名并归入对应项目文件夹。演示中的30个附件在一次确认后完成整理；尚无商业用户数据。",
+      "channelId": "topic_skill",
+      "signal": "用户选中一组邮件附件后，工具按文件内容命名并归入对应项目文件夹。演示中原本要逐份打开、重命名、移动的30个附件，在一次确认后完成整理。\nhttps://example.org/fixture-tool",
+      "sourceContext": "来源读取于2026-10-30T07:10:28.982Z；Skill 9f4e4549",
+      "sourceUrl": "https://example.org/fixture-tool",
+      "exploration": false,
+      "evidence": null,
+      "status": "candidate",
+      "frozenFire": null,
+      "frozenEvidence": null,
+      "selectedAt": null,
+      "automatic": false,
+      "createdAt": "2026-10-30T07:10:28.982Z",
+      "updatedAt": "2026-10-30T07:10:28.982Z"
+    }
+  ],
+  "skillRevision": "9f4e454908b6aef33c93efad80899ed8687b07bc3ebb0a6d5cd31f2ea19330b7",
+  "skillLoaded": 6710
+}

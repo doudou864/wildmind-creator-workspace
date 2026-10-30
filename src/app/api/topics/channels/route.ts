@@ -1,18 +1,7 @@
-import { loadTopicChannels, editTopicChannel } from '@/lib/topic-channels';
-import { serviceError } from '@/lib/api-response';
+// Retain the retired endpoint to give old open tabs an explicit migration message.
 export async function GET() {
-  try {
-    const { channels, revision } = await loadTopicChannels();
-    return Response.json({ channels, revision });
-  } catch (e) {
-    return serviceError(e);
-  }
+  return Response.json({ error: '选题渠道已移入 Skill，请刷新选题页面后编辑来源入口' }, { status: 410 });
 }
-export async function POST(request: Request) {
-  try {
-    const { channels, revision } = await editTopicChannel(await request.json());
-    return Response.json({ channels, revision });
-  } catch (e) {
-    return serviceError(e);
-  }
+export async function POST() {
+  return GET();
 }

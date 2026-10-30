@@ -48,6 +48,8 @@ export const topicProgressSchema = z.object({
   cachedCount: z.number().default(0),
   count: z.number().default(0),
   warning: z.string().nullable().default(null),
+  skillRevision: z.string().optional(),
+  activity: z.string().optional(),
 });
 export type TopicProgress = z.infer<typeof topicProgressSchema>;
 export type TopicTask = TopicProgress & {

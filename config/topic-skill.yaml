@@ -1,0 +1,7 @@
+# 仅宿主连接与运行保护；选题内容、来源、数量和判断规则全部来自 Skill。
+path: /Users/a1234/.codex/skills/doudou-topic-discovery/SKILL.md
+maxTurns: 16
+maxPages: 40
+maxPageCharacters: 24000
+maxContextCharacters: 180000
+searchTemplate: https://www.bing.com/search?q={query}

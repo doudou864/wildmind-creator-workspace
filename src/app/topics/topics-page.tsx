@@ -1,8 +1,8 @@
 'use client';
-import { TopicChannelEditor } from '@/ui/topic-channel-editor';
+import { TopicSkillEditor } from '@/ui/topic-skill-editor';
 import { ArchiveButton } from '@/ui/archive-controls';
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { TopicGenerationStatus } from '@/ui/topic-generation-status';
 import type { Parameters, Platform } from '@/lib/config';
 import type { TopicChannel } from '@/lib/topic-channels';
@@ -26,19 +26,20 @@ const humanText = (text: string) =>
     .replaceAll('history为空', '暂时没有历史记录');
 export default function TopicsPage({
   parameters,
-  channels: initialChannels,
+  channels = [],
   platforms,
   initialData,
   today,
 }: {
   parameters: Parameters;
-  channels: TopicChannel[];
+  channels?: TopicChannel[];
   platforms: Platform[];
   initialData: TopicData;
   today: string;
 }) {
-  const [channels, setChannels] = useState(initialChannels);
-  const [channelsPending, setChannelsPending] = useState(false);
+  const [skillState, setSkillState] = useState({ pending: true, revision: '' });
+  const updateSkillState = useCallback((value: { pending: boolean; revision: string }) => setSkillState(value), []);
+  const [skillRefresh, setSkillRefresh] = useState(0);
   const { data, error, refresh } = useResource('/api/topics', initialData, true);
   const {
     data: taskData,
@@ -76,7 +77,15 @@ export default function TopicsPage({
   const selectedTopic = topics.find((t) => t.status === 'selected');
   const candidateCount = topics.filter((t) => t.status === 'candidate').length;
   const sourceName = (id: string) =>
-    channels.find((c) => c.id === id)?.name ?? `${platforms.find((p) => p.id === id)?.name ?? '未命名来源'}历史作品`;
+    ({
+      topic_skill: 'Skill 找题',
+      open_discovery: '主动发现',
+      search_keywords: '抖音搜索词',
+      followup_search: '看后搜',
+    })[id] ??
+    channels.find((c) => c.id === id)?.name ??
+    platforms.find((p) => p.id === id)?.name ??
+    '历史来源';
   const sourceIds = [...new Set([...channels.map((c) => c.id), ...topics.map((t) => t.channelId)])];
   const canChange = data.writeReady && !busy;
   async function updateTopic(topic: Topic, nextStatus: 'candidate' | 'selected' | 'skipped') {
@@ -105,11 +114,15 @@ export default function TopicsPage({
     }
   }
   async function generate() {
-    if (!data.generationReady || busy || starting || generating || channelsPending) return;
+    if (!data.generationReady || busy || starting || generating || skillState.pending) return;
     setStarting(true);
     setNotice('');
     try {
-      await request('/api/topics/generate', { method: 'POST' });
+      await request('/api/topics/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ revision: skillState.revision }),
+      });
       await refreshTask();
       setNotice('');
       setStatus('candidate');
@@ -123,21 +136,21 @@ export default function TopicsPage({
   const generateButton = (
     <Button
       variant="primary"
-      disabled={!data.generationReady || busy || starting || generating || channelsPending}
+      disabled={!data.generationReady || busy || starting || generating || skillState.pending}
       disabledReason={
-        channelsPending
-          ? '请先保存或删除左侧未保存的渠道行。'
+        skillState.pending
+          ? '请先读取并保存 Skill 的修改。'
           : !data.generationReady
             ? '目前无法生成候选，请稍后再试。'
             : '正在处理，请稍候。'
       }
       onClick={() => void generate()}
     >
-      {starting ? '正在启动…' : generating ? '正在采集…' : `生成 ${parameters.topicCandidateCount} 个候选`}
+      {starting ? '正在启动…' : generating ? '正在找题…' : '按 Skill 找选题'}
     </Button>
   );
   return (
-    <main className="workspace topics-workspace topics-v2">
+    <main className="workspace topics-workspace topics-v2 topics-skill-page">
       <WorkspaceHeader current="/topics" date={today} syncWindow={parameters.syncWindow} />
       <PageHeader
         title="选题"
@@ -151,13 +164,14 @@ export default function TopicsPage({
         onRefresh={() => {
           void refresh();
           void refreshTask();
+          setSkillRefresh((value) => value + 1);
         }}
         action={generateButton}
       />
       {(notice || error || taskError) && <p role="status">{error || taskError || notice}</p>}
       <div className="topics-channel-layout">
         <aside className="topics-channel-sidebar">
-          <TopicChannelEditor onChanged={setChannels} onPendingChange={setChannelsPending} />
+          <TopicSkillEditor onState={updateSkillState} refreshKey={skillRefresh} />
         </aside>
         <div className={`topics-v2-grid ${!focused ? 'topics-no-detail' : ''}`}>
           <TopicGenerationStatus task={taskData.task} starting={starting} />
@@ -227,12 +241,19 @@ export default function TopicsPage({
                       data-topic-id={topic.id}
                     >
                       <div className="topic-row-content">
+                        {topic.channelId === 'topic_skill' && (
+                          <p className="topic-entity">
+                            <b>实体</b>
+                            {topic.direction}
+                          </p>
+                        )}
                         <div className="topic-row-title">
                           <button
                             className="topic-title list-row"
                             aria-expanded={focused?.id === topic.id}
                             onClick={() => setFocusId(focused?.id === topic.id ? '' : topic.id)}
                           >
+                            {topic.channelId === 'topic_skill' && <b className="topic-field-label">角度</b>}
                             {topic.title} →
                           </button>
                           <div className="topic-row-actions">

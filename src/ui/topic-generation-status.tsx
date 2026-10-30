@@ -27,7 +27,7 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
   const problems = task?.sources.filter((s) => s.reason) ?? [];
   return (
     <Card
-      title="本轮采集"
+      title={task?.skillRevision ? '本轮找题' : '上次采集'}
       className={`topic-task-card ${active || starting ? 'topic-task-active' : 'topic-task-complete'}`}
     >
       <div role="status" aria-live="polite" className="topic-task-summary">
@@ -35,7 +35,7 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
           {starting && !active
             ? '正在提交采集任务…'
             : active
-              ? `${stages[task.stage]}${task.currentSource ? ` · ${task.currentSource}` : ''}`
+              ? `${task.skillRevision && task.activity && task.stage === 'researching' ? task.activity : stages[task.stage]}${task.currentSource ? ` · ${task.currentSource}` : ''}`
               : task?.status === 'failed'
                 ? '本轮未生成候选'
                 : `已生成 ${task?.count ?? 0} 个候选`}
@@ -46,6 +46,11 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
           </span>
         )}
       </div>
+      {task?.skillRevision && (
+        <p>
+          使用 Skill 版本 <span className="mono">{task.skillRevision.slice(0, 8)}</span>
+        </p>
+      )}
       {active && (
         <div className="topic-task-scan" aria-hidden="true">
           <span />
@@ -60,6 +65,7 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
       {!!task?.cachedCount && <p>本轮使用此前保存的 {task.cachedCount} 条线索，来源日期见选题依据。</p>}
       {task?.reason && <p className="topic-task-error">{task.reason}</p>}
       {task?.warning && <p className="topic-task-error">{task.warning}</p>}
+      {task?.status === 'completed' && task.count === 0 && task.activity && <p>{task.activity}</p>}
       {problems.length > 0 && (
         <details key={`${task?.id}:${task?.status}`} open={active || task?.status === 'failed'}>
           <summary>{problems.length} 个网站有情况</summary>

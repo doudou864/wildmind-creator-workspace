@@ -1,17 +1,15 @@
 import type { Metadata } from 'next';
 import { loadConfig } from '@/lib/config';
-import { loadTopicChannels } from '@/lib/topic-channels';
 import { readTopics } from '@/lib/workspace-service';
 import TopicsPage from './topics-page';
 
 export const dynamic = 'force-dynamic';
 export const metadata: Metadata = { title: '选题 · WILDMIND 野生脑洞工作台' };
 export default async function Page() {
-  const [config, sources] = await Promise.all([loadConfig(), loadTopicChannels()]);
+  const config = await loadConfig();
   return (
     <TopicsPage
       parameters={config.parameters}
-      channels={sources.channels}
       platforms={config.platforms}
       initialData={await readTopics()}
       today={new Intl.DateTimeFormat('en-CA', {
