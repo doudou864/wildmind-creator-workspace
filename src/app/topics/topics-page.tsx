@@ -113,15 +113,15 @@ export default function TopicsPage({
       setBusy(false);
     }
   }
-  async function generate() {
-    if (!data.generationReady || busy || starting || generating || skillState.pending) return;
+  async function generate(resumeFrom?: string) {
+    if (!data.generationReady || busy || starting || generating || (!resumeFrom && skillState.pending)) return;
     setStarting(true);
     setNotice('');
     try {
       await request('/api/topics/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ revision: skillState.revision }),
+        body: JSON.stringify(resumeFrom ? { resumeFrom } : { revision: skillState.revision }),
       });
       await refreshTask();
       setNotice('');
@@ -174,7 +174,11 @@ export default function TopicsPage({
           <TopicSkillEditor onState={updateSkillState} refreshKey={skillRefresh} />
         </aside>
         <div className={`topics-v2-grid ${!focused ? 'topics-no-detail' : ''}`}>
-          <TopicGenerationStatus task={taskData.task} starting={starting} />
+          <TopicGenerationStatus
+            task={taskData.task}
+            starting={starting}
+            onRecover={() => void generate(taskData.task?.id)}
+          />
           <Card title="候选方向" className="topic-list-card">
             {exhausted && selectedTopic && (
               <Link href={`/images?topic=${encodeURIComponent(selectedTopic.id)}`}>
@@ -298,7 +302,13 @@ export default function TopicsPage({
                     </article>
                   ))}
                   {!visible.length && (
-                    <Empty>{topics.length ? '当前筛选没有方向，换个筛选看看' : '暂无候选，生成后显示'}</Empty>
+                    <Empty>
+                      {status === 'candidate' && taskData.task?.status === 'failed'
+                        ? '本轮找题中断，尚未生成候选'
+                        : topics.length
+                          ? '当前筛选没有方向，换个筛选看看'
+                          : '暂无候选，生成后显示'}
+                    </Empty>
                   )}
                 </div>
               </>

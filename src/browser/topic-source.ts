@@ -14,6 +14,16 @@ export type ExternalTopicPage = {
   links?: { title: string; url: string }[];
 };
 export type TopicReadTarget = { id: string; location: string; allowRedirect?: boolean; blockedHosts?: string[] };
+export function isTopicReadTimeout(reason: string) {
+  return /^浏览器操作超时|^浏览器截图超时/.test(reason);
+}
+export class TopicReadInterrupted extends Error {
+  pages: ExternalTopicPage[];
+  constructor(message: string, pages: ExternalTopicPage[]) {
+    super(message);
+    this.pages = pages;
+  }
+}
 // 一轮只用一个浏览器任务；追加页面来自配置搜索入口或已观察链接，不猜选择器或调用接口。
 export async function readTopicSources(
   channels: TopicReadTarget[],
@@ -104,6 +114,14 @@ export async function readTopicSources(
         if (!complete) result.warning = '已达本轮读取上限，仅使用已读取的页面原文';
       } catch (error) {
         const reason = error instanceof Error ? error.message : '外部来源读取失败';
+        if (isTopicReadTimeout(reason)) {
+          // Stop all browser actions, preserving text observed before the timeout for offline judgment.
+          if (result.text.trim()) result.warning = `浏览器读取中断，仅保留已读原文：${reason}`;
+          else result.error = reason;
+          results.push(result);
+          await hooks?.onPage?.(result);
+          throw new TopicReadInterrupted(reason, results);
+        }
         // 用户接管必须立即停下，不能换页面绕过。
         if (/控制权|不自动重试|浏览器操作超时/.test(reason)) throw error;
         if (result.text.trim() && /网络|页面等待超时/.test(reason))
@@ -113,11 +131,17 @@ export async function readTopicSources(
       results.push(result);
       await hooks?.onPage?.(result);
     }
-    await session.run(
-      results.some((r) => r.error)
-        ? `await task.handOff();console.log('WORKSPACE_RESULT:true');`
-        : `await task.finish({keep:[]});console.log('WORKSPACE_RESULT:true');`,
-    );
+    try {
+      await session.run(
+        results.some((r) => r.error)
+          ? `await task.handOff();console.log('WORKSPACE_RESULT:true');`
+          : `await task.finish({keep:[]});console.log('WORKSPACE_RESULT:true');`,
+      );
+    } catch (error) {
+      if (error instanceof Error && isTopicReadTimeout(error.message))
+        throw new TopicReadInterrupted(error.message, results);
+      throw error;
+    }
     return results;
   } finally {
     await release();

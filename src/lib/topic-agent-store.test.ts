@@ -125,3 +125,116 @@ test('Agent 协议满足结构化输出必填字段', () => {
   const schema = z.toJSONSchema(topicAgentStepSchema);
   expect(schema.required).toEqual(expect.arrayContaining(['action', 'activity', 'requests', 'items', 'note']));
 });
+
+import { TopicReadInterrupted } from '../browser/topic-source';
+import { vi } from 'vitest';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { topicSkillSnapshotPath } from './topic-skill';
+import { saveTaskProgress } from '../jobs/topic-task-state';
+
+test('浏览器超时后仅用已读原文交付，不重新浏览且明确说明中断范围', async () =>
+  fixture(async (db) => {
+    let calls = 0;
+    const readPages: typeof readTopicSources = async (initial, _screens, hooks) => {
+      calls++;
+      const page = { id: initial[0].id, url: initial[0].location, text: raw, error: null, screenshots: [], links: [] };
+      await hooks?.onPage?.(page);
+      throw new TopicReadInterrupted('浏览器操作超时；请查看 ego 窗口，未自动重试', [page]);
+    };
+    expect((await generateSkillTopics(db, 'fixture', { skill, judgment: agent(), readPages })).count).toBe(1);
+    expect(calls).toBe(1);
+    expect(taskProgress(db, 'fixture')).toMatchObject({
+      sourceCount: 1,
+      demandCount: 0,
+      warning: expect.stringContaining('已停止浏览'),
+    });
+  }));
+test('用户接管必须结束整个任务，不能用超时降级逻辑绕过', async () =>
+  fixture(async (db) => {
+    const judgment = agent();
+    const original = judgment.read;
+    const read = vi.fn(original);
+    await expect(
+      generateSkillTopics(db, 'fixture', {
+        skill,
+        judgment: { read: read as Judgment['read'] },
+        readPages: async () => {
+          throw Error('控制权已交给用户，不自动重试');
+        },
+      }),
+    ).rejects.toThrow('控制权');
+    expect(read).toHaveBeenCalledOnce();
+  }));
+test('超时但没有网页原文时不拿需求词或搜索摘要编题', async () =>
+  fixture(async (db) => {
+    await expect(
+      generateSkillTopics(db, 'fixture', {
+        skill,
+        judgment: agent(),
+        readPages: async () => {
+          throw new TopicReadInterrupted('浏览器操作超时', []);
+        },
+      }),
+    ).rejects.toThrow('没有取得');
+    expect(db.db.select().from(topics).all()).toHaveLength(0);
+  }));
+test('续接只用失败批次的材料与原日期，保留旧失败记录且不调用浏览器', async () =>
+  fixture(async (db) => {
+    const date = '2026-10-20T01:00:00.000Z';
+    db.db.update(topicGenerationTasks).set({ status: 'failed', reason: '浏览器操作超时' }).run();
+    const file = topicSkillSnapshotPath(db.filename, 'fixture');
+    await mkdir(path.dirname(file), { recursive: true });
+    await writeFile(file, JSON.stringify(skill));
+    db.db
+      .insert(rawRecords)
+      .values({
+        id: 'material',
+        platformId: 'topic_skill',
+        dataDate: '2026-10-20',
+        type: 'topic_source',
+        sourcePath: 'data/fixture.json',
+        capturedAt: date,
+        updatedAt: date,
+        content: {
+          taskId: 'fixture',
+          id: 'page-1',
+          url: 'https://example.org/tool',
+          text: raw,
+          error: null,
+          screenshots: [],
+          discoveryOnly: false,
+        },
+      })
+      .run();
+    db.db
+      .insert(topicGenerationTasks)
+      .values({ id: 'resumed', status: 'queued', createdAt: date, updatedAt: date })
+      .run();
+    saveTaskProgress(db, 'resumed', { resumeFrom: 'fixture' });
+    const reader = vi.fn(async () => {
+      throw Error('不应浏览');
+    });
+    const judgment: Judgment = {
+      read: async (schema, prompt) => {
+        expect(prompt).toContain('禁止再请求搜索或页面');
+        expect(prompt).toContain(date);
+        return schema.parse({
+          action: 'finish',
+          activity: '完成',
+          requests: [],
+          items: [{ entity: raw, angle: '【隔离续接】整理文件省两步', evidence: [{ sourceId: 'page-1', quote: raw }] }],
+          note: '',
+        });
+      },
+    };
+    expect((await generateSkillTopics(db, 'resumed', { skill, judgment, readPages: reader })).count).toBe(1);
+    expect(reader).not.toHaveBeenCalled();
+    expect(
+      db.db
+        .select()
+        .from(topicGenerationTasks)
+        .all()
+        .find((t) => t.id === 'fixture')?.status,
+    ).toBe('failed');
+    expect(db.db.select().from(topics).get()?.sourceContext).toContain(date);
+  }));

@@ -9,6 +9,7 @@ import { loadConfig } from '../lib/config.ts';
 import { acquireJobLock } from './lock.ts';
 import { latestTopicTask, saveTaskProgress } from './topic-task-state.ts';
 import { readTopicSkill, topicSkillSnapshotPath } from '../lib/topic-skill.ts';
+import { loadTopicRecovery } from '../lib/topic-recovery.ts';
 
 export async function launchTopicWorker(taskId: string, filename: string) {
   const directory = path.join(path.dirname(filename), 'jobs');
@@ -38,6 +39,7 @@ export async function startTopicGeneration(
   db: WorkspaceDatabase,
   launch = launchTopicWorker,
   expectedRevision?: string,
+  resumeFrom?: string,
 ) {
   const config = await loadConfig();
   const release = await acquireJobLock(path.join(path.dirname(db.filename), 'jobs/topics-launch.pid'));
@@ -49,7 +51,7 @@ export async function startTopicGeneration(
     const workerRelease = await acquireJobLock(path.join(path.dirname(db.filename), 'jobs/topics.pid'));
     if (!workerRelease) throw Error('已有选题任务正在运行，请稍后刷新；未重复启动。');
     await workerRelease();
-    const skill = await readTopicSkill();
+    const skill = resumeFrom ? (await loadTopicRecovery(db, resumeFrom)).skill : await readTopicSkill();
     if (expectedRevision && expectedRevision !== skill.revision) throw Error('Skill 已更新，请重新读取后再开始找题');
     const id = randomUUID(),
       now = new Date().toISOString();
@@ -57,7 +59,7 @@ export async function startTopicGeneration(
     await mkdir(path.dirname(snapshot), { recursive: true });
     await writeFile(snapshot, JSON.stringify(skill), { mode: 0o600 });
     db.db.insert(topicGenerationTasks).values({ id, status: 'queued', createdAt: now, updatedAt: now }).run();
-    saveTaskProgress(db, id, { stage: 'queued', skillRevision: skill.revision });
+    saveTaskProgress(db, id, { stage: 'queued', skillRevision: skill.revision, ...(resumeFrom ? { resumeFrom } : {}) });
     try {
       const pid = await launch(id, db.filename);
       saveTaskProgress(db, id, { pid });

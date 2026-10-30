@@ -10,12 +10,15 @@ export async function POST(request: Request) {
   try {
     const text = await request.text();
     const input = z
-      .object({ revision: z.string().optional() })
+      .object({ revision: z.string().optional(), resumeFrom: z.string().optional() })
       .strict()
       .parse(text ? JSON.parse(text) : {});
-    return Response.json(await usingDatabase((db) => startTopicGeneration(db, undefined, input.revision)), {
-      status: 202,
-    });
+    return Response.json(
+      await usingDatabase((db) => startTopicGeneration(db, undefined, input.revision, input.resumeFrom)),
+      {
+        status: 202,
+      },
+    );
   } catch (error) {
     return serviceError(error);
   }

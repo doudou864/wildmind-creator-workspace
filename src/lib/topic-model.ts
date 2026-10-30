@@ -50,6 +50,8 @@ export const topicProgressSchema = z.object({
   warning: z.string().nullable().default(null),
   skillRevision: z.string().optional(),
   activity: z.string().optional(),
+  demandCount: z.number().int().nonnegative().optional(),
+  resumeFrom: z.string().optional(),
 });
 export type TopicProgress = z.infer<typeof topicProgressSchema>;
 export type TopicTask = TopicProgress & {

@@ -4,7 +4,12 @@ import { randomUUID } from 'node:crypto';
 import { desc, eq } from 'drizzle-orm';
 import { z } from 'zod';
 import { CodexJudgment, type Judgment } from '../ai/structured.ts';
-import { readTopicSources, type ExternalTopicPage, type TopicReadTarget } from '../browser/topic-source.ts';
+import {
+  readTopicSources,
+  TopicReadInterrupted,
+  type ExternalTopicPage,
+  type TopicReadTarget,
+} from '../browser/topic-source.ts';
 import { shanghaiDate } from '../browser/policy.ts';
 import { backupDatabase, type WorkspaceDatabase } from '../db/database.ts';
 import { topics, topicSignals, rawRecords, topicGenerationTasks, topicGenerationResults } from '../db/schema.ts';
@@ -15,6 +20,7 @@ import { loadTopicSkillConfig, topicSkillSnapshotPath, topicSkillText, type Topi
 import { publicTopicUrl } from './topic-discovery.ts';
 import { topicKey } from './topic-workflow.ts';
 import { topicSchema } from './topic-model.ts';
+import { loadTopicRecovery } from './topic-recovery.ts';
 
 // This is a tool/result protocol, not an editorial pipeline. The Skill chooses the next action.
 export const topicAgentStepSchema = z.object({
@@ -89,13 +95,19 @@ export async function generateSkillTopics(
       remaining -= s.text.length;
       sources.push({ id: s.id, text: s.text, url: s.sourceUrl, date: s.capturedAt, discoveryOnly: true });
     }
+    saveTaskProgress(db, taskId, { demandCount: sources.length });
+    let interruption = '';
     const requests = new Map<string, { kind: 'page' | 'search'; value: string }>();
     const seenUrls = new Set<string>();
     let turns = 0,
       final: z.infer<typeof topicAgentStepSchema> | undefined;
-    const decide = async (pages: ExternalTopicPage[]): Promise<TopicReadTarget[]> => {
-      saveTaskProgress(db, taskId, { stage: 'researching', currentSource: '', sourceCount: sources.length });
-      const exhausted = turns >= runtime.maxTurns - 1 || requests.size >= runtime.maxPages || remaining <= 0;
+    const decide = async (pages: ExternalTopicPage[], offline = false): Promise<TopicReadTarget[]> => {
+      saveTaskProgress(db, taskId, {
+        stage: offline ? 'generating' : 'researching',
+        currentSource: '',
+        sourceCount: sources.filter((s) => !s.discoveryOnly).length,
+      });
+      const exhausted = offline || turns >= runtime.maxTurns - 1 || requests.size >= runtime.maxPages || remaining <= 0;
       if (turns >= runtime.maxTurns) throw Error('本轮达到运行上限，已读材料保留，请缩小 Skill 中的研究范围后再试');
       turns++;
       const step = topicAgentStepSchema.parse(
@@ -111,9 +123,11 @@ export async function generateSkillTopics(
               sources,
               pages: pages.map((p) => ({ id: p.id, url: p.url, error: p.error, warning: p.warning, links: p.links })),
               remainingPages: Math.max(0, runtime.maxPages - requests.size),
-              instruction: exhausted
-                ? '本轮运行保护额度已用完，请依据实际材料 finish，说明未完成范围；不能再请求浏览。'
-                : '决定继续研究还是交付；本轮未指定固定候选数量。',
+              instruction: offline
+                ? '浏览器已停止。本次只用上述实际已读原文交付，禁止再请求搜索或页面；材料不足则finish空列表并说明缺少什么，不编造。'
+                : exhausted
+                  ? '本轮运行保护额度已用完，请依据实际材料 finish，说明未完成范围；不能再请求浏览。'
+                  : '决定继续研究还是交付；本轮未指定固定候选数量。',
             }),
           [],
           'topicEditorial',
@@ -124,7 +138,12 @@ export async function generateSkillTopics(
         final = step;
         return [];
       }
-      if (exhausted) throw Error('本轮达到运行上限，Agent 尚未交付；已读材料保留');
+      if (exhausted)
+        throw Error(
+          offline
+            ? '浏览器已停止，Agent 仍请求新页面，未自动重试；已读材料保留'
+            : '本轮达到运行上限，Agent 尚未交付；已读材料保留',
+        );
       const next: TopicReadTarget[] = [];
       for (const request of step.requests) {
         if (requests.size >= runtime.maxPages) break;
@@ -154,55 +173,94 @@ export async function generateSkillTopics(
       });
       return next;
     };
-    const initial = await decide([]);
-    if (initial.length)
-      await (deps.readPages ?? readTopicSources)(initial, config.parameters.topicExternalMaxScreens, {
-        maxLinks: 60,
-        maxCharacters: runtime.maxPageCharacters,
-        nextBatch: decide,
-        onStart: (id) =>
-          saveTaskProgress(db, taskId, {
-            stage: 'collecting',
-            currentSource: requests.get(id)?.value ?? '',
-            sources: taskProgress(db, taskId).sources.map((s) => (s.id === id ? { ...s, status: 'reading' } : s)),
-          }),
-        onPage: async (page) => {
-          const search = requests.get(page.id)?.kind === 'search';
-          const material = path.join(path.dirname(db.filename), 'topics', taskId, page.id + '.json');
-          await mkdir(path.dirname(material), { recursive: true });
-          await writeFile(material, JSON.stringify(page), { mode: 0o600 });
-          db.db
-            .insert(rawRecords)
-            .values({
-              id: randomUUID(),
-              platformId: 'topic_skill',
-              dataDate: shanghaiDate(),
-              type: 'topic_source',
-              content: { ...page, taskId, discoveryOnly: search },
-              sourcePath: `data/topics/${taskId}/${page.id}.json`,
-              capturedAt: now,
-              updatedAt: now,
-            })
-            .run();
-          if (!page.error && page.text.trim()) {
-            const text = page.text.slice(0, Math.max(0, remaining));
-            remaining -= text.length;
-            if (text) sources.push({ id: page.id, text, url: page.url, date: now, discoveryOnly: !!search });
-          }
-          saveTaskProgress(db, taskId, {
-            sources: taskProgress(db, taskId).sources.map((s) =>
-              s.id === page.id
-                ? {
-                    ...s,
-                    status: page.error ? 'failed' : 'completed',
-                    reason: page.error ?? page.warning ?? null,
-                    count: page.error ? 0 : 1,
-                  }
-                : s,
-            ),
+    const resumeFrom = taskProgress(db, taskId).resumeFrom;
+    if (resumeFrom) {
+      const recovery = await loadTopicRecovery(db, resumeFrom);
+      interruption = '本轮仅使用上次中断前保存的材料，没有重新浏览网站';
+      for (const page of recovery.pages) {
+        if (!page.error && page.text.trim())
+          sources.push({
+            id: page.id,
+            text: page.text,
+            url: page.url,
+            date: page.capturedAt,
+            discoveryOnly: page.discoveryOnly,
           });
-        },
+      }
+      saveTaskProgress(db, taskId, {
+        cachedCount: recovery.pages.filter((p) => !p.error && !p.discoveryOnly).length,
+        warning: interruption,
       });
+      await decide(recovery.pages, true);
+    } else {
+      const initial = await decide([]);
+      try {
+        if (initial.length)
+          await (deps.readPages ?? readTopicSources)(initial, config.parameters.topicExternalMaxScreens, {
+            maxLinks: 60,
+            maxCharacters: runtime.maxPageCharacters,
+            nextBatch: decide,
+            onStart: (id) =>
+              saveTaskProgress(db, taskId, {
+                stage: 'collecting',
+                currentSource: requests.get(id)?.value ?? '',
+                sources: taskProgress(db, taskId).sources.map((s) => (s.id === id ? { ...s, status: 'reading' } : s)),
+              }),
+            onPage: async (page) => {
+              const search = requests.get(page.id)?.kind === 'search';
+              const material = path.join(path.dirname(db.filename), 'topics', taskId, page.id + '.json');
+              await mkdir(path.dirname(material), { recursive: true });
+              await writeFile(material, JSON.stringify(page), { mode: 0o600 });
+              db.db
+                .insert(rawRecords)
+                .values({
+                  id: randomUUID(),
+                  platformId: 'topic_skill',
+                  dataDate: shanghaiDate(),
+                  type: 'topic_source',
+                  content: { ...page, taskId, discoveryOnly: search },
+                  sourcePath: `data/topics/${taskId}/${page.id}.json`,
+                  capturedAt: now,
+                  updatedAt: now,
+                })
+                .run();
+              if (!page.error && page.text.trim()) {
+                const text = page.text.slice(0, Math.max(0, remaining));
+                remaining -= text.length;
+                if (text) sources.push({ id: page.id, text, url: page.url, date: now, discoveryOnly: !!search });
+              }
+              saveTaskProgress(db, taskId, {
+                sources: taskProgress(db, taskId).sources.map((s) =>
+                  s.id === page.id
+                    ? {
+                        ...s,
+                        status: page.error ? 'failed' : 'completed',
+                        reason: page.error ?? page.warning ?? null,
+                        count: page.error ? 0 : 1,
+                      }
+                    : s,
+                ),
+              });
+            },
+          });
+      } catch (error) {
+        if (!(error instanceof TopicReadInterrupted)) throw error;
+        interruption = `浏览器读取已中断，已停止浏览；仅用已读材料判断选题。原因：${error.message}`;
+        saveTaskProgress(db, taskId, {
+          warning: interruption,
+          sources: taskProgress(db, taskId).sources.map((s) =>
+            ['pending', 'reading'].includes(s.status)
+              ? { ...s, status: 'failed', reason: '浏览器中断，未完成读取' }
+              : s,
+          ),
+        });
+        if (!final) {
+          if (!sources.some((s) => !s.discoveryOnly && s.text.trim()))
+            throw Error(error.message + '；没有取得可用于判断的网页原文');
+          await decide(error.pages, true);
+        }
+      }
+    }
     if (!final) throw Error('Agent 未交付选题，已读材料保留');
     const seen = new Set(history.map((t) => topicKey(t.title)));
     let rejected = 0;
@@ -223,7 +281,7 @@ export async function generateSkillTopics(
           direction: item.entity,
           channelId: 'topic_skill',
           signal: evidence.map((e) => `${e.quote}\n${e.source!.url ?? ''}`).join('\n\n'),
-          sourceContext: `来源读取于${now}；Skill ${skill.revision.slice(0, 8)}`,
+          sourceContext: `来源读取于${evidence[0].source!.date}；Skill ${skill.revision.slice(0, 8)}`,
           sourceUrl: evidence[0].source!.url,
           exploration: false,
           evidence: null,
@@ -237,10 +295,14 @@ export async function generateSkillTopics(
         }),
       ];
     });
-    const warning = [final.note, rejected ? `${rejected} 条重复或原文引用不符的结果未入库` : '']
+    const warning = [interruption, final.note, rejected ? `${rejected} 条重复或原文引用不符的结果未入库` : '']
       .filter(Boolean)
       .join('；');
-    saveTaskProgress(db, taskId, { stage: 'saving', warning: warning || null, sourceCount: sources.length });
+    saveTaskProgress(db, taskId, {
+      stage: 'saving',
+      warning: warning || null,
+      sourceCount: sources.filter((s) => !s.discoveryOnly).length,
+    });
     db.db.transaction((tx) => {
       for (const row of records) {
         tx.insert(topics).values(row).run();

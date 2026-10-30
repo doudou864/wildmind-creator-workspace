@@ -5,6 +5,7 @@ const mocks = vi.hoisted(() => ({
   ego: vi.fn(),
   navigate: vi.fn(),
   observe: vi.fn(),
+  capture: vi.fn(),
 }));
 vi.mock('../jobs/lock.ts', () => ({ acquireJobLock: mocks.lock }));
 vi.mock('./ego.ts', () => ({ runEgo: mocks.ego }));
@@ -19,7 +20,7 @@ vi.mock('./collection-session.ts', () => ({
       await mocks.navigate(url);
     }
     async capture() {
-      return 'fixture.png';
+      return mocks.capture();
     }
     async scroll() {}
     async run() {
@@ -34,6 +35,7 @@ beforeEach(() => {
   mocks.navigate.mockReset().mockResolvedValue(undefined);
   mocks.lock.mockResolvedValue(mocks.release);
   mocks.ego.mockResolvedValue(88);
+  mocks.capture.mockReset().mockResolvedValue('fixture.png');
 });
 test('平台采集锁被占用时选题仍使用自己的锁和浏览器会话', async () => {
   mocks.lock.mockImplementation(async (file: string) => (file.endsWith('/collect.pid') ? null : mocks.release));
@@ -131,4 +133,28 @@ test('搜索跳转也不能重新采用用户已停用的来源', async () => {
     1,
   );
   expect(pages[0]).toMatchObject({ error: '该来源已停用，不采用本页', text: '' });
+});
+
+test('截图超时仍交付此前已读文字，之后不再浏览或接管其他窗口', async () => {
+  mocks.capture.mockRejectedValueOnce(Error('浏览器操作超时；请查看 ego 窗口，未自动重试'));
+  const onPage = vi.fn(async () => {});
+  const nextBatch = vi.fn();
+  await expect(
+    readTopicSources(
+      [
+        { id: 'first', location: 'https://example.com' },
+        { id: 'second', location: 'https://example.com/second' },
+      ],
+      1,
+      { onPage, nextBatch },
+    ),
+  ).rejects.toMatchObject({
+    pages: [
+      expect.objectContaining({ text: 'fixture 渠道内容', error: null, warning: expect.stringContaining('中断') }),
+    ],
+  });
+  expect(onPage).toHaveBeenCalledOnce();
+  expect(mocks.navigate).toHaveBeenCalledOnce();
+  expect(nextBatch).not.toHaveBeenCalled();
+  expect(mocks.observe).toHaveBeenCalledOnce();
 });

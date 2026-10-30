@@ -1,9 +1,17 @@
 'use client';
 import { useEffect, useState } from 'react';
 import type { TopicTask } from '@/lib/topic-model';
-import { Card } from './components';
+import { Button, Card } from './components';
 
-export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | null; starting: boolean }) {
+export function TopicGenerationStatus({
+  task,
+  starting,
+  onRecover,
+}: {
+  task?: TopicTask | null;
+  starting: boolean;
+  onRecover?: () => void;
+}) {
   const [now, setNow] = useState<number | null>(null);
   const active = task?.status === 'queued' || task?.status === 'running';
   useEffect(() => {
@@ -24,7 +32,14 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
     finished: '采集已完成',
   };
   const done = task?.sources.filter((s) => s.status === 'completed' || s.status === 'failed').length ?? 0;
-  const problems = task?.sources.filter((s) => s.reason) ?? [];
+  const problems =
+    task?.sources
+      .map((s) =>
+        !active && ['pending', 'reading'].includes(s.status)
+          ? { ...s, status: 'failed', reason: '任务已中断，本页未完成读取' }
+          : s,
+      )
+      .filter((s) => s.reason) ?? [];
   return (
     <Card
       title={task?.skillRevision ? '本轮找题' : '上次采集'}
@@ -37,8 +52,10 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
             : active
               ? `${task.skillRevision && task.activity && task.stage === 'researching' ? task.activity : stages[task.stage]}${task.currentSource ? ` · ${task.currentSource}` : ''}`
               : task?.status === 'failed'
-                ? '本轮未生成候选'
-                : `已生成 ${task?.count ?? 0} 个候选`}
+                ? '找题中断，尚未交付候选'
+                : task?.count === 0
+                  ? '研究已结束，本轮没有合格候选'
+                  : `已生成 ${task?.count ?? 0} 个候选`}
         </strong>
         {active && (
           <span className="mono">
@@ -58,12 +75,32 @@ export function TopicGenerationStatus({ task, starting }: { task?: TopicTask | n
       )}
       {task && (task.sources.length > 0 || task.sourceCount > 0) && (
         <p className="topic-task-detail">
-          已处理 {done}/{task.sources.length} 个网站 · {task.sources.filter((s) => s.status === 'completed').length}{' '}
-          个取得线索{task.sourceCount > 0 ? ` · 使用 ${task.sourceCount} 条线索` : ''}
+          {task.resumeFrom ? (
+            '使用已保存材料继续判断'
+          ) : (
+            <>
+              已处理 {done}/{task.sources.length} 个网站 · {task.sources.filter((s) => s.status === 'completed').length}{' '}
+              个取得线索
+            </>
+          )}
+          {task.sourceCount > 0
+            ? ` · ${task.demandCount === undefined ? `使用 ${task.sourceCount} 条线索` : `可用网页材料 ${task.sourceCount} 份`}`
+            : ''}
+          {task.demandCount !== undefined && ` · 参考需求词 ${task.demandCount} 条`}
         </p>
       )}
-      {!!task?.cachedCount && <p>本轮使用此前保存的 {task.cachedCount} 条线索，来源日期见选题依据。</p>}
+      {!!task?.cachedCount && (
+        <p>
+          本轮使用此前保存的 {task.cachedCount} {task.demandCount === undefined ? '条线索' : '份网页材料'}
+          ，来源日期见选题依据。
+        </p>
+      )}
       {task?.reason && <p className="topic-task-error">{task.reason}</p>}
+      {onRecover && task?.status === 'failed' && /^浏览器操作超时|^浏览器截图超时/.test(task.reason ?? '') && (
+        <Button onClick={onRecover} disabled={starting} disabledReason="正在启动">
+          用已读材料继续
+        </Button>
+      )}
       {task?.warning && <p className="topic-task-error">{task.warning}</p>}
       {task?.status === 'completed' && task.count === 0 && task.activity && <p>{task.activity}</p>}
       {problems.length > 0 && (
