@@ -46,8 +46,8 @@ accountExtras:
   metrics: [主页访客, 主页转粉率]
   scroll: '.microapp-container:not([style*="display: none"])'
   chart: '.area-graph canvas'
-  rightInset: 190
-  viewport: {width: 2560, height: 1080}
+  rightInset: 74
+  tooltip: ".area-graph .g2-tooltip"
   maxScreens: 15
 
 nextPage: ".d-pagination-page >> nth=-1"

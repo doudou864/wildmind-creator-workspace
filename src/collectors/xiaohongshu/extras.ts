@@ -31,8 +31,8 @@ export async function captureAccountExtras(
         scroll: z.string(),
         chart: z.string(),
         rightInset: z.number(),
+        tooltip: z.string(),
         maxScreens: z.number(),
-        viewport: z.object({ width: z.number(), height: z.number() }),
       }),
     })
     .parse(parse(await readFile('config/xiaohongshu.yaml', 'utf8')));
@@ -41,7 +41,8 @@ export async function captureAccountExtras(
   const e = cfg.accountExtras,
     readings: CapturedReading[] = [],
     yesterday = shanghaiDate(new Date(now.getTime() - 86400000));
-  session.viewport = e.viewport;
+  session.viewport = undefined;
+  await session.run("await page.cdp('Emulation.clearDeviceMetricsOverride');console.log('WORKSPACE_RESULT:true');");
   await session.navigate(e.url, e.ready);
   await session.inspect(cfg.platformId);
   await session.click(e.growthTab);
@@ -75,7 +76,7 @@ export async function captureAccountExtras(
     await session.click(`text="${label}"`);
     await bottom();
     const file = `${folder}/profile-${i}.png`;
-    await session.captureChartTip(e.chart, e.rightInset, file);
+    await session.captureChartTip(e.chart, e.rightInset, file, e.tooltip);
     const r = await save(
       file,
       `只取曲线悬停提示中的${label}，account.dataDate原样返回悬停提示日期，允许“10.28”这种仅月日格式；不要求截图有年份，程序会依据当前北京时间${shanghaiDate(now)}确定年份。日期早于昨天也正常返回；不可读取上方近7日合计。若没有提示或无法看清日期则status=failed，不得推测缺数或用7日合计补填。只返回这一个账号指标，原数字单位保留。其他数组为空。`,

@@ -36,7 +36,7 @@ export class CollectionSession {
   async navigate(url: string, ready: string) {
     await consumePage();
     await this.run(
-      `await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).actionDelayMs)});try{await page.goto(${JSON.stringify(url)});}catch(e){if(!String(e).includes('navigation committed'))throw e;}console.log('WORKSPACE_RESULT:true');`,
+      `await new Promise(resolve=>setTimeout(resolve,${randomBetween((await loadBrowserPolicy()).actionDelayMs)}));try{await page.goto(${JSON.stringify(url)});}catch(e){if(!String(e).includes('navigation committed'))throw e;}console.log('WORKSPACE_RESULT:true');`,
     );
     await this.settle(ready);
   }
@@ -90,7 +90,7 @@ export class CollectionSession {
     await mkdir(path.dirname(path.resolve(filename)), { recursive: true, mode: 0o700 });
     const result = await this.screenshot(filename, async () =>
       this.run<string>(
-        `await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).dwellMs)});console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.screenshot({path:${JSON.stringify(path.resolve(filename))}})));`,
+        `await new Promise(resolve=>setTimeout(resolve,${randomBetween((await loadBrowserPolicy()).dwellMs)}));console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.screenshot({path:${JSON.stringify(path.resolve(filename))}})));`,
       ),
     );
     return result;
@@ -104,14 +104,14 @@ export class CollectionSession {
   async click(selector: string) {
     await consumePage();
     await this.run(
-      `await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).actionDelayMs)});await page.click(${JSON.stringify(selector)});console.log('WORKSPACE_RESULT:true');`,
+      `await new Promise(resolve=>setTimeout(resolve,${randomBetween((await loadBrowserPolicy()).actionDelayMs)}));await page.click(${JSON.stringify(selector)});console.log('WORKSPACE_RESULT:true');`,
     );
     await this.settle();
   }
   async scroll(selector = 'html', direction = 1) {
     const policy = await loadBrowserPolicy();
     await this.run(
-      `const box=await page.evaluate(selector=>{let e=document.querySelector(selector),dx=0,dy=0;for(const f of document.querySelectorAll('iframe')){try{const candidate=f.contentDocument?.querySelector(selector);if(candidate&&(!e||candidate.scrollHeight-candidate.clientHeight>e.scrollHeight-e.clientHeight)){e=candidate;const b=f.getBoundingClientRect();dx=b.left;dy=b.top;}}catch{}}if(!e)throw new Error('滚动区域不存在');const r=e.getBoundingClientRect();return {x:Math.min(innerWidth-40,Math.max(250,dx+r.left+r.width/2)),y:Math.min(innerHeight-60,Math.max(200,dy+r.top+Math.min(r.height,innerHeight)/2))};},${JSON.stringify(selector)});await page.mouse.move(box.x,box.y);await page.waitForTimeout(${randomBetween(policy.actionDelayMs)});await page.mouse.wheel(0,${direction * randomBetween(policy.scrollPixels)});console.log('WORKSPACE_RESULT:true');`,
+      `const box=await page.evaluate(selector=>{let e=document.querySelector(selector),dx=0,dy=0;for(const f of document.querySelectorAll('iframe')){try{const candidate=f.contentDocument?.querySelector(selector);if(candidate&&(!e||candidate.scrollHeight-candidate.clientHeight>e.scrollHeight-e.clientHeight)){e=candidate;const b=f.getBoundingClientRect();dx=b.left;dy=b.top;}}catch{}}if(!e)throw new Error('滚动区域不存在');const r=e.getBoundingClientRect();return {x:Math.min(innerWidth-40,Math.max(250,dx+r.left+r.width/2)),y:Math.min(innerHeight-60,Math.max(200,dy+r.top+Math.min(r.height,innerHeight)/2))};},${JSON.stringify(selector)});await page.mouse.move(box.x,box.y);await new Promise(resolve=>setTimeout(resolve,${randomBetween(policy.actionDelayMs)}));await page.mouse.wheel(0,${direction * randomBetween(policy.scrollPixels)});console.log('WORKSPACE_RESULT:true');`,
     );
     await this.settle();
   }
@@ -119,21 +119,21 @@ export class CollectionSession {
   async clickShadow(host: string, selector: string, text: string | null = null, firstVisible = false) {
     await consumePage();
     await this.run(
-      `await page.cdp('Emulation.clearDeviceMetricsOverride');await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).actionDelayMs)});const point=await page.evaluate(cfg=>{const root=document.querySelector(cfg.host)?.shadowRoot;if(!root)throw Error('页面内容区域未加载');const nodes=Array.from(root.querySelectorAll(cfg.selector)).filter(e=>cfg.text===null||e.textContent.trim()===cfg.text).filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.height&&(!cfg.firstVisible||(r.top>=0&&r.bottom<=innerHeight&&e.contains(root.elementFromPoint(r.x+r.width/2,r.y+r.height/2))))});if(cfg.firstVisible)nodes.splice(1);if(nodes.length!==1)throw Error('页面目标不唯一');const r=nodes[0].getBoundingClientRect();if(r.top<0||r.bottom>innerHeight)throw Error('请先滚动到目标');const x=r.x+r.width/2,y=r.y+r.height/2;if(!nodes[0].contains(root.elementFromPoint(x,y)))throw Error('目标被遮挡，请先滚动到目标');return {x,y};},${JSON.stringify({ host, selector, text, firstVisible })});await page.mouse.click(point.x,point.y);console.log('WORKSPACE_RESULT:true');`,
+      `await page.cdp('Emulation.clearDeviceMetricsOverride');await new Promise(resolve=>setTimeout(resolve,${randomBetween((await loadBrowserPolicy()).actionDelayMs)}));const point=await page.evaluate(cfg=>{const root=document.querySelector(cfg.host)?.shadowRoot;if(!root)throw Error('页面内容区域未加载');const nodes=Array.from(root.querySelectorAll(cfg.selector)).filter(e=>cfg.text===null||e.textContent.trim()===cfg.text).filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.height&&(!cfg.firstVisible||(r.top>=0&&r.bottom<=innerHeight&&e.contains(root.elementFromPoint(r.x+r.width/2,r.y+r.height/2))))});if(cfg.firstVisible)nodes.splice(1);if(nodes.length!==1)throw Error('页面目标不唯一');const r=nodes[0].getBoundingClientRect();if(r.top<0||r.bottom>innerHeight)throw Error('请先滚动到目标');const x=r.x+r.width/2,y=r.y+r.height/2;if(!nodes[0].contains(root.elementFromPoint(x,y)))throw Error('目标被遮挡，请先滚动到目标');return {x,y};},${JSON.stringify({ host, selector, text, firstVisible })});await page.mouse.click(point.x,point.y);console.log('WORKSPACE_RESULT:true');`,
     );
     await this.settle();
   }
   async scrollShadow(host: string, selector: string, direction = 1) {
     const policy = await loadBrowserPolicy();
     await this.run(
-      `await page.cdp('Emulation.clearDeviceMetricsOverride');const point=await page.evaluate(cfg=>{const e=document.querySelector(cfg.host)?.shadowRoot?.querySelector(cfg.selector);if(!e)throw Error('滚动区域不存在');const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:Math.min(innerHeight-40,r.y+r.height/2),height:Math.min(r.height,innerHeight)};},${JSON.stringify({ host, selector })});await page.mouse.move(point.x,point.y);await page.waitForTimeout(${randomBetween(policy.actionDelayMs)});await page.mouse.wheel(0,${direction}*Math.min(${randomBetween(policy.scrollPixels)},Math.floor(point.height*0.7)));console.log('WORKSPACE_RESULT:true');`,
+      `await page.cdp('Emulation.clearDeviceMetricsOverride');const point=await page.evaluate(cfg=>{const e=document.querySelector(cfg.host)?.shadowRoot?.querySelector(cfg.selector);if(!e)throw Error('滚动区域不存在');const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:Math.min(innerHeight-40,r.y+r.height/2),height:Math.min(r.height,innerHeight)};},${JSON.stringify({ host, selector })});await page.mouse.move(point.x,point.y);await new Promise(resolve=>setTimeout(resolve,${randomBetween(policy.actionDelayMs)}));await page.mouse.wheel(0,${direction}*Math.min(${randomBetween(policy.scrollPixels)},Math.floor(point.height*0.7)));console.log('WORKSPACE_RESULT:true');`,
     );
     await this.settle();
   }
   async openDetail(title: string, titleSelector: string) {
     await consumePage();
     const label = await this.run<string>(
-      `const titles=await page.evaluate(selector=>Array.from(document.querySelectorAll(selector)).map(e=>e.textContent.replace(/\\s+/g,' ').trim()),${JSON.stringify(titleSelector)});const title=${JSON.stringify(title.replace(/\s+/g, ' ').trim())};if(titles.filter(t=>t===title).length!==1)throw new Error('列表中目标作品不存在或标题不唯一');await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).actionDelayMs)});const [next]=await Promise.all([page.waitForEvent('popup',{timeout:60000}),page.click(${JSON.stringify(titleSelector)}+':text-is('+JSON.stringify(title)+')')]);console.log('WORKSPACE_RESULT:'+JSON.stringify(next.label));`,
+      `const titles=await page.evaluate(selector=>Array.from(document.querySelectorAll(selector)).map(e=>e.textContent.replace(/\\s+/g,' ').trim()),${JSON.stringify(titleSelector)});const title=${JSON.stringify(title.replace(/\s+/g, ' ').trim())};if(titles.filter(t=>t===title).length!==1)throw new Error('列表中目标作品不存在或标题不唯一');await new Promise(resolve=>setTimeout(resolve,${randomBetween((await loadBrowserPolicy()).actionDelayMs)}));const [next]=await Promise.all([page.waitForEvent('popup',{timeout:60000}),page.click(${JSON.stringify(titleSelector)}+':text-is('+JSON.stringify(title)+')')]);console.log('WORKSPACE_RESULT:'+JSON.stringify(next.label));`,
     );
     return new CollectionSession(this.spaceId, label, this.execute);
   }
@@ -152,18 +152,18 @@ export class CollectionSession {
     result.viewport = this.viewport;
     return result;
   }
-  async captureChartTip(selector: string, inset: number, filename: string) {
+  async captureChartTip(selector: string, inset: number, filename: string, tooltipSelector?: string) {
     await mkdir(path.dirname(path.resolve(filename)), { recursive: true, mode: 0o700 });
     await this.screenshot(filename, async () =>
       this.run(
-        `await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).dwellMs)});const r=await page.evaluate(selector=>{const r=document.querySelector(selector)?.getBoundingClientRect();if(!r)throw new Error('趋势图不存在');return {x:r.right-${inset},y:r.top+r.height/2};},${JSON.stringify(selector)});await page.mouse.move(r.x,r.y);await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).dwellMs)});await page.screenshot({path:${JSON.stringify(path.resolve(filename))}});console.log('WORKSPACE_RESULT:true');`,
+        `await page.cdp('Emulation.clearDeviceMetricsOverride');await page.evaluate(selector=>document.querySelector(selector)?.scrollIntoView({block:"center"}),${JSON.stringify(selector)});await new Promise(resolve=>setTimeout(resolve,${randomBetween((await loadBrowserPolicy()).dwellMs)}));const r=await page.evaluate(selector=>{const r=document.querySelector(selector)?.getBoundingClientRect();if(!r)throw new Error('趋势图不存在');return {x:r.right-${inset},y:r.top+r.height/2};},${JSON.stringify(selector)});await page.mouse.move(r.x,r.y);await new Promise(resolve=>setTimeout(resolve,${randomBetween((await loadBrowserPolicy()).dwellMs)}));${tooltipSelector ? `await page.waitForFunction(selector=>{const el=document.querySelector(selector);return el&&getComputedStyle(el).visibility!=="hidden"&&el.getBoundingClientRect().width>0;},${JSON.stringify(tooltipSelector)},{timeout:5000});await page.evaluate(selector=>{const e=document.querySelector(selector);const r=e.getBoundingClientRect();if(r.right>innerWidth)e.style.transform="translateX("+(innerWidth-r.right-16)+"px)";},${JSON.stringify(tooltipSelector)});` : ''}await page.screenshot({path:${JSON.stringify(path.resolve(filename))}});console.log('WORKSPACE_RESULT:true');`,
       ),
     );
   }
   async download(selector: string, filename: string) {
     await consumePage();
     return this.run<string>(
-      `await page.waitForTimeout(${randomBetween((await loadBrowserPolicy()).actionDelayMs)});const pending=page.waitForEvent('download',{timeout:60000});await page.click(${JSON.stringify(selector)});const file=await pending;await file.saveAs(${JSON.stringify(path.resolve(filename))});console.log('WORKSPACE_RESULT:'+JSON.stringify(file.suggestedFilename()));`,
+      `await new Promise(resolve=>setTimeout(resolve,${randomBetween((await loadBrowserPolicy()).actionDelayMs)}));const pending=page.waitForEvent('download',{timeout:60000});await page.click(${JSON.stringify(selector)});const file=await pending;await file.saveAs(${JSON.stringify(path.resolve(filename))});console.log('WORKSPACE_RESULT:'+JSON.stringify(file.suggestedFilename()));`,
     );
   }
   async close() {

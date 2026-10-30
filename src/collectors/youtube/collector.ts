@@ -1,3 +1,5 @@
+import { contentRows, type ContentRow } from './content-rows.ts';
+import { executionEvent } from '../../jobs/execution-log.ts';
 import { PlatformDataPending } from '../availability.ts';
 import { PageCoverage } from '../pagination.ts';
 import { loadCapacity, checkCapacity } from '../capacity.ts';
@@ -39,6 +41,7 @@ export async function collectYoutube(
       nextPage: z.string(),
       rowSelector: z.string(),
       titleSelector: z.string(),
+      draftLabel: z.string(),
       dateSelector: z.string(),
       reportUrl: z.url(),
       reportReady: z.string(),
@@ -66,16 +69,29 @@ export async function collectYoutube(
     const coverage = new PageCoverage();
     for (let pageIndex = 0; pageIndex < capacity.maxPages; pageIndex++) {
       const state = await session.inspect(cfg.platformId);
-      const rows = await session.run<{ title: string; href: string; date: string }[]>(
-        `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(cfg=>Array.from(document.querySelectorAll(cfg.rowSelector)).map(row=>({title:row.querySelector(cfg.titleSelector)?.textContent?.trim()??'',href:row.querySelector(cfg.titleSelector)?.getAttribute('href')??'',date:row.querySelector(cfg.dateSelector)?.textContent?.trim()??''})),${JSON.stringify(cfg)})));`,
+      const rows = await session.run<ContentRow[]>(
+        `console.log('WORKSPACE_RESULT:'+JSON.stringify(await page.evaluate(cfg=>Array.from(document.querySelectorAll(cfg.rowSelector)).map(row=>({title:row.querySelector(cfg.titleSelector)?.textContent?.trim()??'',href:row.querySelector(cfg.titleSelector)?.getAttribute('href')??'',date:row.querySelector(cfg.dateSelector)?.textContent?.trim()??'',text:row.innerText})),${JSON.stringify(cfg)})));`,
       );
       const count = state.text.match(/第\s*\d+\s*[-–]\s*(\d+)\s*条，共\s*(\d+)\s*条/);
       if (!count) throw new Error('YouTube列表总数无法确认');
-      const done = coverage.add(
-        rows.map((r) => r.href),
-        Number(count[2]),
+      await writeFile(
+        `${folder}/content-${cfg.contentUrls.indexOf(url)}-${pageIndex}.json`,
+        JSON.stringify({ url, pageIndex, total: Number(count[2]), rows }),
       );
-      metadata.push(...rows);
+      paths.push(`${folder}/content-${cfg.contentUrls.indexOf(url)}-${pageIndex}.json`);
+      const classified = contentRows(rows, cfg.draftLabel);
+      executionEvent(
+        '作品列表读取',
+        'success',
+        JSON.stringify({
+          pageIndex,
+          total: Number(count[2]),
+          published: classified.published.length,
+          drafts: classified.drafts.map((r) => r.title),
+        }),
+      );
+      const done = coverage.add(classified.keys, Number(count[2]));
+      metadata.push(...classified.published);
       if (done) break;
       await session.click(cfg.nextPage);
     }

@@ -85,3 +85,51 @@ test('截图超时先观察原工作区和当前页面，只重读截图一次�
     await rm(folder, { recursive: true, force: true });
   }
 });
+
+test('辅助图表必须在原生坐标系确认提示框出现后才截图，缺提示不能继续交给AI', async () => {
+  const calls: string[] = [];
+  let visible = true;
+  const page = {
+    cdp: async (method: string) => {
+      calls.push(method);
+    },
+    evaluate: async () => ({ x: 1340, y: 600 }),
+    waitForTimeout: async () => {},
+    mouse: {
+      move: async () => {
+        calls.push('move');
+      },
+    },
+    waitForFunction: async () => {
+      calls.push('tooltip');
+      if (!visible) throw Error('提示未出现');
+    },
+    screenshot: async () => {
+      calls.push('screenshot');
+    },
+  };
+  const session = new CollectionSession(14, 'p1', async (script) => {
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    await new AsyncFunction('taskSpace', 'console', 'setTimeout', script)(
+      async () => ({ page: () => page }),
+      { log: () => {} },
+      (callback: () => void) => callback(),
+    );
+    return true;
+  });
+  session.viewport = { width: 2560, height: 1080 };
+  await session.captureChartTip('.chart', 74, '/tmp/fixture-chart.png', '.tooltip');
+  expect(calls).toEqual([
+    'Emulation.setDeviceMetricsOverride',
+    'Emulation.clearDeviceMetricsOverride',
+    'move',
+    'tooltip',
+    'screenshot',
+  ]);
+  calls.length = 0;
+  visible = false;
+  await expect(session.captureChartTip('.chart', 74, '/tmp/fixture-chart.png', '.tooltip')).rejects.toThrow(
+    '提示未出现',
+  );
+  expect(calls).not.toContain('screenshot');
+});

@@ -10,6 +10,7 @@ vi.mock('../state.ts', () => ({ readState: () => ({ month: '2026-10' }) }));
 test('辅助图表日期落后仍保存真实日期；无日期不能伪装为平台延迟', async () => {
   const folder = await mkdtemp(path.join(tmpdir(), 'fixture-xhs-extras-'));
   const session = {
+    run: async () => {},
     navigate: async () => {},
     click: async () => {},
     captureChartTip: async () => {},

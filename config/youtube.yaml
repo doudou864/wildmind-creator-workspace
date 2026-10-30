@@ -6,6 +6,7 @@ contentUrls:
 contentReady: 'ytcp-video-row >> nth=0'
 rowSelector: ytcp-video-row
 titleSelector: '#video-title'
+draftLabel: 草稿
 dateSelector: '.tablecell-date'
 dashboardUrl: https://studio.youtube.com/channel/UCNRZf29PvGrv1puttSISTpA
 dashboardReady: 'text="当前订阅人数"'
