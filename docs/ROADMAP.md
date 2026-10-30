@@ -463,3 +463,5 @@ D1等全空阶段仍保留坐标与全部作品；作品名旁展示D*播放量/
 ### 2026-10-29 项目知识与版本同步
 
 使用 neat-freak 对齐 README、PRD 入口、进度总览及服务接入契约，保留用户已改渠道与历史验收。完整 check 通过（91文件259测试），本机首页HTTP200；本轮不触发真实平台操作。[审计与待验边界](verification/project-sync/README.md)。
+
+- 2026-10-30：按用户要求撤下消息板块及所有生产采集路径中的评论/私信读取，撤下首页待回复与需求主题、作品评论入口；历史消息和商单保留。format/check（303 tests）通过，ego 双宽截图及旧地址回首页验收通过；详见 docs/verification/retire-inbox/README.md。

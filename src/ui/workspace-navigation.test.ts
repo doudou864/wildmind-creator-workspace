@@ -5,7 +5,6 @@ describe('video workflow navigation', () => {
   it('makes each video task directly reachable and independently selected', () => {
     expect(workspaceNavigation.map((item) => item.title)).toEqual([
       '总控台',
-      '消息',
       '作品数据',
       '选题',
       '封面生成',
@@ -17,7 +16,7 @@ describe('video workflow navigation', () => {
 
   it('keeps legacy analysis and deal pages in their owning sections', () => {
     expect(workspaceSection('/data-center')).toBe('/works');
-    expect(workspaceSection('/deals')).toBe('/inbox');
+    expect(workspaceSection('/deals')).toBe('/');
   });
 });
 

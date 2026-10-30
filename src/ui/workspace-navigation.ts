@@ -1,6 +1,5 @@
 export const workspaceNavigation = [
   { title: '总控台', href: '/' },
-  { title: '消息', href: '/inbox' },
   { title: '作品数据', href: '/works' },
   { title: '选题', href: '/topics' },
   { title: '封面生成', href: '/images' },
@@ -8,10 +7,10 @@ export const workspaceNavigation = [
 ] as const;
 
 export type WorkspacePath =
-  (typeof workspaceNavigation)[number]['href'] | '/create' | '/data-center' | '/layouts' | '/deals';
+  (typeof workspaceNavigation)[number]['href'] | '/create' | '/data-center' | '/layouts' | '/deals' | '/inbox';
 
 export function workspaceSection(current: WorkspacePath): WorkspacePath {
-  if (current === '/deals') return '/inbox';
+  if (current === '/deals' || current === '/inbox') return '/';
   if (current === '/data-center') return '/works';
   if (current === '/create') return '/topics';
   return current;

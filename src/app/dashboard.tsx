@@ -9,13 +9,12 @@ import { checkpointNote, findAnomalies } from '@/lib/workspace-model';
 import { dealCounts, type DealConfig, type DealData } from '@/lib/deal-model';
 import type { InboxConfig } from '@/lib/inbox-model';
 import { number, signed } from '@/lib/format';
-import { request, useResource } from '@/ui/use-resource';
+import { useResource } from '@/ui/use-resource';
 import { PageHeader, Button, Card, Dialog, Empty, Segmented } from '@/ui/components';
 import { WorkspaceHeader } from '@/ui/workspace-header';
 import { Chart } from '@/ui/charts';
 import { HitRates } from '@/ui/hit-rates';
-import { inboxSummary } from '@/ui/inbox-summary';
-import { dataDate, freshness, workTitle } from '@/ui/data-freshness';
+import { freshness, workTitle } from '@/ui/data-freshness';
 import type { DashboardRead } from '@/ui/dashboard-read';
 export default function Dashboard({
   config,
@@ -37,13 +36,10 @@ export default function Dashboard({
   const router = useRouter();
   const { data: workspace, error, refresh } = useResource('/api/dashboard', initialData);
   const { data: deals, error: dealError, refresh: refreshDeals } = useResource('/api/deals', initialDeals);
-  const summary = inboxSummary(deals.messages),
-    counts = dealCounts(deals.items);
+  const counts = dealCounts(deals.items);
   const { platforms, parameters, metrics } = config;
   const platformId = dataCenterPlatformId;
   const [range, setRange] = useState(parameters.defaultRange),
-    [notice, setNotice] = useState(''),
-    [busy, setBusy] = useState<string | null>(null),
     [detail, setDetail] = useState<string | null>(null);
   const platform = platforms.find((p) => p.id === platformId) ?? platforms[0],
     data = workspace.platforms[platform.id];
@@ -56,12 +52,6 @@ export default function Dashboard({
     .at(-1);
   const failed = activePlatforms.filter((p) => workspace.platforms[p.id]?.status === 'failed');
   const planned = workspace.plannedContents.filter((c) => c.plannedDate === today);
-  const pendingDeals = deals.items.filter((d) => summary.assessments.get(d.source.messageId)?.state === 'waiting');
-  const oldest = pendingDeals[0],
-    oldestMessage = oldest ? deals.messages.find((m) => m.id === oldest.source.messageId) : null;
-  const waited = oldestMessage?.sentAt
-    ? Math.max(0, Math.floor((Date.parse(today) - Date.parse(dataDate(oldestMessage.sentAt))) / 86400000))
-    : null;
   const anomalyIds = [
     ...new Set([
       ...failed.map((p) => p.id),
@@ -71,30 +61,10 @@ export default function Dashboard({
   ];
   const actions = [
     {
-      label: '商单待回复',
-      count: summary.dealWaiting,
-      detail: oldest
-        ? `${platforms.find((p) => p.id === oldest.source.platformId)?.name ?? ''} · ${oldest.brand ?? oldestMessage?.author ?? '查看商单'}${waited !== null ? ` · 已等 ${waited} 天` : ''}`
-        : '查看商单消息',
-      href: `/inbox?category=deal&reply=waiting${oldest ? `&message=${encodeURIComponent(oldest.source.messageId)}` : ''}`,
-    },
-    {
       label: '计划今天发布',
       count: planned.length,
       detail: planned.map((c) => workTitle(c.title)).join('、'),
       href: planned[0] ? `/publishing?content=${encodeURIComponent(planned[0].id)}` : '/publishing',
-    },
-    {
-      label: '有价值私信待回复',
-      count: summary.ideaDmWaiting,
-      detail: '打开私信，回复具体问题',
-      href: '/inbox?category=idea&channel=dm&reply=waiting',
-    },
-    {
-      label: '有价值评论待回复',
-      count: summary.ideaCommentWaiting,
-      detail: '打开评论，回复求助与共鸣',
-      href: '/inbox?category=idea&channel=comment&reply=waiting',
     },
     {
       label: '平台异常待处理',
@@ -144,23 +114,6 @@ export default function Dashboard({
       : null;
   const mature = presentation.mature[platformId] ?? 0;
   const anomalies = findAnomalies(data?.works ?? [], parameters);
-  async function syncTheme(theme: DashboardData['themes'][number]) {
-    if (busy || !workspace.themeSyncReady || theme.signalId) return;
-    setBusy(theme.id);
-    try {
-      await request(`/api/dashboard/themes/${encodeURIComponent(theme.id)}/topic`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expectedRevision: theme.revision }),
-      });
-      await refresh();
-      setNotice('已送进选题');
-    } catch (e) {
-      setNotice(e instanceof Error ? e.message : '暂时无法保存');
-    } finally {
-      setBusy(null);
-    }
-  }
   return (
     <main className="workspace dashboard-v2">
       <WorkspaceHeader
@@ -194,7 +147,7 @@ export default function Dashboard({
         today={today}
         onUpdate={refresh}
       />
-      {(error || dealError || notice) && <p role="status">{error || dealError || notice}</p>}
+      {(error || dealError) && <p role="status">{error || dealError}</p>}
       <div className="dashboard-two-columns">
         <div className="dashboard-left">
           {actions.length ? (
@@ -221,11 +174,7 @@ export default function Dashboard({
           <Link className="card compact-deals list-row" href="/deals">
             商单　待处理 {counts.pending} · 跟进中 {counts.following} · 已完成 {counts.completed} →
           </Link>
-          {summary.incomplete.length > 0 && (
-            <Link className="list-row health-incomplete" href="/inbox?reply=unknown">
-              {summary.incomplete.length} 条有价值消息的回复状态没读全，去平台核对有无回复 →
-            </Link>
-          )}
+
           {anomalies.length > 0 && (
             <Card title="作品表现异常">
               {anomalies.map((a) => (
@@ -238,34 +187,6 @@ export default function Dashboard({
                 </Link>
               ))}
             </Card>
-          )}
-          {workspace.themes.length ? (
-            <Card title="需求主题">
-              {workspace.themes.length ? (
-                workspace.themes.slice(0, parameters.dashboardPreviewLimit).map((t) => (
-                  <div className="theme-action" key={t.id}>
-                    <Link href={`/inbox?theme=${encodeURIComponent(t.id)}`}>
-                      {t.title} · {t.count} 条 →
-                    </Link>
-                    {t.signalId ? (
-                      <span>已送入选题</span>
-                    ) : (
-                      <Button
-                        disabled={!!busy || !workspace.themeSyncReady}
-                        disabledReason="当前不能保存，请稍后再试。"
-                        onClick={() => void syncTheme(t)}
-                      >
-                        送进选题
-                      </Button>
-                    )}
-                  </div>
-                ))
-              ) : (
-                <Empty>暂无需求主题，读到有价值消息后会汇总到这里</Empty>
-              )}
-            </Card>
-          ) : (
-            <div className="card collapsed-note">暂无需求主题，读到有价值消息后会汇总到这里</div>
           )}
         </div>
         <div className="dashboard-right">

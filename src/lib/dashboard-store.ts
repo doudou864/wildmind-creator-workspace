@@ -1,6 +1,3 @@
-import { assessReplies } from './inbox-model.ts';
-import { inboxData } from './inbox-store.ts';
-import { demandThemes } from '../db/schema.ts';
 import type { WorkspaceDatabase } from '../db/database.ts';
 import type { WorkspaceConfig } from './config.ts';
 import type { DashboardData, Day, PlatformData } from './workspace-model';
@@ -56,42 +53,22 @@ export function dashboardData(db: WorkspaceDatabase, config: WorkspaceConfig, no
       ),
     };
   }
-  const inbox = inboxData(db);
-  const replies = assessReplies(inbox.items);
   return {
     platforms,
     hitRates: review.hitRates,
     collectionReady: true,
     reviewReady: true,
-    questions: inbox.items
-      .filter(
-        (m) =>
-          m.classification.status === 'ready' &&
-          m.classification.result.category === 'idea' &&
-          !['replied', 'low_value'].includes(replies.get(m.id)?.state ?? ''),
-      )
-      .map((m) => ({ id: m.id, title: m.body, platformId: m.platformId })),
-    questionsReady: true,
+    questions: [],
+    questionsReady: false,
     plannedContents: db.db
       .select()
       .from(contents)
       .all()
       .filter((c) => c.plannedDate !== null),
     plansReady: true,
-    themes: db.db
-      .select()
-      .from(demandThemes)
-      .all()
-      .filter((t) => inbox.themes.some((visible) => visible.id === t.id))
-      .map((t) => ({
-        id: t.id,
-        revision: t.revision,
-        title: t.title,
-        count: inbox.themes.find((visible) => visible.id === t.id)!.messageIds.length,
-        signalId: t.signalId,
-      })),
-    themesReady: true,
-    themeSyncReady: true,
+    themes: [],
+    themesReady: false,
+    themeSyncReady: false,
     accountAlerts: [],
     accountAlertsReady: false,
     attention: db.db

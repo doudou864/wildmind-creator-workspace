@@ -1,9 +1,8 @@
 import { visualLogin } from '../browser/visual-login.ts';
 import { recheckLoginAttention } from './recheck-attention.ts';
-import { executionEvent, traceExecution } from './execution-log.ts';
+import { executionEvent } from './execution-log.ts';
 import { throwIfCollectionCancelled, CollectionCancelled, collectionSignal } from './cancellation.ts';
 import { existingCollectionSpace } from '../browser/collection-space.ts';
-import { collectPlatformInbox } from '../collectors/platform-inbox.ts';
 import { refreshReviews } from '../lib/review-store.ts';
 import { loadConfig } from '../lib/config.ts';
 import { collectYoutube } from '../collectors/youtube/collector.ts';
@@ -120,15 +119,6 @@ export async function runCollection(
                 collector(database, new CollectionSession(spaceId, page), new CodexJudgment(), paths),
               );
               executionEvent('平台指标读取', 'success', outcome.dataPending?.note);
-              await traceExecution('评论与私信采集', () =>
-                collectPlatformInbox(
-                  database,
-                  platformId,
-                  new CollectionSession(spaceId, page),
-                  new CodexJudgment(),
-                  paths,
-                ),
-              );
               await finishCrawl(database, id, {
                 status: 'success',
                 archivePaths: paths,
@@ -294,9 +284,6 @@ export async function runCollection(
         const session = new CollectionSession(activeSpace, activePage);
         const outcome = await collectWithAvailability(() => collector(database, session, new CodexJudgment(), paths));
         executionEvent('平台指标读取', 'success', outcome.dataPending?.note);
-        await traceExecution('评论与私信采集', () =>
-          collectPlatformInbox(database, id, session, new CodexJudgment(), paths),
-        );
         throwIfCollectionCancelled();
         refreshReviews(database, await loadConfig());
         await finishCrawl(database, crawlId, {

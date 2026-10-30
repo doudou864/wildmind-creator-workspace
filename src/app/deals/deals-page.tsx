@@ -1,5 +1,4 @@
 'use client';
-import { MessageNavigation } from '@/ui/message-navigation';
 import Link from 'next/link';
 import { ReplyActions, ReplyToast, type ReplyDestinations } from '@/ui/reply-actions';
 import { useEditSession } from '@/ui/use-edit-session';
@@ -200,18 +199,13 @@ export default function DealsPage({
   return (
     <main className="workspace deals-workspace">
       <WorkspaceHeader current="/deals" date={today} syncWindow={syncWindow} />
-      <MessageNavigation current="deals" />
       <ReplyToast />
       <PageHeader
+        action={null}
         title="商单列表"
         summary={counts.pending ? `${counts.pending} 条待处理` : '查看跟进中的商单，确认下一次回复'}
         onRefresh={() => void reload()}
         refreshing={busy || refreshing}
-        action={
-          <Link className="button button-primary" href="/inbox?category=deal">
-            查看商单消息 →
-          </Link>
-        }
       />
       <div className="deal-summary" aria-label="商单状态概况">
         {config.statuses.map((status, index) => (
@@ -453,9 +447,7 @@ export default function DealsPage({
                 ) : (
                   <Empty>关联消息暂不可用，不补填原文</Empty>
                 )}
-                <div className="deal-source-links">
-                  <Link href={`/inbox?message=${encodeURIComponent(active.source.messageId)}`}>看原消息 →</Link>
-                </div>
+                <div className="deal-source-links"></div>
               </>
             )}
             {active && suggestion && (

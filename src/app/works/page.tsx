@@ -93,12 +93,6 @@ export default async function Page({
           {selected ? (
             <>
               <ArchiveButton kind="content" id={selected.id} afterArchive="/works" />
-              <Link
-                className="button"
-                href={`/inbox?${new URLSearchParams({ content: selected.id, ...(post ? { post: post.id } : {}), channel: 'comment' })}`}
-              >
-                筛选这条作品的评论 →
-              </Link>
               <nav className="subnav" aria-label="作品平台">
                 {published.map((p) => (
                   <Link
